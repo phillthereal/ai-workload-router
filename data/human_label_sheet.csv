@@ -1,0 +1,169 @@
+task_id,task_type,prompt,model_answer,rubric,judge_score,human_score
+cls-002,classification,"Classify the user intent (complaint, inquiry, praise, or request). Text: 'I've been trying to use your service for hours and it's really slow, not sure if I'm doing something wrong or if there's an i…","**Intent: Complaint** (with an embedded inquiry element)
+
+**Primary classification: Complaint**
+
+The dominant intent is a complaint, indicated by:
+- Expression of frustration (""trying for hours"")
+- Negative experience with service performance (""really slow"")
+
+**Secondary element: Inquiry**
+
+There's…",complaint or inquiry,1.0,
+ext-002,extraction,"Extract all mentioned locations and dates from: 'The conference will be held in San Francisco on March 15-17, 2024, and then moves to Berlin on April 5.'","- **Locations**: San Francisco, Berlin
+- **Dates**: March 15-17, 2024; April 5","Locations: San Francisco, Berlin; Dates: March 15-17 2024, April 5",1.0,
+gen-001,short_generation,"Rewrite this sentence in a more formal tone: 'Hey, I just wanted to check if you got my email about the meeting.'",I hope this message finds you well. I would like to inquire whether you received my email regarding the meeting.,"A good answer rewrites the casual tone to formal, maintaining the meaning: something like 'I wanted to confirm receipt of my email regarding the meeting.'",1.0,
+gen-002,short_generation,"Summarize the following in 1-2 sentences: 'The recent study found that people who exercise regularly have better cognitive function, improved mood, and lower rates of depression. Exercise also increa…","Regular exercise is linked to better cognitive function, improved mood, and lower depression rates, largely due to increased brain blood flow and the growth of new neurons.","A good summary captures the key benefits (cognitive function, mood, mental health) and the mechanisms (increased blood flow, neurogenesis).",1.0,
+rsn-001,reasoning,"If all cats are animals and Fluffy is a cat, is Fluffy an animal? Explain your reasoning.","Yes, Fluffy is an animal.
+
+**The reasoning:**
+
+This is a classic example of a valid logical argument called a **syllogism**. It works by connecting two premises to reach a necessary conclusion:
+
+1. **Premise 1:** All cats are animals. (Every member of the ""cats"" category is also in the ""animals"" ca…","A correct answer applies logical deduction: Yes, because Fluffy is a cat and all cats are animals, therefore Fluffy must be an animal.",1.0,
+rsn-002,reasoning,"Three people (Alice, Bob, Carol) each own a different colored car (red, blue, green). Alice's car is not blue. Bob's car is not green. The green car owner has a name starting with 'C'. Who owns the g…","# Solving the Car Color Puzzle
+
+## Given Clues
+1. Alice's car is not blue
+2. Bob's car is not green
+3. The green car owner's name starts with 'C'
+
+## Step-by-Step Reasoning
+
+**Step 1: Identify the green car owner.**
+
+From Clue 3, the green car owner's name starts with 'C'. Among Alice, Bob, and Car…",Correct answer: Carol owns the green car and Bob's car is blue (with Alice's being red). The reasoning should show elimination of possibilities based on the constraints.,1.0,
+cls-007,classification,"Classify the tone of this workplace email and briefly justify your choice: 'Per my last email, I need this deliverable by end of day. I've flagged this twice already.'","The tone is **frustrated and impatient**.
+
+**Justification:** The phrase ""per my last email"" is a standard but often passive-aggressive reference to a previous unheeded request. The emphasis on urgency (""need this by end of day"") combined with the explicit declaration of repeated follow-ups (""flagg…","A good answer identifies the tone as passive-aggressive/frustrated and pointed, noting that the phrase 'per my last email' plus mentioning it was flagged twice signals irritation at being ignored.",1.0,
+cls-008,classification,"Classify the sentiment of this product review, and briefly justify your choice: 'The build quality is fantastic and it looks great on my desk, but the battery life is so disappointing I almost return…","Sentiment: Mixed (or ""Negative-leaning Mixed"")
+
+Justification: The reviewer clearly splits the feedback—praising the build quality and appearance (""fantastic,"" ""looks great"") while strongly criticizing the battery life (""so disappointing I almost returned it""). The battery complaint outweighs the p…","A good answer recognizes this as mixed/neutral sentiment (positive on build quality, negative on battery life) rather than forcing a single strong label, and explains the split.",1.0,
+ext-006,extraction,"Extract the job title, required years of experience, and salary range from this posting: 'We're hiring a Senior Backend Engineer! Requires 5+ years of experience with distributed systems. Compensatio…","Here is the extracted information from the job posting:
+
+- **Job Title:** Senior Backend Engineer
+- **Required Years of Experience:** 5+ years
+- **Salary Range:** $140,000 - $170,000 annually","A good answer lists all three fields correctly: job title = Senior Backend Engineer, experience = 5+ years, salary range = $140,000-$170,000.",1.0,
+ext-007,extraction,"Extract all action items and their owners from this meeting note: 'Quick recap of today's sync - Maria's going to follow up with legal on the contract redlines, hopefully by Friday. We also decided t…","# Action Items
+
+| # | Action Item | Owner | Deadline |
+|---|-------------|-------|----------|
+| 1 | Follow up with legal on the contract redlines | Maria | By Friday (target) |
+| 2 | Notify the team about the marketing launch slipping by a week | Devon | Not specified |
+| 3 | Review the updated roa…","A good answer identifies: (1) Maria - follow up with legal on contract redlines, by Friday; (2) Devon - notify the team that the marketing launch is delayed a week; (3) everyone/the team - review the updated roadmap doc before next week's meeting; (4) Priya - send a reminder about the roadmap review. Partial credit for capturing most items with correct owners.",1.0,
+gen-003,short_generation,"Write a short, professional subject line for an email announcing that the office will be closed next Monday for a public holiday.",Office Closure Notice: Public Holiday Next Monday,"A good answer is concise (under ~10 words), clearly professional, and communicates the office closure and the reason (public holiday) or the date.",1.0,
+gen-004,short_generation,"Write a brief, polite one-sentence reply declining a meeting invite due to a scheduling conflict.","Thank you for the invitation, but I regret to inform you that I have a scheduling conflict and will be unable to attend the meeting.","A good answer is one sentence, polite in tone, clearly declines the meeting, and mentions a scheduling conflict as the reason.",1.0,
+gen-005,short_generation,"Write a 2-3 sentence product description for a reusable stainless steel water bottle that keeps drinks cold for 24 hours, aimed at outdoor enthusiasts.","Stay hydrated on the trail with our rugged stainless steel water bottle, engineered to keep your drinks ice-cold for a full 24 hours. Its durable, double-wall vacuum insulation withstands drops and bumps, while the leak-proof cap and wide mouth make refills easy from any stream. Perfect for hikers,…","A good answer is 2-3 sentences, mentions the material (stainless steel), the cold-retention benefit (24 hours), reusability, and appeals to the outdoor/active audience.",0.9,
+gen-006,short_generation,"Rewrite this technical explanation in plain language a non-technical customer could understand, in 2-3 sentences: 'Our system uses a distributed caching layer with eventual consistency, which means w…","Our system stores copies of your data across multiple locations to keep things fast and reliable. When you make a change, it takes a brief moment to update everywhere, so you might occasionally see slightly outdated information for a few seconds. This quickly corrects itself as all the locations sy…","A good answer avoids jargon (no 'distributed caching', 'eventual consistency', 'asynchronously', 'nodes'), is 2-3 sentences, and correctly conveys that data updates take a short time to fully sync everywhere, so users might briefly see slightly outdated information.",1.0,
+rsn-004,reasoning,A team has a meeting room booked from 2:00 PM to 3:00 PM for a recurring standup that cannot be moved. Meeting A needs 45 minutes and must happen sometime between 1:00 PM and 2:30 PM. Meeting B needs…,"# Analyzing the Scheduling Problem
+
+## Given Constraints
+- **Standup (fixed):** 2:00 PM – 3:00 PM
+- **Meeting A:** 45 min, must fit within 1:00 PM – 2:30 PM window
+- **Meeting B:** 30 min, must fit within 1:45 PM – 3:15 PM window
+
+## Finding Available Slots (excluding the standup)
+
+The only usable…","A good answer determines that Meeting A can fit (e.g., 1:00-1:45 PM, before the standup) but Meeting B cannot: within its allowed window (1:45 PM-3:15 PM), removing the 2:00-3:00 PM standup leaves only two 15-minute gaps (1:45-2:00 and 3:00-3:15), neither long enough for its required 30 minutes and they cannot be combined since the standup separates them. The answer should conclude both meetings cannot be scheduled without changes, and show the interval reasoning behind it.",1.0,
+cls-002,classification,"Classify the user intent (complaint, inquiry, praise, or request). Text: 'I've been trying to use your service for hours and it's really slow, not sure if I'm doing something wrong or if there's an i…","**Intent: Complaint** (with an embedded inquiry element)
+
+**Primary classification: Complaint**
+
+The dominant intent is a complaint, indicated by:
+- Expression of frustration (""trying for hours"")
+- Negative experience with service performance (""really slow"")
+
+**Secondary element: Inquiry**
+
+There's…",complaint or inquiry,1.0,
+ext-002,extraction,"Extract all mentioned locations and dates from: 'The conference will be held in San Francisco on March 15-17, 2024, and then moves to Berlin on April 5.'","Here are the locations and dates extracted from the text:
+
+**Locations:**
+- San Francisco
+- Berlin
+
+**Dates:**
+- March 15-17, 2024
+- April 5","Locations: San Francisco, Berlin; Dates: March 15-17 2024, April 5",1.0,
+gen-001,short_generation,"Rewrite this sentence in a more formal tone: 'Hey, I just wanted to check if you got my email about the meeting.'","Here are a few formal alternatives:
+
+**Option 1 (Professional):**
+""I am writing to confirm whether you received my email regarding the meeting.""
+
+**Option 2 (Polite inquiry):**
+""I wanted to follow up to ensure that my email concerning the meeting reached you.""
+
+**Option 3 (Concise):**
+""Could you pl…","A good answer rewrites the casual tone to formal, maintaining the meaning: something like 'I wanted to confirm receipt of my email regarding the meeting.'",1.0,
+gen-002,short_generation,"Summarize the following in 1-2 sentences: 'The recent study found that people who exercise regularly have better cognitive function, improved mood, and lower rates of depression. Exercise also increa…","Regular exercise improves cognitive function, mood, and reduces depression rates, while also boosting blood flow to the brain and stimulating the growth of new neurons.","A good summary captures the key benefits (cognitive function, mood, mental health) and the mechanisms (increased blood flow, neurogenesis).",1.0,
+rsn-001,reasoning,"If all cats are animals and Fluffy is a cat, is Fluffy an animal? Explain your reasoning.","Yes, Fluffy is an animal.
+
+**The reasoning:**
+
+This is a classic example of a valid logical argument called a **syllogism**. It works by connecting two premises to reach a necessary conclusion:
+
+1. **Premise 1:** All cats are animals. (Every member of the ""cats"" category is also in the ""animals"" ca…","A correct answer applies logical deduction: Yes, because Fluffy is a cat and all cats are animals, therefore Fluffy must be an animal.",1.0,
+rsn-002,reasoning,"Three people (Alice, Bob, Carol) each own a different colored car (red, blue, green). Alice's car is not blue. Bob's car is not green. The green car owner has a name starting with 'C'. Who owns the g…","# Solving the Car Color Puzzle
+
+## Given Clues
+1. Alice's car is not blue
+2. Bob's car is not green
+3. The green car owner's name starts with 'C'
+
+## Step-by-Step Reasoning
+
+**Step 1: Identify the green car owner.**
+
+From Clue 3, the green car owner's name starts with 'C'. Among Alice, Bob, and Car…",Correct answer: Carol owns the green car and Bob's car is blue (with Alice's being red). The reasoning should show elimination of possibilities based on the constraints.,1.0,
+cls-007,classification,"Classify the tone of this workplace email and briefly justify your choice: 'Per my last email, I need this deliverable by end of day. I've flagged this twice already.'","**Tone: Frustrated / passive-aggressive (with an assertive edge)**
+
+**Justification:**
+
+- **""Per my last email""** — This is a classic passive-aggressive workplace phrase. It subtly points out that the information was already communicated, implying the recipient failed to read or act on it.
+
+- **""I'…","A good answer identifies the tone as passive-aggressive/frustrated and pointed, noting that the phrase 'per my last email' plus mentioning it was flagged twice signals irritation at being ignored.",1.0,
+cls-008,classification,"Classify the sentiment of this product review, and briefly justify your choice: 'The build quality is fantastic and it looks great on my desk, but the battery life is so disappointing I almost return…","**Sentiment: Mixed (leaning negative)**
+
+**Justification:**
+
+This review contains genuinely opposing sentiments rather than a clear overall lean, but the negative element carries more weight:
+
+- **Positive signals:** Praise for build quality (""fantastic"") and appearance (""looks great"") — strong, en…","A good answer recognizes this as mixed/neutral sentiment (positive on build quality, negative on battery life) rather than forcing a single strong label, and explains the split.",0.95,
+ext-006,extraction,"Extract the job title, required years of experience, and salary range from this posting: 'We're hiring a Senior Backend Engineer! Requires 5+ years of experience with distributed systems. Compensatio…","Here's the extracted information from the job posting:
+
+- **Job Title:** Senior Backend Engineer
+- **Required Years of Experience:** 5+ years (with distributed systems)
+- **Salary Range:** $140,000–$170,000 annually (plus equity)","A good answer lists all three fields correctly: job title = Senior Backend Engineer, experience = 5+ years, salary range = $140,000-$170,000.",1.0,
+ext-007,extraction,"Extract all action items and their owners from this meeting note: 'Quick recap of today's sync - Maria's going to follow up with legal on the contract redlines, hopefully by Friday. We also decided t…","# Action Items
+
+| # | Action Item | Owner | Deadline |
+|---|-------------|-------|----------|
+| 1 | Follow up with legal on the contract redlines | Maria | By Friday (target) |
+| 2 | Notify the team about the marketing launch slipping by a week | Devon | Not specified |
+| 3 | Review the updated roa…","A good answer identifies: (1) Maria - follow up with legal on contract redlines, by Friday; (2) Devon - notify the team that the marketing launch is delayed a week; (3) everyone/the team - review the updated roadmap doc before next week's meeting; (4) Priya - send a reminder about the roadmap review. Partial credit for capturing most items with correct owners.",1.0,
+gen-003,short_generation,"Write a short, professional subject line for an email announcing that the office will be closed next Monday for a public holiday.","Here are a few options:
+
+**Simple and direct:**
+- Office Closed Monday for Public Holiday
+
+**With date (recommended for clarity):**
+- Office Closed Monday, [Date] – Public Holiday
+
+**Slightly more formal:**
+- Notice: Office Closure for Public Holiday on Monday
+
+**Concise version:**
+- Reminder: Offi…","A good answer is concise (under ~10 words), clearly professional, and communicates the office closure and the reason (public holiday) or the date.",0.85,
+gen-004,short_generation,"Write a brief, polite one-sentence reply declining a meeting invite due to a scheduling conflict.","Thank you for the invitation, but I'm unable to attend due to a scheduling conflict—please let me know if there's another way I can contribute.","A good answer is one sentence, polite in tone, clearly declines the meeting, and mentions a scheduling conflict as the reason.",1.0,
+gen-005,short_generation,"Write a 2-3 sentence product description for a reusable stainless steel water bottle that keeps drinks cold for 24 hours, aimed at outdoor enthusiasts.","Built for the trail and beyond, this durable stainless steel water bottle keeps your drinks ice-cold for a full 24 hours, no matter how hot the adventure gets. Its rugged, reusable design is perfect for hikers, campers, and explorers who demand reliable hydration on every journey. Ditch the disposa…","A good answer is 2-3 sentences, mentions the material (stainless steel), the cold-retention benefit (24 hours), reusability, and appeals to the outdoor/active audience.",1.0,
+gen-006,short_generation,"Rewrite this technical explanation in plain language a non-technical customer could understand, in 2-3 sentences: 'Our system uses a distributed caching layer with eventual consistency, which means w…","Our system stores copies of your data across multiple locations to keep things fast and reliable. When you make a change, it takes a brief moment to update everywhere, so you might occasionally see slightly outdated information for a few seconds. This quickly corrects itself as all the locations sy…","A good answer avoids jargon (no 'distributed caching', 'eventual consistency', 'asynchronously', 'nodes'), is 2-3 sentences, and correctly conveys that data updates take a short time to fully sync everywhere, so users might briefly see slightly outdated information.",1.0,
+rsn-004,reasoning,A team has a meeting room booked from 2:00 PM to 3:00 PM for a recurring standup that cannot be moved. Meeting A needs 45 minutes and must happen sometime between 1:00 PM and 2:30 PM. Meeting B needs…,"# Analyzing the Scheduling Problem
+
+## Given Constraints
+- **Standup (fixed):** 2:00 PM – 3:00 PM
+- **Meeting A:** 45 min, must fit within 1:00 PM – 2:30 PM window
+- **Meeting B:** 30 min, must fit within 1:45 PM – 3:15 PM window
+
+## Finding Available Slots (excluding the standup)
+
+The only usable…","A good answer determines that Meeting A can fit (e.g., 1:00-1:45 PM, before the standup) but Meeting B cannot: within its allowed window (1:45 PM-3:15 PM), removing the 2:00-3:00 PM standup leaves only two 15-minute gaps (1:45-2:00 and 3:00-3:15), neither long enough for its required 30 minutes and they cannot be combined since the standup separates them. The answer should conclude both meetings cannot be scheduled without changes, and show the interval reasoning behind it.",1.0,

@@ -1,0 +1,205 @@
+{
+  "version": 2,
+  "tasks": [
+    {
+      "id": "cls-001",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Is this product review positive or negative? Review: 'This product is amazing! Best purchase ever.'",
+      "reference": "positive",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-002",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Classify the user intent (complaint, inquiry, praise, or request). Text: 'I've been trying to use your service for hours and it's really slow, not sure if I'm doing something wrong or if there's an issue on your end.'",
+      "reference": "complaint or inquiry",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "ext-001",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the company name from this sentence: 'Apple Inc. announced a new product line today.'",
+      "reference": "Apple Inc.",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-002",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract all mentioned locations and dates from: 'The conference will be held in San Francisco on March 15-17, 2024, and then moves to Berlin on April 5.'",
+      "reference": "Locations: San Francisco, Berlin; Dates: March 15-17 2024, April 5",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-001",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Rewrite this sentence in a more formal tone: 'Hey, I just wanted to check if you got my email about the meeting.'",
+      "reference": "A good answer rewrites the casual tone to formal, maintaining the meaning: something like 'I wanted to confirm receipt of my email regarding the meeting.'",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-002",
+      "task_type": "short_generation",
+      "difficulty": "medium",
+      "prompt": "Summarize the following in 1-2 sentences: 'The recent study found that people who exercise regularly have better cognitive function, improved mood, and lower rates of depression. Exercise also increases blood flow to the brain and promotes the growth of new neurons.'",
+      "reference": "A good summary captures the key benefits (cognitive function, mood, mental health) and the mechanisms (increased blood flow, neurogenesis).",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "rsn-001",
+      "task_type": "reasoning",
+      "difficulty": "easy",
+      "prompt": "If all cats are animals and Fluffy is a cat, is Fluffy an animal? Explain your reasoning.",
+      "reference": "A correct answer applies logical deduction: Yes, because Fluffy is a cat and all cats are animals, therefore Fluffy must be an animal.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "rsn-002",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Three people (Alice, Bob, Carol) each own a different colored car (red, blue, green). Alice's car is not blue. Bob's car is not green. The green car owner has a name starting with 'C'. Who owns the green car and what color is Bob's car? Show your reasoning.",
+      "reference": "Correct answer: Carol owns the green car and Bob's car is blue (with Alice's being red). The reasoning should show elimination of possibilities based on the constraints.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "cls-003",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Classify this email as spam or not spam: 'Subject: You've WON $5,000,000!!! Click here NOW to claim your prize before it expires in 24 hours. Limited time offer, act fast!!!'",
+      "reference": "spam",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-004",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Classify this news headline into one category: Sports, Technology, Politics, or Entertainment. Headline: 'Local team wins championship after dramatic overtime victory.'",
+      "reference": "sports",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-005",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Does this message require an urgent response? Answer yes or no. Message: 'Just wanted to say thanks again for the great dinner last week, no rush on anything!'",
+      "reference": "no",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-006",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "A customer support ticket needs to be routed. Based on the message, classify the priority as Low, Medium, or High. Message: 'Our production database went down 10 minutes ago and none of our customers can log in. We're losing money every minute.'",
+      "reference": "high",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-007",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the tone of this workplace email and briefly justify your choice: 'Per my last email, I need this deliverable by end of day. I've flagged this twice already.'",
+      "reference": "A good answer identifies the tone as passive-aggressive/frustrated and pointed, noting that the phrase 'per my last email' plus mentioning it was flagged twice signals irritation at being ignored.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "cls-008",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the sentiment of this product review, and briefly justify your choice: 'The build quality is fantastic and it looks great on my desk, but the battery life is so disappointing I almost returned it.'",
+      "reference": "A good answer recognizes this as mixed/neutral sentiment (positive on build quality, negative on battery life) rather than forcing a single strong label, and explains the split.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "ext-003",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the email address from this text: 'For support questions, please reach out to our team at support@techflow.com and we'll respond within 24 hours.'",
+      "reference": "support@techflow.com",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-004",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the phone number mentioned in this message: 'Call us anytime at (555) 234-7891 for immediate assistance.'",
+      "reference": "(555) 234-7891",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-005",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the total amount due from this invoice line: 'Invoice #4471 -- Services rendered: $1,250.00 -- Due upon receipt.'",
+      "reference": "$1,250.00",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-006",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract the job title, required years of experience, and salary range from this posting: 'We're hiring a Senior Backend Engineer! Requires 5+ years of experience with distributed systems. Compensation: $140,000-$170,000 annually, plus equity.'",
+      "reference": "A good answer lists all three fields correctly: job title = Senior Backend Engineer, experience = 5+ years, salary range = $140,000-$170,000.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "ext-007",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Extract all action items and their owners from this meeting note: 'Quick recap of today's sync - Maria's going to follow up with legal on the contract redlines, hopefully by Friday. We also decided the marketing launch needs to slip a week since design assets aren't ready; Devon will let the team know. Everyone should review the updated roadmap doc before next week's meeting, no specific deadline given on that one though Priya mentioned she'd send a reminder.'",
+      "reference": "A good answer identifies: (1) Maria - follow up with legal on contract redlines, by Friday; (2) Devon - notify the team that the marketing launch is delayed a week; (3) everyone/the team - review the updated roadmap doc before next week's meeting; (4) Priya - send a reminder about the roadmap review. Partial credit for capturing most items with correct owners.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-003",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Write a short, professional subject line for an email announcing that the office will be closed next Monday for a public holiday.",
+      "reference": "A good answer is concise (under ~10 words), clearly professional, and communicates the office closure and the reason (public holiday) or the date.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-004",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Write a brief, polite one-sentence reply declining a meeting invite due to a scheduling conflict.",
+      "reference": "A good answer is one sentence, polite in tone, clearly declines the meeting, and mentions a scheduling conflict as the reason.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-005",
+      "task_type": "short_generation",
+      "difficulty": "medium",
+      "prompt": "Write a 2-3 sentence product description for a reusable stainless steel water bottle that keeps drinks cold for 24 hours, aimed at outdoor enthusiasts.",
+      "reference": "A good answer is 2-3 sentences, mentions the material (stainless steel), the cold-retention benefit (24 hours), reusability, and appeals to the outdoor/active audience.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "gen-006",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Rewrite this technical explanation in plain language a non-technical customer could understand, in 2-3 sentences: 'Our system uses a distributed caching layer with eventual consistency, which means writes propagate asynchronously across nodes and reads may briefly return stale data before convergence.'",
+      "reference": "A good answer avoids jargon (no 'distributed caching', 'eventual consistency', 'asynchronously', 'nodes'), is 2-3 sentences, and correctly conveys that data updates take a short time to fully sync everywhere, so users might briefly see slightly outdated information.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "rsn-003",
+      "task_type": "reasoning",
+      "difficulty": "easy",
+      "prompt": "A store had 84 items in stock. They sold 27 in the morning and 19 in the afternoon. How many items are left in stock? Answer with just the number.",
+      "reference": "38",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-004",
+      "task_type": "reasoning",
+      "difficulty": "medium",
+      "prompt": "A team has a meeting room booked from 2:00 PM to 3:00 PM for a recurring standup that cannot be moved. Meeting A needs 45 minutes and must happen sometime between 1:00 PM and 2:30 PM. Meeting B needs 30 minutes and must happen sometime between 1:45 PM and 3:15 PM. Can both meetings be scheduled in the room without overlapping each other or the 2:00-3:00 PM standup? If so, propose a valid schedule; if not, explain why not.",
+      "reference": "A good answer determines that Meeting A can fit (e.g., 1:00-1:45 PM, before the standup) but Meeting B cannot: within its allowed window (1:45 PM-3:15 PM), removing the 2:00-3:00 PM standup leaves only two 15-minute gaps (1:45-2:00 and 3:00-3:15), neither long enough for its required 30 minutes and they cannot be combined since the standup separates them. The answer should conclude both meetings cannot be scheduled without changes, and show the interval reasoning behind it.",
+      "scoring": "rubric_judge"
+    }
+  ]
+}

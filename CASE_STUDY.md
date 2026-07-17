@@ -1,0 +1,114 @@
+# AI Workload Router — Product Case Study
+
+**Author:** Fil Ivanov · **Role:** Product (end-to-end: problem framing → spec → benchmark → result)
+
+> A cost-optimizing routing layer for LLM applications. This case study shows how I took a sprawling idea, isolated the one assumption worth testing, cut scope to test it fast, and proved the result with a live benchmark. The code is the evidence; the product thinking is the exhibit.
+
+---
+
+## TL;DR
+
+Teams building on LLMs overpay by sending every request to one premium model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well, logging cost and quality on every call so routing improves over time.
+
+**On a 25-task benchmark, routing across a three-vendor roster cut cost 53.6% with no measurable quality loss (100.4% of the frontier-only baseline) and ran 46.2% faster.** The hypothesis (≥40% cost reduction, ≥95% quality retention) **passed.** Every number is from live API calls, graded by an LLM judge that's itself been cross-checked by a second, independent judge, and the whole run is reproducible from cache.
+
+The most useful finding wasn't the headline number — it was *why* the savings stopped where they did. That's the part a good PM cares about, and it's below.
+
+---
+
+## The problem
+
+Teams shipping LLM features route all traffic to a single premium model because comparing models per-task is tedious and there's no cheap way to know which tasks a smaller model can handle. The result is an API bill that scales linearly with usage and no visibility into the price/quality tradeoff being made on every call.
+
+The person who feels this: **the engineer or founder who owns the bill** and has only one lever — "use a cheaper model everywhere and hope quality holds."
+
+## The one bet worth testing
+
+The original concept (compiled by ChatGPT) was expansive: a multi-agent orchestrator decomposing tasks across four specialist models, adaptive routing, a full web app, three build phases. Most of that is machinery built *before* knowing whether the core idea pays off.
+
+I cut it to a single testable hypothesis:
+
+> **For a realistic task mix, routing to cheaper models where they suffice cuts cost meaningfully while holding quality within an acceptable band of the frontier-only baseline.**
+
+If that's false, no orchestration UI matters. So v1 proves it on a benchmark before anything else gets built. Everything that didn't serve that proof — task decomposition, the multi-agent layer, the frontend, adaptive routing — was explicitly deferred, not deleted. (Full scope decisions in [`docs/PRD.md`](docs/PRD.md).)
+
+## How I defined "done" before building
+
+Two decisions that make the result trustworthy:
+
+- **A named baseline.** "Reduce cost" is meaningless without a reference. The baseline is *every task sent to the frontier model* (Claude Opus 4.8). All deltas are measured against it.
+- **A quality floor, not just a cost target.** Cost savings that tank quality are worthless, so success required holding ≥95% of baseline quality — measured, not assumed.
+
+## What I built (the Prove-it MVP)
+
+A backend benchmark harness, deliberately minimal:
+
+| Piece | What it does |
+|---|---|
+| **Provider adapter layer** | One internal interface over multiple model APIs, so a model is swappable by config. |
+| **Rules router** | Classifies each task and picks a tier: easy → budget model, medium → mid, hard/reasoning → frontier. |
+| **Live LLM judge** | Grades open-ended answers 0–1 against a rubric, using a strong model as the judge. |
+| **Record & replay cache** | Every real API response is cached, so the whole benchmark re-runs for free and is fully reproducible by anyone. |
+| **Performance log** | Every run records task, model, tokens, cost, latency, and quality — the data layer that would drive adaptive routing later. |
+
+**Models (this run):** the three tiers now span three real vendors — GPT-4o mini (OpenAI, $0.15 / $0.60 per 1M tokens, budget), DeepSeek Chat (DeepSeek, ~$0.27 / $1.10, mid), and Claude Opus 4.8 (Anthropic, $5 / $25, frontier). The judge is Claude Opus 4.8, cross-validated by a second, independent judge — see "Validating the judge" below. This is the second iteration of the benchmark: the first run kept all three tiers on Claude models (Opus / Sonnet / Haiku) to prove the method fast on a single working key, and landed 32.5% savings. This run swaps the budget and mid tiers onto OpenAI and DeepSeek, widening the price range the router has to work with — see "The insight that matters" for what that did to the ceiling.
+
+**Benchmark:** 25 tasks weighted to resemble real production traffic — mostly classification and extraction, some short generation, a minority of hard reasoning (roughly 32% / 28% / 24% / 16%).
+
+## The result
+
+| Strategy | Total cost | Mean quality | Mean latency |
+|---|---|---|---|
+| Frontier-only (baseline) | $0.1260 | 0.992 | 4,155 ms |
+| **Router** | **$0.0585** | **0.996** | **2,237 ms** |
+
+- **Cost reduction: 53.6%**
+- **Quality retention: 100.4%** of baseline (the router edged it, within noise)
+- **Latency: 46.2% faster** (median 1,208 ms vs. 3,663 ms) — cheaper models also happen to respond faster, so this is a second win at zero extra cost, not a tradeoff.
+- **Hypothesis (≥40% cost reduction, ≥95% quality retention): PASSED.**
+- The router sent 11 tasks to the budget tier (GPT-4o mini), 7 to the mid tier (DeepSeek Chat), 7 to the frontier (Opus) — a sensible spread by difficulty, not a blunt "cheapest everywhere."
+
+## What this looks like at scale
+
+Extrapolating linearly from this run's per-task cost (router $0.00234 vs. baseline $0.00504):
+
+| Volume | Baseline / month | Router / month | Saved / month |
+|---|---|---|---|
+| 100,000 requests | $503.92 | $234.03 | $269.89 |
+| 1,000,000 requests | $5,039.20 | $2,340.26 | $2,698.94 |
+
+This is directional, not a forecast — it assumes production traffic resembles this benchmark's task mix, and real traffic will differ. It's meant to make the shape of the savings tangible, not to be quoted as a committed number.
+
+## Validating the judge
+
+An LLM judge grading its own routing decisions is a circularity worth checking. A second, independent judge (GPT-4o mini — a different vendor from the primary judge, Claude Opus 4.8) re-scored all 30 rubric-judged answers from this run blind. Agreement: **mean absolute difference of 0.010, with 96.7% of scores within 0.15 of each other.** That's a meaningfully lower bar than ground truth, but it's evidence the primary judge isn't an outlier — two different judges, from two different vendors, converge on similar scores. The remaining step is a human-labeled subset (a label sheet is already exported for this run) to check both judges against an actual human, not just against each other.
+
+## The insight that matters
+
+The hypothesis set a 40% cost target. The first (all-Anthropic) run landed at 32.5%; this cross-vendor run landed at 53.6% — and *why* the ceiling moved is the real product lesson.
+
+**The savings ceiling is set by how much of your workload genuinely needs the frontier model, and by how wide a price range the router has to work with — not by how clever the router is.**
+
+In this task mix, reasoning tasks are 16% of the tasks but ~33% of the baseline cost, and they correctly route to the frontier model under *both* strategies, in both runs — a cheaper model measurably underperforms on them. That third of the bill is "locked": no routing can reduce it without losing quality. What changed between the two runs is everything else: swapping the budget and mid tiers from Claude models onto OpenAI and DeepSeek widened the price range available to the router, and the savings on the unlocked two-thirds of the bill grew with it — 32.5% → 53.6%. That's not a fluke; it's the "cross-provider routing widens the ceiling" line that was future work in the first iteration, executed and confirmed here.
+
+The actionable takeaway for anyone adopting this: **there are two levers, not one — your traffic composition (fixed, sets what's locked) and your vendor price range (a choice you control).** A product that is 80% classification will save far more than one that is 50% hard reasoning; and widening the vendor range you route across raises the ceiling further, exactly as this run demonstrates. The performance log makes the composition side of that visible, which is the point.
+
+That's a more honest and more useful finding than a suspiciously round 40% would have been.
+
+## What I'd do next
+
+1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one.)
+2. **Confidence-based escalation** — try the cheap model first, auto-retry on a stronger one only when the judge score is low; capture more savings without a quality floor breach.
+3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth, cheaper or faster provider (e.g., a Gemini adapter) is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
+4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise.
+
+## Honest limitations
+
+- **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
+- **25 tasks is a starting eval,** not a production-scale one. It's enough to demonstrate the method and the composition insight; it's not enough to certify a production savings figure.
+- **Single-turn tasks only.** Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.
+- **The at-scale projection is directional.** It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's task mix — real traffic will differ, sometimes substantially.
+
+---
+
+*Reproduce it: it works with any subset of provider keys. Add whichever of `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `DEEPSEEK_API_KEY` you have to `.env` and run `python run_benchmark.py`. Any model whose provider key is missing falls back to a labeled mock adapter, so the harness always runs end-to-end. First run makes live calls (for whichever keys are present) and caches them; every run after is free and identical.*
