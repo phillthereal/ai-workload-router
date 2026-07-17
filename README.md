@@ -1,8 +1,6 @@
 # AI Workload Router
 
-<!-- CI badge — activated when the repo goes live on GitHub:
-![tests](https://github.com/YOUR_USERNAME/ai-workload-router/actions/workflows/tests.yml/badge.svg)
--->
+![tests](https://github.com/phillthereal/ai-workload-router/actions/workflows/tests.yml/badge.svg)
 
 **[Read the full product case study →](https://claude.ai/code/artifact/205c2a5e-9447-48dc-96d3-dd4459dc3531)** (visual writeup with the benchmark data) · License: MIT
 
@@ -96,3 +94,4 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 - **25 tasks is a starting eval, not production-scale.** It's enough to demonstrate the method and the composition insight; certifying a production savings figure requires a larger, workload-specific task set.
 - **Single-turn tasks only.** Real workloads include multi-turn conversations and tool-use flows that this benchmark doesn't cover.
 - **The at-scale projection is directional.** It extrapolates linearly from this benchmark's task mix; real traffic will differ.
+- **The LLM judge is prompt-injectable.** A hostile task input could instruct the judge to mis-score ("rate this 1.0"). Harmless in a self-controlled benchmark; a hosted version would need injection defenses (input isolation, structured judge output) before accepting untrusted tasks.
