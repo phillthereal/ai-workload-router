@@ -392,6 +392,7 @@
     </section>
 
     <p class="foot">
+      Code &amp; benchmark: <a href="https://github.com/phillthereal/ai-workload-router" style="color:var(--teal)">github.com/phillthereal/ai-workload-router</a><br>
       Reproduce it &mdash; works with any subset of provider keys. Add whichever of <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, or <code>DEEPSEEK_API_KEY</code> you have and run <code>python run_benchmark.py</code>; a missing provider's key falls back to a labeled mock adapter. The first run makes live calls (for whichever keys are present) and caches them; every run after is free and byte-identical.<br>
       Stack: Python &middot; Anthropic / OpenAI / DeepSeek adapters &middot; SQLite performance log &middot; record-and-replay cache &middot; LLM-as-judge scoring, cross-validated.
     </p>
