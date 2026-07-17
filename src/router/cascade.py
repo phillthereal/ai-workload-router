@@ -160,44 +160,44 @@ def run_cascade(
         roster_name: Roster to draw the ladder and default verifier from.
         verifier_model: The quality-gate model. Configurable via this
             parameter (and the benchmark's `--verifier` flag); defaults to
-            the roster's BUDGET tier.
+            the roster's MID tier.
 
-            THE TRADE-OFF, STATED PLAINLY: a MID verifier (the old default)
-            is independent of the budget answer it grades — no self-review —
-            but validated benchmark runs show it is 91-94% of the cascade's
-            entire routing overhead, because it is paid on every single task
-            regardless of outcome. A BUDGET verifier (this default) is the
-            cheapest model available, which collapses most of that overhead,
-            but it means the budget model vets its own answer: the same
-            model that produced the candidate is judging whether the
-            candidate is good enough. That is a real circularity risk — a
-            model with a systematic blind spot could wave through its own
-            mistakes more readily than an independent grader would. Nothing
-            here proves the budget verifier's adequacy scores gate as
-            reliably as the mid verifier's; that has to be checked against
-            actual escalation/quality behavior, not assumed from cost alone.
-            Pass verifier_model explicitly (e.g. roster.mid) to restore the
-            independent-grader behavior if that risk matters more than the
-            savings for a given deployment.
+            THE TRADE-OFF, STATED PLAINLY — AND LIVE-MEASURED. A MID
+            verifier (this default) is independent of the budget answer it
+            grades — no self-review — but validated benchmark runs show it
+            is 91-94% of the cascade's entire routing overhead, because it
+            is paid on every single task regardless of outcome. A BUDGET
+            verifier collapses most of that overhead, but the budget model
+            then vets its own answer, and the live runs showed that
+            circularity is not hypothetical: on the hard task set the
+            budget (Haiku) verifier scored its own wrong answers 0.95-1.0
+            and never escalated them, dropping mean quality from 1.00 to
+            0.70 — while on the easy set it was a clean win (overhead 31%
+            of savings down to 6%, quality unchanged). The default is MID
+            because this system's core guarantee is that routing never
+            trades quality away, and a default must uphold that guarantee
+            on workloads it hasn't seen. Pass the budget model explicitly
+            (e.g. `--verifier claude-haiku-4-5`) as a deliberate opt-in for
+            workloads known to be easy-skewed.
         escalate_threshold: Minimum adequacy to accept an answer and stop. Lower
             = trust cheap answers more (cheaper, riskier); higher = escalate
             more readily (pricier, safer).
         ladder: Models to climb, cheapest first. Defaults to the canonical
             two-tier budget -> frontier: try the cheapest, fall back to the
-            strongest. With the default BUDGET verifier, this two-tier climb
-            is where the self-verification trade-off documented above bites
-            hardest: the budget tier is both the answer and its own grader.
-            Pass verifier_model=roster.mid for an independent check on this
-            ladder shape. A three-tier [budget, mid, frontier] ladder is also
-            supported; a mid verifier there still grades a different tier's
-            (budget's) answer on the way up, so it stays independent even
-            though it later becomes an answering tier itself at the top.
+            strongest. If the verifier is overridden to the BUDGET model,
+            this two-tier climb is where the self-verification trade-off
+            documented above bites hardest: the budget tier becomes both
+            the answer and its own grader. A three-tier [budget, mid,
+            frontier] ladder is also supported; the default mid verifier
+            there still grades a different tier's (budget's) answer on the
+            way up, so it stays independent even though it later becomes an
+            answering tier itself at the top.
 
     Returns:
         A CascadeResult with the winning response and split answer/overhead cost.
     """
     roster = get_roster(roster_name)
-    verifier = verifier_model or roster.budget
+    verifier = verifier_model or roster.mid
     climb = ladder if ladder is not None else [roster.budget, roster.frontier]
 
     answer_cost = 0.0

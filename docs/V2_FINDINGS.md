@@ -60,11 +60,12 @@ Full table in [effort_grid.md](../data/effort_grid.md). The two lines that matte
 ## Verifier economics: does a cheaper verifier still gate correctly?
 
 The cascade's verifier is configurable (`run_cascade(verifier_model=...)`, or
-`run_benchmark.py --verifier`) and now **defaults to the roster's BUDGET
-tier** rather than MID — see `src/router/cascade.py`'s docstring for the
-trade-off this default makes. The two rows above (Haiku verifier) are that
-default's live confirmation, run against the same two task sets as the
-mid-verifier (Sonnet) rows directly above them:
+`run_benchmark.py --verifier`) and **defaults to the roster's MID tier** —
+the independent grader. The cheap (BUDGET) verifier is a deliberate opt-in,
+and the live runs below are why: it is a clean win on the easy set but a
+quality failure on the hard one, and a default must uphold the system's
+never-trade-quality guarantee on workloads it hasn't seen. Both verifiers
+were run live against the same two task sets:
 
 | Task set | Overhead, Sonnet verifier | Overhead, Haiku verifier | Quality, Sonnet | Quality, Haiku | Escalated, Sonnet | Escalated, Haiku |
 |---|---|---|---|---|---|---|
