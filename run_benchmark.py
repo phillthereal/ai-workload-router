@@ -82,12 +82,23 @@ def _parse_effort_policy(raw: Optional[str]) -> Optional[dict[str, Optional[str]
     return policy
 
 
+def _tasks_tag(tasks: Optional[str]) -> Optional[str]:
+    """Short filename tag for a non-default task set (tasks_hard.json -> 'hard')."""
+    if not tasks:
+        return None
+    stem = Path(tasks).stem
+    if stem == "tasks":
+        return None
+    return stem[len("tasks_"):] if stem.startswith("tasks_") else stem
+
+
 def _report_path(
     roster: str,
     all_real: bool,
     classify: bool,
     effort_policy: Optional[dict[str, Optional[str]]],
     strategy: str = "router",
+    tasks: Optional[str] = None,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -109,14 +120,17 @@ def _report_path(
     fabricated mock numbers can never land on any published path.
     """
     data_dir = Path(__file__).parent / "data"
+    tag = _tasks_tag(tasks)
     if not all_real:
-        return data_dir / f"benchmark_report_simulated_{roster}.md"
+        suffix = f"_{tag}" if tag else ""
+        return data_dir / f"benchmark_report_simulated_{roster}{suffix}.md"
 
     is_published_shape = (
         roster == DEFAULT_ROSTER
         and strategy == "router"
         and not classify
         and not effort_policy
+        and tag is None
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -128,6 +142,8 @@ def _report_path(
         parts.append("classified")
     if effort_policy:
         parts.append("effort")
+    if tag:
+        parts.append(tag)
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
 
 
@@ -184,6 +200,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "%(default)s."
         ),
     )
+    parser.add_argument(
+        "--tasks",
+        default=None,
+        help=(
+            "Path to an alternate task file (e.g. data/tasks_hard.json). Defaults "
+            "to the published data/tasks.json. The hard set exists to stress "
+            "quality retention on tasks that actually separate the tiers."
+        ),
+    )
     return parser
 
 
@@ -193,7 +218,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     effort_policy = _parse_effort_policy(args.effort_policy)
     roster = get_roster(args.roster)
 
-    tasks = load_tasks()
+    tasks = load_tasks(args.tasks)
     db.init_db()
     run_group = f"{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
@@ -281,7 +306,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     print_report(report)
 
     out_path = _report_path(
-        args.roster, report.all_real, args.classify, effort_policy, args.strategy
+        args.roster, report.all_real, args.classify, effort_policy, args.strategy, args.tasks
     )
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")

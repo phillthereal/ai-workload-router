@@ -1,0 +1,86 @@
+{
+  "version": 2,
+  "_comment": "Deliberately hard probe set (v2). The published data/tasks.json saturates quality near 0.99 across all tiers, so it cannot show whether routing holds quality when tasks are genuinely hard. These tasks are built to SEPARATE tiers: most use exact_match (no judge leniency — a wrong number scores 0.0), and each carries a trap that smaller models tend to fall for (overflow caps, per-unit vs total, affirming-the-consequent, coreference). Not a published headline set; a stress test.",
+  "tasks": [
+    {
+      "id": "rsn-h01",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A tank holds at most 240 liters and starts empty. It is filled at 30 L/min for 10 minutes, then drained at 5 L/min for 8 minutes, then filled at 40 L/min for 6 minutes. The tank can never exceed 240 liters; any overflow is lost. How many liters are in the tank at the end? Answer with just the number.",
+      "reference": "240",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-h02",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Five runners finished a race with no ties. Alice finished before Bob but after Carol. Dana finished after Bob. Eve finished before Carol. Who finished third? Answer with one name only.",
+      "reference": "Alice",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-h03",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A ruler and an eraser cost $1.10 together. The ruler costs $1.00 more than the eraser. How much does the eraser cost, in dollars? Answer with just the number, e.g. 0.20.",
+      "reference": "0.05",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-h04",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Three pumps working together fill a pool in 6 hours. Pump A alone would take 18 hours. Pump B alone would take 12 hours. How many hours would pump C take alone? Answer with just the number.",
+      "reference": "36",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-h01",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Three products sold last quarter. Widget A: 100 units, $1,500 total revenue. Widget B: 40 units, $800 total revenue. Widget C: 200 units, $2,400 total revenue. Which product had the highest revenue PER UNIT? Answer with the product name only.",
+      "reference": "Widget B",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-h02",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Read this and name the person accountable for the budget: 'Maria owns the timeline. Devon, who reports to Maria, handles vendor contracts. Priya, unlike Devon, is accountable for the budget, while Sam tracks the schedule.' Answer with one name only.",
+      "reference": "Priya",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-h01",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Is the following argument logically valid (does the conclusion necessarily follow)? 'All successful startups take risks. This company takes risks. Therefore this company is a successful startup.' Answer with one word: valid or invalid.",
+      "reference": "invalid",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-h02",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Consider: 'In a room of exactly five people, all with distinct ages, every person is older than at least one other person in the room.' Is this possible or impossible? Answer with exactly one word: possible or impossible.",
+      "reference": "impossible",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "gen-h01",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Rewrite the following in exactly two sentences, under 30 words total, with no jargon, while preserving the 30-day deadline: 'Per our SLA, reimbursement claims must be adjudicated within the 30-day window post-purchase, failing which the associated liability is rendered void.'",
+      "reference": "A good answer is exactly two sentences, under 30 words, uses plain language with no jargon (no 'SLA', 'adjudicated', 'liability', 'rendered void'), and clearly keeps the rule that claims must be made/handled within 30 days of purchase or they are lost.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "ext-h03",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "From this meeting note, list only the action items that have an explicit deadline, with their owner: 'Ravi will send the deck before Thursday. Someone should book the venue at some point. Lena needs to confirm the caterer by end of week. We should all review the budget eventually. Tom is going to call the printer tomorrow morning.' List each as owner: task.",
+      "reference": "A good answer includes exactly the three items with explicit deadlines: Ravi (send the deck, before Thursday), Lena (confirm the caterer, by end of week), and Tom (call the printer, tomorrow morning). It should EXCLUDE the two items with no explicit deadline (booking the venue 'at some point', reviewing the budget 'eventually').",
+      "scoring": "rubric_judge"
+    }
+  ]
+}
