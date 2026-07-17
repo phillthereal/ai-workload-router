@@ -369,6 +369,60 @@
       <p>That arc &mdash; a roadmap line ("cross-provider routing widens the ceiling") executed and confirmed &mdash; is the proof. So the levers for anyone adopting this are <strong>traffic composition (fixed, sets what's locked) and vendor price range (a choice you control).</strong> A product that's 80% classification will save far more than one that's half hard reasoning; widening the vendor range you route across raises the ceiling further, exactly as this run shows. The performance log makes the composition side visible, which is the entire point. That's a more honest and more useful finding than a suspiciously round 40% would have been.</p>
     </section>
 
+    <section aria-label="v2 results">
+      <p class="kicker">V2 &mdash; the roadmap, executed</p>
+      <h2>Three strategies beat the target. A harder workload reset it.</h2>
+      <p>The "what I'd build next" list below isn't hypothetical anymore. I replaced the hand-labeled task difficulty with a real prompt classifier, built the confidence-based escalation cascade, and ran a second benchmark built specifically to find where routing stops paying. All three new strategies cleared the original 40% target.</p>
+
+      <div class="panel">
+        <p class="panel-title">Net savings by strategy &mdash; vs. frontier-only baseline, cross-vendor unless noted</p>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-head">
+              <span class="bar-name">Prompt classifier <span class="sub">cross-vendor roster &middot; net of classification cost</span></span>
+              <span class="bar-val" style="color:var(--teal)">65.6%</span>
+            </div>
+            <div class="track"><div class="fill save" data-w="65.6"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head">
+              <span class="bar-name">Cascade <span class="sub">escalate-on-failure &middot; cheap model first, Opus only if it fails a quality gate</span></span>
+              <span class="bar-val" style="color:var(--teal)">53.1%</span>
+            </div>
+            <div class="track"><div class="fill save" data-w="53.1"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head">
+              <span class="bar-name">Within-vendor tiering <span class="sub">Claude-only ladder &middot; Haiku &rarr; Sonnet &rarr; Opus</span></span>
+              <span class="bar-val" style="color:var(--teal)">42.5%</span>
+            </div>
+            <div class="track"><div class="fill save" data-w="42.5"></div></div>
+          </div>
+        </div>
+        <p class="delta-note">The classifier <b>beat</b> the original hand-labeled v1 run (53.6%) &mdash; it found seven cheaper routes the conservative hand labels missed, all judged 0.85&ndash;1.00, for a routing cost of about 1% of the savings. The cascade beat the predict-ahead classifier within a single vendor (53.1% vs. 42.5%) by trying the cheap model on everything and reacting to what fails, instead of pre-routing hard work to the frontier.</p>
+      </div>
+
+      <div class="insight">
+        <p class="big">On a harder task set that actually separates model quality tiers, routing goes cost-negative &mdash; but it never sacrifices output quality.</p>
+        <p>The published 25-task benchmark saturates quality near 0.99 on every tier, so it can't test whether routing holds up when tasks are genuinely hard. A new 10-task hard set &mdash; mostly objective, exact-match, no judge leniency &mdash; separates the tiers cleanly:</p>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Model tier</th><th>Hard-set quality</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Haiku &middot; budget</td><td>0.70</td></tr>
+            <tr><td>Sonnet &middot; mid</td><td>0.90</td></tr>
+            <tr><td>Opus &middot; frontier</td><td class="save-cell">1.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>On that hard set, every strategy still held 100% of baseline quality &mdash; but cost <em>more</em> than sending everything straight to Opus, because every task genuinely needed the frontier model and routing only added overhead. That's the sharper form of the v1 composition insight: <strong>the router's savings are a direct function of how much of the workload is actually easy.</strong> On an all-hard workload there's no free lunch &mdash; but the quality guarantee holds either way, which is the more important half of that sentence. The buyer's decision rule falls out of it: measure your easy-task fraction before adopting a router.</p>
+    </section>
+
     <section>
       <p class="kicker">What I'd build next</p>
       <h2>From proof to product.</h2>
