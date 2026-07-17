@@ -46,13 +46,15 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from router import db  # noqa: E402
 from router.adapters import get_adapter  # noqa: E402
 from router.benchmark.tasks import load_tasks  # noqa: E402
+from router.cascade import run_cascade  # noqa: E402
 from router.classifier import classify_task  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS, get_model, get_roster  # noqa: E402
-from router.report import build_report, format_report_markdown, print_report  # noqa: E402
+from router.report import BASELINE_STRATEGY, build_report, format_report_markdown, print_report  # noqa: E402
 from router.router import route_task  # noqa: E402
 from router.scoring import score  # noqa: E402
 
-STRATEGIES = ("router", "frontier_only")
+# Experimental arms the benchmark can run against the frontier_only baseline.
+EXPERIMENTAL_STRATEGIES = ("router", "cascade")
 
 
 def _parse_effort_policy(raw: Optional[str]) -> Optional[dict[str, Optional[str]]]:
@@ -85,6 +87,7 @@ def _report_path(
     all_real: bool,
     classify: bool,
     effort_policy: Optional[dict[str, Optional[str]]],
+    strategy: str = "router",
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -110,12 +113,17 @@ def _report_path(
         return data_dir / f"benchmark_report_simulated_{roster}.md"
 
     is_published_shape = (
-        roster == DEFAULT_ROSTER and not classify and not effort_policy
+        roster == DEFAULT_ROSTER
+        and strategy == "router"
+        and not classify
+        and not effort_policy
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
 
     parts = [roster]
+    if strategy != "router":
+        parts.append(strategy)
     if classify:
         parts.append("classified")
     if effort_policy:
@@ -150,7 +158,30 @@ def _build_parser() -> argparse.ArgumentParser:
             "the roster's budget model, instead of reading the hand-authored "
             "labels. This is what a real deployment has. Costs one budget-model "
             "call per task; that cost is logged and reported as routing "
-            "overhead rather than excluded from the savings figure."
+            "overhead rather than excluded from the savings figure. "
+            "(--strategy router only.)"
+        ),
+    )
+    parser.add_argument(
+        "--strategy",
+        choices=EXPERIMENTAL_STRATEGIES,
+        default="router",
+        help=(
+            "Experimental arm to compare against the frontier-only baseline. "
+            "'router' predicts difficulty and routes once; 'cascade' tries the "
+            "cheapest model, verifies the answer, and escalates only on a failed "
+            "check. Default %(default)s."
+        ),
+    )
+    parser.add_argument(
+        "--escalate-threshold",
+        type=float,
+        default=0.7,
+        help=(
+            "Cascade only: minimum verifier adequacy [0-1] to accept a cheap "
+            "answer instead of escalating. Lower trusts cheap answers more "
+            "(cheaper, riskier); higher escalates more readily. Default "
+            "%(default)s."
         ),
     )
     return parser
@@ -166,15 +197,34 @@ def main(argv: Optional[list[str]] = None) -> None:
     db.init_db()
     run_group = f"{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
-    for strategy in STRATEGIES:
+    # The experimental arm (router OR cascade) plus the fixed frontier-only
+    # baseline. Both experimental arms charge their decision cost to
+    # routing_cost_usd, so the report's net-savings accounting is identical for
+    # either — the classifier's prediction toll and the cascade's
+    # verifier-plus-discarded-attempt overhead land in the same column.
+    for strategy in (args.strategy, BASELINE_STRATEGY):
         for task in tasks:
             routing_cost = 0.0
             agreed: Optional[bool] = None
+            effort: Optional[str] = None
 
-            if strategy == "router":
-                # The classifier runs on the ROUTER arm only. The frontier-only
-                # baseline does not route, so it has no routing overhead to pay
-                # — charging it one would understate the router's true cost.
+            if strategy == "cascade":
+                # React-to-failure: try cheap, verify, escalate only on a failed
+                # check. cost_usd is the winning answer; overhead (verifier
+                # calls + discarded cheap attempts) is the routing cost.
+                result = run_cascade(
+                    task,
+                    roster_name=args.roster,
+                    escalate_threshold=args.escalate_threshold,
+                )
+                response = result.response
+                model_name = response.model
+                cost = result.answer_cost
+                routing_cost = result.overhead_cost
+            elif strategy == "router":
+                # Predict-then-route. The classifier runs on this arm only; the
+                # baseline does not route, so charging it overhead would
+                # understate the router's true cost.
                 classification = classify_task(
                     task, roster_name=args.roster, use_labels=not args.classify
                 )
@@ -189,15 +239,18 @@ def main(argv: Optional[list[str]] = None) -> None:
                 )
                 model_name = decision.chosen_model
                 effort = decision.effort
-            else:
+                response = get_adapter(model_name).complete(task["prompt"], effort=effort)
+                cost = get_model(model_name).cost_for_tokens(
+                    response.input_tokens, response.output_tokens
+                )
+            else:  # frontier_only baseline
                 model_name = roster.frontier
                 effort = (effort_policy or {}).get("frontier")
+                response = get_adapter(model_name).complete(task["prompt"], effort=effort)
+                cost = get_model(model_name).cost_for_tokens(
+                    response.input_tokens, response.output_tokens
+                )
 
-            adapter = get_adapter(model_name)
-            response = adapter.complete(task["prompt"], effort=effort)
-            cost = get_model(model_name).cost_for_tokens(
-                response.input_tokens, response.output_tokens
-            )
             quality = score(task, response)
 
             db.log_run(
@@ -224,10 +277,12 @@ def main(argv: Optional[list[str]] = None) -> None:
                 classifier_agreed=agreed,
             )
 
-    report = build_report(run_group)
+    report = build_report(run_group, experimental_strategy=args.strategy)
     print_report(report)
 
-    out_path = _report_path(args.roster, report.all_real, args.classify, effort_policy)
+    out_path = _report_path(
+        args.roster, report.all_real, args.classify, effort_policy, args.strategy
+    )
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")
     if not report.all_real:

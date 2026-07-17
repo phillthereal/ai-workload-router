@@ -102,32 +102,44 @@ class BenchmarkReport:
     THIS IS NOT AN ACCURACY SCORE. The labels are one person's judgement on 25
     self-authored tasks. Disagreement means the classifier and the author
     differ; it does not establish which is right."""
+    experimental_strategy: str = ROUTER_STRATEGY
+    """Name of the non-baseline strategy this report compares against
+    frontier_only — "router" (classify + route) or "cascade" (escalate on a
+    failed verifier check). Lets one report template serve both experiments
+    without the baseline arm ever changing."""
 
 
 def build_report(
-    run_group: str, db_path: Optional[Union[str, Path]] = None
+    run_group: str,
+    db_path: Optional[Union[str, Path]] = None,
+    experimental_strategy: str = ROUTER_STRATEGY,
 ) -> BenchmarkReport:
     """
-    Query logged runs for `run_group` and compute the router vs
+    Query logged runs for `run_group` and compute the experimental-strategy vs
     frontier_only comparison.
 
     Args:
         run_group: The run_group to report on.
         db_path: Optional db path override (for tests).
+        experimental_strategy: The non-baseline strategy to compare against
+            frontier_only. Defaults to "router" so every existing caller and
+            the published report are unaffected; run_benchmark passes "cascade"
+            for the escalate-on-failure arm.
 
     Returns:
         BenchmarkReport with headline metrics and breakdowns.
     """
     summary = db.summary_by_strategy(run_group, db_path=db_path)
-    router = summary.get(ROUTER_STRATEGY, {"total_cost": 0.0, "mean_quality": 0.0, "n": 0})
+    router = summary.get(experimental_strategy, {"total_cost": 0.0, "mean_quality": 0.0, "n": 0})
     frontier = summary.get(BASELINE_STRATEGY, {"total_cost": 0.0, "mean_quality": 0.0, "n": 0})
 
     rows = db.fetch_runs(run_group, db_path=db_path)
     model_simulated = _model_simulated_map(rows)
 
-    # Routing overhead is charged to the router arm only: the frontier-only
-    # baseline does not route, so it has no classifier call to pay for.
-    router_rows = [r for r in rows if r["strategy"] == ROUTER_STRATEGY]
+    # Routing overhead is charged to the experimental arm only: the frontier-
+    # only baseline does not route, so it has no classifier/verifier call to
+    # pay for.
+    router_rows = [r for r in rows if r["strategy"] == experimental_strategy]
     routing_cost = sum(r.get("routing_cost_usd") or 0.0 for r in router_rows)
     net_router_cost = router["total_cost"] + routing_cost
 
@@ -167,7 +179,7 @@ def build_report(
 
     latency_raw = db.latency_by_strategy(run_group, db_path=db_path)
     latency_stats = {strat: _latency_stats(values) for strat, values in latency_raw.items()}
-    router_latency = latency_stats.get(ROUTER_STRATEGY, _latency_stats([]))
+    router_latency = latency_stats.get(experimental_strategy, _latency_stats([]))
     frontier_latency = latency_stats.get(BASELINE_STRATEGY, _latency_stats([]))
     latency_delta_pct = (
         (frontier_latency["mean_ms"] - router_latency["mean_ms"]) / frontier_latency["mean_ms"] * 100
@@ -215,6 +227,7 @@ def build_report(
         net_cost_reduction_pct=net_cost_reduction_pct,
         routing_overhead_pct_of_savings=routing_overhead_pct_of_savings,
         classifier_agreement_pct=classifier_agreement_pct,
+        experimental_strategy=experimental_strategy,
     )
 
 
@@ -294,7 +307,8 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     lines.append("| Strategy | Total cost (USD) | Mean quality | N |")
     lines.append("|---|---|---|---|")
     lines.append(
-        f"| router | ${report.router_cost:.6f} | {report.router_quality:.3f} | {report.router_n} |"
+        f"| {report.experimental_strategy} | ${report.router_cost:.6f} | "
+        f"{report.router_quality:.3f} | {report.router_n} |"
     )
     lines.append(
         f"| frontier_only (baseline) | ${report.frontier_cost:.6f} | "
@@ -384,9 +398,10 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     lines.append("## At-scale cost projection")
     lines.append("")
     lines.append(
-        f"Cost per task in this run: router ${report.cost_per_task_router:.6f}, "
-        f"frontier_only (baseline) ${report.cost_per_task_frontier:.6f}. Projected "
-        "monthly cost at scale, extrapolating linearly from that per-task rate:"
+        f"Cost per task in this run: {report.experimental_strategy} "
+        f"${report.cost_per_task_router:.6f}, frontier_only (baseline) "
+        f"${report.cost_per_task_frontier:.6f}. Projected monthly cost at scale, "
+        "extrapolating linearly from that per-task rate:"
     )
     lines.append("")
     lines.append(
