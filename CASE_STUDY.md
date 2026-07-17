@@ -95,12 +95,24 @@ The actionable takeaway for anyone adopting this: **there are two levers, not on
 
 That's a more honest and more useful finding than a suspiciously round 40% would have been.
 
+## v2: I built the next steps — and found where routing stops paying
+
+The "what I'd do next" list below is no longer hypothetical. I replaced the hand-labeled difficulty with a real prompt classifier, built the confidence-based escalation (item 2), and ran four follow-up experiments live. Three findings changed how I think about the product.
+
+**Predicting difficulty is cheaper than labeling it — and the labels were the conservative part.** A real deployment gets a prompt, not a difficulty label, so I replaced my hand labels with a cheap classifier that predicts difficulty from the prompt — and reports savings *net of that prediction's cost*. It *raised* cross-vendor savings from 53.6% to 65.6% at equal quality: on 7 of 25 tasks it routed to a cheaper model than my labels dictated, all judged 0.85–1.00. I had been over-labeling difficulty; the classifier found the slack, for a routing cost of ~1% of savings. The honest, automatable version was *better* than the hand-tuned one.
+
+**React-to-failure beats predict-ahead within a vendor.** The cascade — try Haiku, let a cheap reference-free verifier check the answer, escalate to Opus only on a failed check — netted 53.1% within the Claude ladder, beating the predict-then-route classifier's 42.5%. It wins by being less conservative: it tries the cheapest model on everything and discovers what works, instead of pre-routing all reasoning to the frontier. The cost is honest — its overhead (verifier calls plus discarded cheap attempts) runs 31% of savings, and it adds latency.
+
+**Routing stops paying on hard work — the most useful thing I learned.** The published 25-task set saturates quality near 0.99 on every tier, so it can't answer "does routing hold quality when tasks are hard?" I built a 10-task hard set (mostly objective exact-match, no judge leniency) that separates the tiers cleanly: Haiku 0.70, Sonnet 0.90, Opus 1.00. On it, both strategies held 100% quality but went cost-*negative* — every hard task needs the frontier, so routing only adds overhead. That is the sharpest form of the composition insight: **the router's value is a direct function of how much easy work exists, and on an all-hard workload it is worse than doing nothing — but it never trades away quality to find that out.** The buyer's decision rule falls out of this: measure your easy-task fraction before adopting a router.
+
+Everything is additive and reproducible — the default configuration still reproduces the original 53.6% run exactly, and each experiment is a one-line command in the README.
+
 ## What I'd do next
 
-1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one.)
-2. **Confidence-based escalation** — try the cheap model first, auto-retry on a stronger one only when the judge score is low; capture more savings without a quality floor breach.
+1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one; the v2 classifier is a first step — prediction from the prompt rather than a static rule.)
+2. **Confidence-based escalation** — ✅ *built in v2 (the cascade): try the cheap model first, a reference-free verifier checks the answer, escalate only on a failed check.* Next: tune the escalate threshold per task type from the performance log, rather than a single global value.
 3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth, cheaper or faster provider (e.g., a Gemini adapter) is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
-4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise.
+4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
 
 ## Honest limitations
 

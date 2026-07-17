@@ -61,6 +61,29 @@ flowchart LR
 - **Performance log** — every run (task, model, tokens, cost, latency, quality) is persisted to SQLite, the data layer that powers future adaptive routing.
 - **Mock fallback** — runs completely offline with zero API keys using a quality profile, so you can verify the system end-to-end before adding credentials.
 
+## v2: Four follow-up experiments
+
+v1 (above) routes across three vendors using *hand-labeled* task difficulty — a clean proof of the idea, but it leans on two things a real deployment lacks: labels it didn't generate, and a free choice of vendors. v2 removes both crutches and adds a second routing strategy. Everything here is additive: the default configuration still reproduces the v1 run byte-for-byte, and all figures below are live (real API calls, real Opus judge).
+
+**1. A real classifier replaces the hand labels.** A production router gets a prompt, not a difficulty label. v2 predicts `(task_type, difficulty)` from the prompt with the roster's cheapest model, and reports savings *net of that prediction's cost*. Live, classifier routing came out **cheaper than the hand labels — 65.6% vs 53.6%** cross-vendor at equal quality: on 7 of 25 tasks it found cheaper models than the labels dictated, all judged 0.85–1.00. The labels were conservative; a cheap classifier found the slack, for a routing cost of ~1% of savings.
+
+**2. Staying inside one vendor.** Enterprises often can't add vendors but can always add tiers. Routing across Claude Haiku / Sonnet / Opus (a ~5× price range vs ~41× cross-vendor) nets **42.5%** — right where the price arithmetic predicts. Narrower price range means a lower ceiling *and* worse overhead (11% of savings vs 1%), because the cheapest available classifier (Haiku) isn't as cheap as GPT-4o mini.
+
+**3. A cascade — react instead of predict.** Try the cheapest model, have a cheap reference-free verifier check the answer, and escalate only on a failed check. Live within-vendor, the cascade **beat the classifier on net savings (53.1% vs 42.5%)** — it tries Haiku on everything and discovers what works, rather than pre-routing reasoning to Opus — at triple the overhead (31% of savings) and higher latency.
+
+**4. A hard task set, because the easy one saturates.** The published 25 tasks score ~0.99 across every tier, so they can't show whether routing holds quality when tasks are genuinely hard. A 10-task probe set (`data/tasks_hard.json`, mostly objective `exact_match`) *does* separate them: Haiku 0.70, Sonnet 0.90, Opus 1.00. Run the strategies on it and the punchline lands: **on hard tasks both strategies hold 100% quality but go cost-negative** (classifier −6%, cascade −20%). Every hard task needs the frontier, so routing only adds overhead — but it never sacrifices quality to try.
+
+**The through-line:** routing's savings scale with how much genuinely-easy work a workload contains, and collapse to zero (or below) on all-hard workloads — the demonstrated form of v1's "ceiling = workload composition × price range." Quality, on both strategies, was never the thing that gave.
+
+```bash
+python3 run_benchmark.py --roster claude_tiers --classify          # within-vendor, real classifier
+python3 run_benchmark.py --roster claude_tiers --strategy cascade   # escalate-on-failure
+python3 run_benchmark.py --classify --tasks data/tasks_hard.json    # stress quality on hard tasks
+python3 run_effort_grid.py                                          # (model × effort) frontier
+```
+
+*Caveats: n is 25 (10 for the hard set), so these are directional, not statistically certified. The Opus judge scores generously on the easy set (the same instrument cross-validated in v1). The effort dial and Sonnet 5's introductory pricing carry their own footnotes in the code.*
+
 ## Run It Yourself
 
 **Setup:**
