@@ -85,6 +85,16 @@ python3 run_effort_grid.py                                          # (model × 
 
 *Caveats: n is 25 (10 for the hard set), so these are directional, not statistically certified. The Opus judge scores generously on the easy set (the same instrument cross-validated in v1). The effort dial and Sonnet 5's introductory pricing carry their own footnotes in the code.*
 
+## Where this goes next: v3, the learned router
+
+Everything above still predicts difficulty *cold* — from the prompt alone,
+every time. But every run already gets logged to `data/runs.db` (task type,
+model, cost, quality). v3 proposes closing that loop: consult outcome
+history for tasks like this one before routing, and let the router get
+cheaper as it learns your workload — never trading away the quality floor to
+do it. Full design, including the cold-start rule and the safety asymmetry
+borrowed from the v2 verifier finding, in [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
+
 ## Run It Yourself
 
 **Setup:**
@@ -111,6 +121,7 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 
 - **[`docs/PRD.md`](docs/PRD.md)** — product requirements, success metrics, and the core hypothesis being tested.
 - **[`CASE_STUDY.md`](CASE_STUDY.md)** — decision rationale, how scope was cut, benchmark methodology, and full results breakdown.
+- **[`docs/V3_DESIGN.md`](docs/V3_DESIGN.md)** — design for the learned router (v3, not yet built): closing the feedback loop from `runs.db`.
 
 ## Limitations
 

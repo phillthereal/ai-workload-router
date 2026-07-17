@@ -114,6 +114,23 @@ Everything is additive and reproducible — the default configuration still repr
 3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth, cheaper or faster provider (e.g., a Gemini adapter) is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
 4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
 
+## v3: making the spend compound
+
+Item 1 above — adaptive routing — is now a design, not just a line item.
+Every run this project has ever made is sitting in `data/runs.db`: task type,
+model, cost, quality, success. The router currently *re-derives* what it
+already paid to learn — the classifier predicts difficulty cold from the
+prompt, every single time, with no memory of the last hundred times it saw a
+task like this one. v3 is the fix: consult that outcome history before
+routing, and only let it push a task to a cheaper tier when the evidence is
+strong enough to trust — with the same never-trade-quality guarantee that has
+held through every experiment so far, and a decision rule modeled directly on
+the v2 verifier finding (cheap signals are fine on easy tasks and a liability
+on hard ones). Not built — the full design, including the similarity
+approach, the cold-start rule, and the eval plan for proving it beats the
+classifier rather than just agreeing with it, is in
+[`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
+
 ## Honest limitations
 
 - **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
