@@ -15,6 +15,12 @@ ENV/
 *.db
 *.sqlite
 
+# Offline/mock benchmark output. data/benchmark_report.md IS committed — it is
+# the published live result — but simulated runs write to these names instead
+# (see run_benchmark.py:_report_path) and their numbers are fabricated, so they
+# must never be mistaken for findings or land in the repo.
+data/benchmark_report_simulated_*.md
+
 # IDE
 .vscode/
 .idea/

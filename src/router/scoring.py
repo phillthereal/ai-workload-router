@@ -72,6 +72,40 @@ QUALITY_PROFILE: dict[str, dict[str, dict[str, float]]] = {
 DIFFICULTIES = ("easy", "medium", "hard")
 TASK_TYPES = ("classification", "extraction", "short_generation", "reasoning")
 
+# ---------------------------------------------------------------------------
+# SIMULATED effort curves — PLACEHOLDER DATA, same status as QUALITY_PROFILE.
+#
+# Effort trades thinking tokens for quality. Thinking tokens are billed as
+# output tokens, so raising effort raises cost WITHOUT changing the model or the
+# per-token price. These two tables encode a plausible shape for that trade:
+#
+#   - cost climbs steeply and without bound (max is ~8x the no-thinking output),
+#   - quality climbs and then flattens hard (max buys +0.005 over xhigh).
+#
+# That asymmetry is the whole thesis of the effort dial: the cheap end of the
+# curve is where the value is, and the expensive end is mostly waste. Whether
+# real models behave this way is exactly what a live grid run would measure —
+# these numbers exist to make the offline path runnable and the tests
+# deterministic, and MUST NOT be reported as findings.
+# ---------------------------------------------------------------------------
+EFFORT_OUTPUT_MULTIPLIER: dict[str, float] = {
+    "off": 1.0,      # no thinking — the visible answer is the whole output
+    "low": 1.6,
+    "medium": 2.5,
+    "high": 4.0,
+    "xhigh": 6.0,
+    "max": 8.5,
+}
+
+EFFORT_QUALITY_BONUS: dict[str, float] = {
+    "off": 0.0,
+    "low": 0.02,
+    "medium": 0.04,
+    "high": 0.055,
+    "xhigh": 0.065,
+    "max": 0.07,
+}
+
 # Max +/- spread applied by the deterministic per-task jitter below.
 _JITTER_SPREAD = 0.06
 
@@ -132,15 +166,17 @@ def rubric_judge(task: dict[str, Any], response: Response) -> float:
 
     Args:
         task: Task dict with at least id, task_type, difficulty.
-        response: The Response to score (its `.model` selects the tier).
+        response: The Response to score (its `.model` selects the tier, its
+            `.effort` selects the simulated effort bonus).
 
     Returns:
         Simulated quality score in [0.0, 1.0].
     """
     tier = MODEL_TIER.get(response.model, "budget")
     base = QUALITY_PROFILE[tier][task["task_type"]][task["difficulty"]]
+    bonus = EFFORT_QUALITY_BONUS.get(response.effort or "off", 0.0)
     jitter = (_hash_unit(task["id"], response.model, "quality") - 0.5) * _JITTER_SPREAD
-    return max(0.0, min(1.0, base + jitter))
+    return max(0.0, min(1.0, base + bonus + jitter))
 
 
 # ---------------------------------------------------------------------------

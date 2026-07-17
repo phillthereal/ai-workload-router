@@ -36,19 +36,38 @@ CREATE TABLE IF NOT EXISTS runs (
     quality_score REAL NOT NULL,
     success INTEGER NOT NULL,
     simulated INTEGER NOT NULL DEFAULT 0,
-    response_text TEXT NOT NULL DEFAULT ''
+    response_text TEXT NOT NULL DEFAULT '',
+    effort TEXT,
+    roster TEXT NOT NULL DEFAULT 'cross_vendor',
+    routing_cost_usd REAL NOT NULL DEFAULT 0.0,
+    classifier_agreed INTEGER
 )
 """
 
-# Older data/runs.db files predate the `simulated` / `response_text`
-# columns; add them in place rather than forcing a manual `rm data/runs.db`
-# on every existing checkout. `response_text` stores the model's raw answer
-# text so router.judge_validation can re-score it with a second judge later
-# without re-calling the original model — only rows logged after this
-# migration landed will have it populated (see run_benchmark.py).
+# Older data/runs.db files predate columns added in later phases; add them in
+# place rather than forcing a manual `rm data/runs.db` on every existing
+# checkout. `response_text` stores the model's raw answer text so
+# router.judge_validation can re-score it with a second judge later without
+# re-calling the original model.
+#
+# The v2 columns:
+#   effort            — the effort level this run was produced at (NULL = no
+#                       effort/thinking config sent, i.e. the v1 shape). Cost is
+#                       unattributable without it, because effort changes output
+#                       token count without changing the model or the price.
+#   roster            — which ladder this run routed across.
+#   routing_cost_usd  — what the classifier call for this task cost. Logged per
+#                       row so the report can present savings NET of routing
+#                       overhead instead of quietly excluding it.
+#   classifier_agreed — whether the predicted label matched the hand label
+#                       (NULL when unlabelled or when labels were used directly).
 _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN simulated INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE runs ADD COLUMN response_text TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE runs ADD COLUMN effort TEXT",
+    "ALTER TABLE runs ADD COLUMN roster TEXT NOT NULL DEFAULT 'cross_vendor'",
+    "ALTER TABLE runs ADD COLUMN routing_cost_usd REAL NOT NULL DEFAULT 0.0",
+    "ALTER TABLE runs ADD COLUMN classifier_agreed INTEGER",
 ]
 
 
@@ -98,6 +117,10 @@ def log_run(
     success: bool,
     simulated: bool = False,
     response_text: str = "",
+    effort: Optional[str] = None,
+    roster: str = "cross_vendor",
+    routing_cost_usd: float = 0.0,
+    classifier_agreed: Optional[bool] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -114,6 +137,13 @@ def log_run(
             predate this column; used by router.judge_validation to re-score
             rubric_judge answers with a second judge without re-calling the
             original model.
+        effort: Effort level this run was produced at, or None if no
+            effort/thinking config was sent (the v1 shape).
+        roster: Which model ladder this run routed across.
+        routing_cost_usd: Cost of the classifier call that produced this run's
+            routing decision. Zero when labels were used directly.
+        classifier_agreed: Whether the classifier's prediction matched the
+            task's hand label, or None when there was nothing to compare.
 
     Returns:
         The auto-generated row id.
@@ -126,13 +156,16 @@ def log_run(
             INSERT INTO runs (
                 run_group, strategy, task_id, task_type, difficulty, model,
                 input_tokens, output_tokens, cost_usd, latency_ms,
-                quality_score, success, simulated, response_text
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                quality_score, success, simulated, response_text,
+                effort, roster, routing_cost_usd, classifier_agreed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
                 input_tokens, output_tokens, cost_usd, latency_ms,
                 quality_score, int(success), int(simulated), response_text,
+                effort, roster, routing_cost_usd,
+                None if classifier_agreed is None else int(classifier_agreed),
             ),
         )
         conn.commit()

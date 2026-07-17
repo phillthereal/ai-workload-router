@@ -21,6 +21,8 @@ normalized output and metadata (tokens, latency).
 
 from __future__ import annotations
 
+from typing import Optional
+
 from ..config import get_model
 from ..secrets import force_mock, get_api_key
 from .base import Adapter, Response
@@ -47,11 +49,16 @@ class _FallbackToMockAdapter(Adapter):
         self.primary = primary
         self.model_name = model_name
 
-    def complete(self, prompt: str) -> Response:
-        response = self.primary.complete(prompt)
+    def complete(
+        self,
+        prompt: str,
+        effort: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+    ) -> Response:
+        response = self.primary.complete(prompt, effort, max_tokens)
         if response.success:
             return response
-        return MockAdapter(self.model_name).complete(prompt)
+        return MockAdapter(self.model_name).complete(prompt, effort, max_tokens)
 
 
 def _build_real_adapter(model_name: str, provider: str, api_key: str) -> Adapter:

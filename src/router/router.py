@@ -1,18 +1,43 @@
 """
-Rules-based router (P0-3).
+Rules-based router (P0-3, extended in v2).
 
-Classifies each incoming task by (task_type, difficulty) and picks a model
-from a documented default mapping. Respects an optional `quality_floor` that
+Classifies each incoming task by (task_type, difficulty) and picks a model from
+a documented default mapping. Respects an optional `quality_floor` that
 escalates the choice to a stronger tier regardless of what the default policy
 would have picked, and records a human-readable reason for every decision.
+
+v2 adds three things, in the order they now execute:
+
+  1. ROSTER (router.config.Roster) — which budget/mid/frontier ladder to route
+     across. The published v1 result routes across three vendors; `claude_tiers`
+     routes across one vendor's ladder. Selectable, not hardcoded, so testing
+     the second does not invalidate the first.
+
+  2. GATES (router.gates) — hard capability constraints, applied BEFORE the
+     quality policy. A model that cannot physically take the prompt (context
+     overflow) or the requested effort is removed from consideration, and the
+     router escalates to the next tier up rather than failing. Gates are
+     arithmetic, not judgement: they cost nothing and cannot be wrong.
+
+  3. EFFORT (router.config.EFFORT_LEVELS) — the second dial. Effort trades
+     thinking tokens (billed as output, so: cost) against quality WITHOUT
+     changing model. It exists only within a single vendor's ladder, which is
+     what makes the `claude_tiers` roster a genuinely different experiment
+     rather than a rerun of v1 with a smaller price range.
+
+The (task_type, difficulty) inputs may come from a task's hand-authored labels
+(v1 behavior, and the control arm) or from router.classifier (v2, and what a
+real deployment would actually have). The router itself does not care which —
+it takes the pair and routes. See run_benchmark.py for how the arms are wired.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from .config import BUDGET_MODEL, FRONTIER_MODEL, MID_MODEL, MODEL_TIER, TIER_ORDER
+from . import gates
+from .config import EFFORT_STATES, MODEL_TIER, TIER_ORDER, Roster, get_roster
 
 
 @dataclass
@@ -31,21 +56,39 @@ class RoutingDecision:
     quality_floor_applied: bool
     """True if a quality floor override forced a stronger model."""
 
+    effort: Optional[str] = None
+    """Effort level to request from the chosen model, or None to send no
+    thinking/effort config at all (the v1 request shape). See
+    router.config.EFFORT_OFF for why None and "off" are different."""
 
-# Documented default routing policy: (task_type, difficulty) -> model.
+    roster: str = "cross_vendor"
+    """Name of the roster this decision was made within."""
+
+    gated_models: list[str] = field(default_factory=list)
+    """Models a capability gate removed from consideration for this task.
+    Empty on the overwhelming majority of tasks — populated only when a prompt
+    genuinely does not fit somewhere, which is the point: gates should be
+    invisible until they matter, and auditable when they do."""
+
+
+# Documented default routing policy: (task_type, difficulty) -> tier.
 #
-#   - easy classification/extraction/short_generation -> cheapest (budget) model
-#   - medium classification/extraction/short_generation -> mid-tier model
-#   - hard classification/extraction/short_generation -> frontier model
-#   - ANY reasoning task, regardless of difficulty, -> frontier model, because
+#   - easy classification/extraction/short_generation -> cheapest (budget) tier
+#   - medium classification/extraction/short_generation -> mid tier
+#   - hard classification/extraction/short_generation -> frontier tier
+#   - ANY reasoning task, regardless of difficulty, -> frontier tier, because
 #     multi-step logic errors are costlier than the savings from a cheaper
 #     model and cheap/mid models degrade sharply on reasoning (see
 #     router.scoring.QUALITY_PROFILE).
+#
+# NOTE: this maps to TIERS, not to model names. v1 mapped straight to model
+# names, which silently welded the policy to one roster. The indirection is what
+# lets the same documented policy be evaluated against either ladder.
 DEFAULT_ROUTING_RULES: dict[str, dict[str, str]] = {
-    "classification": {"easy": BUDGET_MODEL, "medium": MID_MODEL, "hard": FRONTIER_MODEL},
-    "extraction": {"easy": BUDGET_MODEL, "medium": MID_MODEL, "hard": FRONTIER_MODEL},
-    "short_generation": {"easy": BUDGET_MODEL, "medium": MID_MODEL, "hard": FRONTIER_MODEL},
-    "reasoning": {"easy": FRONTIER_MODEL, "medium": FRONTIER_MODEL, "hard": FRONTIER_MODEL},
+    "classification": {"easy": "budget", "medium": "mid", "hard": "frontier"},
+    "extraction": {"easy": "budget", "medium": "mid", "hard": "frontier"},
+    "short_generation": {"easy": "budget", "medium": "mid", "hard": "frontier"},
+    "reasoning": {"easy": "frontier", "medium": "frontier", "hard": "frontier"},
 }
 
 # quality_floor overrides: the first (floor, tier) whose floor the given
@@ -58,75 +101,169 @@ def _tier_of(model: str) -> str:
     return MODEL_TIER.get(model, "budget")
 
 
-def _model_for_tier(tier: str) -> str:
-    for name, t in MODEL_TIER.items():
-        if t == tier:
-            return name
-    raise KeyError(f"No model registered for tier={tier!r}")
-
-
-def _escalate_for_floor(model: str, quality_floor: float) -> str:
-    """Escalate `model` to the minimum tier required by `quality_floor`, if any."""
-    min_tier = next((tier for floor, tier in _FLOOR_MIN_TIER if quality_floor >= floor), None)
+def _escalate_tier_for_floor(tier: str, quality_floor: float) -> str:
+    """Raise `tier` to the minimum required by `quality_floor`, if any."""
+    min_tier = next((t for floor, t in _FLOOR_MIN_TIER if quality_floor >= floor), None)
     if min_tier is None:
-        return model
-    if TIER_ORDER.index(_tier_of(model)) >= TIER_ORDER.index(min_tier):
-        return model
-    return _model_for_tier(min_tier)
+        return tier
+    if TIER_ORDER.index(tier) >= TIER_ORDER.index(min_tier):
+        return tier
+    return min_tier
+
+
+def _effort_for_tier(
+    tier: str, effort_policy: Optional[dict[str, Optional[str]]]
+) -> Optional[str]:
+    """Look up the effort level this policy assigns to `tier`."""
+    if not effort_policy:
+        return None
+    return effort_policy.get(tier)
+
+
+def _apply_gates(
+    roster: Roster, tier: str, prompt: str, effort: Optional[str]
+) -> tuple[str, Optional[str], list[str], list[str]]:
+    """
+    Escalate past any tier whose model fails a capability gate.
+
+    Walks up the tier ladder from `tier` until it finds a model that can
+    physically take this prompt at this effort. If the requested effort is what
+    blocks an otherwise-viable model, the effort is dropped for that model
+    rather than escalating to a pricier one — a Haiku answer with no thinking
+    is cheaper than a Sonnet answer with thinking, and effort is a preference
+    where context is a hard limit.
+
+    Returns:
+        (final_tier, final_effort, gated_model_names, gate_reasons)
+    """
+    gated: list[str] = []
+    reasons: list[str] = []
+
+    for candidate_tier in TIER_ORDER[TIER_ORDER.index(tier):]:
+        model = roster.model_for_tier(candidate_tier)
+
+        if not gates.fits_context(model, prompt):
+            gated.append(model)
+            reasons.append(gates.check(model, prompt, effort).reason)
+            continue
+
+        if not gates.effort_supported(model, effort):
+            # Model fits; only the effort is unsupported. Keep the model, drop
+            # the dial.
+            reasons.append(
+                f"{model} does not support effort={effort!r} — routing it with "
+                f"no effort config rather than escalating tier"
+            )
+            return candidate_tier, None, gated, reasons
+
+        return candidate_tier, effort, gated, reasons
+
+    # Every tier gated out. Return the frontier anyway: the frontier model is
+    # the largest context in the roster, so if the prompt does not fit there it
+    # does not fit anywhere, and failing loudly at the API is more honest than
+    # this function inventing a route that cannot work.
+    reasons.append(
+        "every tier failed a capability gate — falling through to frontier; "
+        "this task is expected to fail at the provider"
+    )
+    return "frontier", effort, gated, reasons
 
 
 def route_task(
     task: dict[str, Any],
     quality_floor: Optional[float] = None,
     routing_rules: Optional[dict[str, dict[str, str]]] = None,
+    roster_name: Optional[str] = None,
+    effort_policy: Optional[dict[str, Optional[str]]] = None,
+    task_type: Optional[str] = None,
+    difficulty: Optional[str] = None,
 ) -> RoutingDecision:
     """
-    Route a task to a model based on task_type + difficulty, with an optional
-    quality_floor override.
+    Route a task to a (model, effort) pair.
 
     Args:
-        task: Task dict with at least id, task_type, difficulty.
+        task: Task dict with at least `id`. `prompt` is required for capability
+            gates; `task_type`/`difficulty` are read from here unless
+            overridden by the arguments below.
         quality_floor: If set, forces at least the mid tier (>=0.85) or the
-                       frontier tier (>=0.95) regardless of the default policy.
-        routing_rules: Nested {task_type: {difficulty: model}} mapping.
-                       Defaults to DEFAULT_ROUTING_RULES.
+            frontier tier (>=0.95) regardless of the default policy.
+        routing_rules: Nested {task_type: {difficulty: tier}} mapping.
+            Defaults to DEFAULT_ROUTING_RULES.
+        roster_name: Which ladder to route across. Defaults to the published v1
+            roster (`cross_vendor`), so existing callers are unaffected.
+        effort_policy: {tier: effort_level_or_None}. Absent or None means send
+            no effort/thinking config, reproducing v1's request shape exactly.
+        task_type: Overrides `task['task_type']`. This is the seam
+            router.classifier plugs into — a predicted label routes through the
+            identical policy as a hand-authored one, which is what makes the
+            classified and labelled arms comparable.
+        difficulty: Overrides `task['difficulty']`.
 
     Returns:
-        RoutingDecision with chosen_model, reason, and quality_floor_applied.
+        RoutingDecision with chosen_model, effort, reason, and any gate hits.
 
     Raises:
-        KeyError: If task_type/difficulty has no matching rule.
+        KeyError: If task_type/difficulty has no matching rule, or roster_name
+            is not a known roster.
+        ValueError: If effort_policy names an unknown effort level.
     """
     rules = routing_rules or DEFAULT_ROUTING_RULES
-    task_type = task["task_type"]
-    difficulty = task["difficulty"]
+    roster = get_roster(roster_name)
+    resolved_type = task_type if task_type is not None else task["task_type"]
+    resolved_difficulty = (
+        difficulty if difficulty is not None else task["difficulty"]
+    )
 
-    if task_type not in rules:
-        raise KeyError(f"No routing rule for task_type={task_type!r}")
-    type_rules = rules[task_type]
-    if difficulty not in type_rules:
-        raise KeyError(f"No routing rule for task_type={task_type!r}, difficulty={difficulty!r}")
+    if effort_policy:
+        for value in effort_policy.values():
+            if value is not None and value not in EFFORT_STATES:
+                raise ValueError(
+                    f"Unknown effort level {value!r}; expected None or one of "
+                    f"{EFFORT_STATES}"
+                )
 
-    model = type_rules[difficulty]
-    reason = f"{task_type}/{difficulty} -> {model} per default routing policy"
+    if resolved_type not in rules:
+        raise KeyError(f"No routing rule for task_type={resolved_type!r}")
+    type_rules = rules[resolved_type]
+    if resolved_difficulty not in type_rules:
+        raise KeyError(
+            f"No routing rule for task_type={resolved_type!r}, "
+            f"difficulty={resolved_difficulty!r}"
+        )
+
+    tier = type_rules[resolved_difficulty]
+    reason_parts = [f"{resolved_type}/{resolved_difficulty} -> {tier} tier per default policy"]
     quality_floor_applied = False
 
     if quality_floor is not None:
-        escalated = _escalate_for_floor(model, quality_floor)
-        if escalated != model:
-            reason = (
-                f"{task_type}/{difficulty} would default to {model}, but "
+        escalated = _escalate_tier_for_floor(tier, quality_floor)
+        if escalated != tier:
+            reason_parts.append(
                 f"quality_floor={quality_floor} requires at least the "
-                f"{_tier_of(escalated)} tier -> escalated to {escalated}"
+                f"{escalated} tier -> escalated from {tier}"
             )
-            model = escalated
+            tier = escalated
             quality_floor_applied = True
+
+    effort = _effort_for_tier(tier, effort_policy)
+
+    prompt = task.get("prompt", "")
+    tier, effort, gated, gate_reasons = _apply_gates(roster, tier, prompt, effort)
+    reason_parts.extend(gate_reasons)
+
+    model = roster.model_for_tier(tier)
+    reason_parts.append(
+        f"chose {model} (roster={roster.name}, effort={effort!r})"
+    )
 
     return RoutingDecision(
         task_id=task["id"],
         chosen_model=model,
-        reason=reason,
+        reason="; ".join(reason_parts),
         quality_floor_applied=quality_floor_applied,
+        effort=effort,
+        roster=roster.name,
+        gated_models=gated,
     )
 
 
@@ -135,6 +272,6 @@ def get_routing_rules() -> dict[str, dict[str, str]]:
     Retrieve the current default routing rules.
 
     Returns:
-        Nested dict mapping task_type -> difficulty -> model name.
+        Nested dict mapping task_type -> difficulty -> tier name.
     """
     return DEFAULT_ROUTING_RULES

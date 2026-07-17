@@ -13,6 +13,7 @@ the Anthropic adapter and the base.py contract).
 from __future__ import annotations
 
 import time
+from typing import Optional
 
 from .base import Adapter, Response
 
@@ -29,7 +30,21 @@ class OpenAICompatibleAdapter(Adapter):
         self.api_key = api_key
         self.base_url = base_url
 
-    def complete(self, prompt: str) -> Response:
+    def complete(
+        self,
+        prompt: str,
+        effort: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+    ) -> Response:
+        """
+        Complete `prompt` against an OpenAI-compatible endpoint.
+
+        `effort` is accepted and ignored: it is an Anthropic parameter with no
+        equivalent here. Neither model in the cross-vendor roster that uses this
+        adapter (gpt-4o-mini, deepseek-chat) supports it, so router.gates never
+        constructs such a pairing — the parameter is in the signature only to
+        satisfy the Adapter contract.
+        """
         import httpx  # lazy import — keeps the offline path dependency-free
 
         headers = {
@@ -39,7 +54,7 @@ class OpenAICompatibleAdapter(Adapter):
         body = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": _MAX_TOKENS,
+            "max_tokens": max_tokens or _MAX_TOKENS,
         }
 
         last_latency_ms = 0.0

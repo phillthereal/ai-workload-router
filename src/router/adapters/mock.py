@@ -22,10 +22,25 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from typing import Optional
 
-from ..config import MODEL_TIER
-from ..scoring import QUALITY_PROFILE
+from ..config import EFFORT_OFF, MODEL_TIER
 from .base import Adapter, Response
+
+# NOTE: router.scoring is imported lazily inside complete(), NOT at module
+# level, and that is load-bearing rather than stylistic.
+#
+# There is an import cycle here by design: scoring imports adapters.base (for
+# the Response type) and this module imports scoring (for the shared simulation
+# tables). Keeping the tables in one place is worth the cycle — the mock
+# adapter and the mock judge MUST agree about how good a model is, and two
+# copies of that data would drift.
+#
+# At module level the cycle resolved only by luck of import order: it worked
+# when something imported router.adapters before router.scoring, and raised
+# ImportError on a partially-initialized module when anything imported scoring
+# first. Deferring the import to call time removes the ordering dependency
+# entirely.
 
 _POSITIVE_WORDS = {
     "amazing", "great", "excellent", "love", "best", "fantastic", "good",
@@ -115,8 +130,26 @@ class MockAdapter(Adapter):
         self.model_name = model_name
         self.tier = MODEL_TIER.get(model_name, "mid")
 
-    def complete(self, prompt: str) -> Response:
-        """Fabricate a deterministic Response for `prompt` (no network call)."""
+    def complete(
+        self,
+        prompt: str,
+        effort: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+    ) -> Response:
+        """
+        Fabricate a deterministic Response for `prompt` (no network call).
+
+        `effort` is simulated the way it actually behaves: raising it spends
+        more thinking tokens (billed as output, hence more cost) and buys some
+        quality back. The simulated magnitudes come from
+        router.scoring.EFFORT_OUTPUT_MULTIPLIER and are PLACEHOLDER DATA — they
+        exist so the (model x effort) grid is runnable and testable offline for
+        free, NOT so its numbers can be reported. Only a live run produces a
+        publishable effort result.
+        """
+        # Lazy import — see the module-level note on the router.scoring cycle.
+        from ..scoring import EFFORT_OUTPUT_MULTIPLIER, QUALITY_PROFILE
+
         start = time.perf_counter()
 
         task_type = _infer_task_type(prompt)
@@ -135,10 +168,19 @@ class MockAdapter(Adapter):
             text = _filler_text(prompt, self.tier, difficulty)
 
         input_tokens = max(1, len(prompt) // 4)
-        output_tokens = max(1, len(text) // 4)
+
+        # Thinking tokens are output tokens. A visible answer of the same length
+        # costs more at higher effort because of what was spent reasoning before
+        # it — so the multiplier lands on output_tokens, not on `text`.
+        multiplier = EFFORT_OUTPUT_MULTIPLIER.get(effort or EFFORT_OFF, 1.0)
+        output_tokens = max(1, int((len(text) // 4) * multiplier))
 
         latency_ms = _LATENCY_BASE_MS[self.tier] + _hash_float(self.model_name, prompt, "latency") * 200
+        latency_ms *= multiplier  # more thinking, more wall-clock
         latency_ms += (time.perf_counter() - start) * 1000
+
+        if max_tokens is not None and output_tokens > max_tokens:
+            output_tokens = max_tokens
 
         return Response(
             text=text,
@@ -147,4 +189,5 @@ class MockAdapter(Adapter):
             latency_ms=latency_ms,
             model=self.model_name,
             simulated=True,
+            effort=effort,
         )

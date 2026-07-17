@@ -73,6 +73,35 @@ class BenchmarkReport:
     "savings_monthly"}, extrapolated from this run's per-task cost. Assumes
     production traffic resembles the benchmark's task mix — see the caveat
     printed alongside this section in the report."""
+    routing_cost: float = 0.0
+    """Total cost of the classifier calls that produced this run's routing
+    decisions. Zero when the router read hand-authored labels (the v1 arm).
+
+    ROUTING IS NOT FREE. A router that decides where to send a task by asking a
+    model has to pay for asking. Reporting a savings figure that excludes this
+    is reporting a number the deployment will not see."""
+    net_router_cost: float = 0.0
+    """router_cost + routing_cost — what the router arm ACTUALLY costs."""
+    net_cost_reduction_pct: float = 0.0
+    """Cost reduction computed against net_router_cost. This is the headline:
+    `cost_reduction_pct` is retained alongside it as the gross figure, so the
+    overhead is visible as the gap between the two rather than hidden.
+
+    For any run that used labels (routing_cost == 0) net and gross are equal by
+    construction — which is why adopting the net figure as the headline does
+    not restate the published v1 result."""
+    routing_overhead_pct_of_savings: float = 0.0
+    """routing_cost as a percentage of the gross savings it generated. The
+    number that answers "is the router worth its own overhead?" — and the one
+    worth leading with, because it has a denominator."""
+    classifier_agreement_pct: Optional[float] = None
+    """Percentage of tasks where the classifier's predicted (task_type,
+    difficulty) matched the hand-authored label. None when labels were used
+    directly (nothing was predicted, so there is nothing to agree).
+
+    THIS IS NOT AN ACCURACY SCORE. The labels are one person's judgement on 25
+    self-authored tasks. Disagreement means the classifier and the author
+    differ; it does not establish which is right."""
 
 
 def build_report(
@@ -93,23 +122,48 @@ def build_report(
     router = summary.get(ROUTER_STRATEGY, {"total_cost": 0.0, "mean_quality": 0.0, "n": 0})
     frontier = summary.get(BASELINE_STRATEGY, {"total_cost": 0.0, "mean_quality": 0.0, "n": 0})
 
+    rows = db.fetch_runs(run_group, db_path=db_path)
+    model_simulated = _model_simulated_map(rows)
+
+    # Routing overhead is charged to the router arm only: the frontier-only
+    # baseline does not route, so it has no classifier call to pay for.
+    router_rows = [r for r in rows if r["strategy"] == ROUTER_STRATEGY]
+    routing_cost = sum(r.get("routing_cost_usd") or 0.0 for r in router_rows)
+    net_router_cost = router["total_cost"] + routing_cost
+
     cost_reduction_pct = (
         (frontier["total_cost"] - router["total_cost"]) / frontier["total_cost"] * 100
         if frontier["total_cost"]
         else 0.0
     )
+    net_cost_reduction_pct = (
+        (frontier["total_cost"] - net_router_cost) / frontier["total_cost"] * 100
+        if frontier["total_cost"]
+        else 0.0
+    )
+    gross_savings = frontier["total_cost"] - router["total_cost"]
+    routing_overhead_pct_of_savings = (
+        routing_cost / gross_savings * 100 if gross_savings > 0 else 0.0
+    )
+
+    agreements = [
+        r["classifier_agreed"] for r in router_rows if r.get("classifier_agreed") is not None
+    ]
+    classifier_agreement_pct = (
+        sum(agreements) / len(agreements) * 100 if agreements else None
+    )
+
     quality_retention_pct = (
         router["mean_quality"] / frontier["mean_quality"] * 100
         if frontier["mean_quality"]
         else 0.0
     )
+    # Judged on the NET figure. For label-driven runs routing_cost is 0, so this
+    # is identical to the gross test and the published v1 verdict is unchanged.
     hypothesis_passed = (
-        cost_reduction_pct >= COST_REDUCTION_TARGET_PCT
+        net_cost_reduction_pct >= COST_REDUCTION_TARGET_PCT
         and quality_retention_pct >= QUALITY_RETENTION_TARGET_PCT
     )
-
-    rows = db.fetch_runs(run_group, db_path=db_path)
-    model_simulated = _model_simulated_map(rows)
 
     latency_raw = db.latency_by_strategy(run_group, db_path=db_path)
     latency_stats = {strat: _latency_stats(values) for strat, values in latency_raw.items()}
@@ -121,7 +175,10 @@ def build_report(
         else 0.0
     )
 
-    cost_per_task_router = router["total_cost"] / router["n"] if router["n"] else 0.0
+    # Projections extrapolate the NET per-task rate — at 1M requests/month the
+    # routing overhead is 1M classifier calls, so excluding it would overstate
+    # the saving by exactly the amount that grows fastest with volume.
+    cost_per_task_router = net_router_cost / router["n"] if router["n"] else 0.0
     cost_per_task_frontier = frontier["total_cost"] / frontier["n"] if frontier["n"] else 0.0
     projections = [
         {
@@ -153,6 +210,11 @@ def build_report(
         cost_per_task_router=cost_per_task_router,
         cost_per_task_frontier=cost_per_task_frontier,
         projections=projections,
+        routing_cost=routing_cost,
+        net_router_cost=net_router_cost,
+        net_cost_reduction_pct=net_cost_reduction_pct,
+        routing_overhead_pct_of_savings=routing_overhead_pct_of_savings,
+        classifier_agreement_pct=classifier_agreement_pct,
     )
 
 
@@ -241,13 +303,61 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     lines.append("")
     lines.append("## Headline")
     lines.append("")
-    lines.append(f"- **Cost reduction vs baseline:** {report.cost_reduction_pct:.1f}%")
+    lines.append(
+        f"- **Cost reduction vs baseline:** {report.net_cost_reduction_pct:.1f}% "
+        f"(net of routing overhead)"
+    )
     lines.append(f"- **Quality retention:** {report.quality_retention_pct:.1f}% of baseline")
     verdict = "PASSED" if report.hypothesis_passed else "NOT MET"
     lines.append(
         f"- **Hypothesis (>= {COST_REDUCTION_TARGET_PCT:.0f}% cost reduction, "
         f">= {QUALITY_RETENTION_TARGET_PCT:.0f}% quality retention): {verdict}**"
     )
+    lines.append("")
+    lines.append("## Routing overhead")
+    lines.append("")
+    if report.routing_cost > 0:
+        lines.append(
+            "This run predicted each task's `(task_type, difficulty)` from the "
+            "prompt using the roster's budget model, rather than reading a "
+            "hand-authored label. That is what a real deployment has — and it "
+            "means the router costs money to run. That cost is charged against "
+            "the savings below, not excluded from them."
+        )
+        lines.append("")
+        lines.append("| Metric | Value |")
+        lines.append("|---|---|")
+        lines.append(f"| Router model spend | ${report.router_cost:.6f} |")
+        lines.append(f"| Routing (classifier) spend | ${report.routing_cost:.6f} |")
+        lines.append(f"| **Router total, net** | **${report.net_router_cost:.6f}** |")
+        lines.append(f"| Cost reduction, gross | {report.cost_reduction_pct:.1f}% |")
+        lines.append(f"| **Cost reduction, net** | **{report.net_cost_reduction_pct:.1f}%** |")
+        lines.append(
+            f"| **Routing overhead as % of savings** | "
+            f"**{report.routing_overhead_pct_of_savings:.1f}%** |"
+        )
+        if report.classifier_agreement_pct is not None:
+            lines.append(
+                f"| Classifier agreement with hand labels | "
+                f"{report.classifier_agreement_pct:.1f}% |"
+            )
+        lines.append("")
+        if report.classifier_agreement_pct is not None:
+            lines.append(
+                "*Agreement is measured against labels authored by one person "
+                "for this task set. It is a sanity check, not an accuracy "
+                "benchmark: a disagreement means the classifier and the author "
+                "differ, not that the classifier is wrong.*"
+            )
+    else:
+        lines.append(
+            "This run routed on the task set's hand-authored "
+            "`(task_type, difficulty)` labels, so routing cost nothing and the "
+            "net and gross savings figures are identical. Note that a real "
+            "deployment does not have those labels — it has a prompt. Re-run "
+            "with `--classify` to pay for predicting them and see the net "
+            "figure move."
+        )
     lines.append("")
     lines.append("## Latency")
     lines.append("")
