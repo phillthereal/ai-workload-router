@@ -78,5 +78,39 @@ class TestHardTaskSet(unittest.TestCase):
             self.assertEqual(task["difficulty"], "hard")
 
 
+class TestVerifierFlag(unittest.TestCase):
+    """--verifier plumbing: the CLI flag that picks the cascade's quality-gate
+    model (see router.cascade.run_cascade's cost-vs-independence trade-off)."""
+
+    def test_verifier_defaults_to_none(self):
+        """Omitting --verifier must fall through to run_cascade's own default
+        (the roster's budget tier) rather than the CLI silently picking one."""
+        args = rb._build_parser().parse_args(["--strategy", "cascade"])
+        self.assertIsNone(args.verifier)
+
+    def test_verifier_flag_sets_model_name(self):
+        args = rb._build_parser().parse_args(
+            ["--strategy", "cascade", "--verifier", "claude-haiku-4-5"]
+        )
+        self.assertEqual(args.verifier, "claude-haiku-4-5")
+
+    def test_explicit_verifier_does_not_collide_with_default_verifier_report(self):
+        """A cascade run with an explicit --verifier is a different experiment
+        from the same roster/strategy/tasks with run_cascade's own default —
+        it must get its own filename rather than silently overwriting the
+        default-verifier report (this collision actually happened once; see
+        docs/V2_FINDINGS.md's verifier-economics note)."""
+        default_verifier = rb._report_path(
+            "claude_tiers", all_real=True, classify=False, effort_policy=None,
+            strategy="cascade", tasks=None, verifier=None,
+        )
+        haiku_verifier = rb._report_path(
+            "claude_tiers", all_real=True, classify=False, effort_policy=None,
+            strategy="cascade", tasks=None, verifier="claude-haiku-4-5",
+        )
+        self.assertNotEqual(default_verifier.name, haiku_verifier.name)
+        self.assertIn("verifier-claude-haiku-4-5", haiku_verifier.name)
+
+
 if __name__ == "__main__":
     unittest.main()

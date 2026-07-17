@@ -110,5 +110,25 @@ class TestDefaultLadder(unittest.TestCase):
         self.assertEqual(result.tiers_used, [roster.budget, roster.frontier])
 
 
+class TestVerifierModelSelection(unittest.TestCase):
+    """verifier_model is configurable and defaults to the roster's BUDGET
+    tier (cheap, self-verifying) rather than MID (pricier, independent) —
+    see run_cascade's docstring for the trade-off this default makes."""
+
+    @patch.object(cascade, "verify_adequacy", return_value=(0.9, 0.0001))
+    def test_default_verifier_is_roster_budget(self, mock_verify):
+        roster = get_roster("claude_tiers")
+        run_cascade(TASK, roster_name="claude_tiers")
+        called_verifier = mock_verify.call_args.args[2]
+        self.assertEqual(called_verifier, roster.budget)
+
+    @patch.object(cascade, "verify_adequacy", return_value=(0.9, 0.0001))
+    def test_explicit_verifier_model_overrides_default(self, mock_verify):
+        roster = get_roster("claude_tiers")
+        run_cascade(TASK, roster_name="claude_tiers", verifier_model=roster.mid)
+        called_verifier = mock_verify.call_args.args[2]
+        self.assertEqual(called_verifier, roster.mid)
+
+
 if __name__ == "__main__":
     unittest.main()

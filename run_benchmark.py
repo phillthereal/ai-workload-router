@@ -99,6 +99,7 @@ def _report_path(
     effort_policy: Optional[dict[str, Optional[str]]],
     strategy: str = "router",
     tasks: Optional[str] = None,
+    verifier: Optional[str] = None,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -118,6 +119,15 @@ def _report_path(
 
     A partially-simulated run can only ever write to a `_simulated_` name, so
     fabricated mock numbers can never land on any published path.
+
+    `verifier` (cascade only) is likewise part of the run shape: a cascade run
+    with an explicit `--verifier` overriding run_cascade's default is a
+    DIFFERENT experiment from the same roster/strategy/tasks with the default
+    verifier — same as --classify above, it must not silently overwrite the
+    default-verifier report under the same filename. (This guard exists
+    because a live `--verifier claude-haiku-4-5` run once did exactly that
+    clobber before the tag was added — see git history / docs/V2_FINDINGS.md's
+    verifier-economics note.)
     """
     data_dir = Path(__file__).parent / "data"
     tag = _tasks_tag(tasks)
@@ -131,6 +141,7 @@ def _report_path(
         and not classify
         and not effort_policy
         and tag is None
+        and verifier is None
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -142,6 +153,8 @@ def _report_path(
         parts.append("classified")
     if effort_policy:
         parts.append("effort")
+    if verifier:
+        parts.append(f"verifier-{verifier}")
     if tag:
         parts.append(tag)
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
@@ -209,6 +222,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "quality retention on tasks that actually separate the tiers."
         ),
     )
+    parser.add_argument(
+        "--verifier",
+        default=None,
+        help=(
+            "Cascade only: model name to use as the quality-gate verifier "
+            "(e.g. claude-haiku-4-5). Omit to use run_cascade's default (the "
+            "roster's BUDGET tier — cheap but self-verifying; pass the "
+            "roster's mid model here for an independent grader instead). See "
+            "router.cascade.run_cascade's docstring for the cost-vs-"
+            "independence trade-off this flag controls."
+        ),
+    )
     return parser
 
 
@@ -241,6 +266,7 @@ def main(argv: Optional[list[str]] = None) -> None:
                 result = run_cascade(
                     task,
                     roster_name=args.roster,
+                    verifier_model=args.verifier,
                     escalate_threshold=args.escalate_threshold,
                 )
                 response = result.response
@@ -311,7 +337,8 @@ def main(argv: Optional[list[str]] = None) -> None:
     print_report(report)
 
     out_path = _report_path(
-        args.roster, report.all_real, args.classify, effort_policy, args.strategy, args.tasks
+        args.roster, report.all_real, args.classify, effort_policy, args.strategy, args.tasks,
+        args.verifier,
     )
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")
