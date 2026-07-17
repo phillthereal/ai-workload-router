@@ -85,6 +85,16 @@ MODELS: dict[str, ModelConfig] = {
         cost_per_1m_output_tokens=1.10,
         context_window_tokens=64_000,
     ),
+    "gemini-2.0-flash": ModelConfig(
+        name="gemini-2.0-flash",
+        provider="google",
+        display_name="Gemini 2.0 Flash",
+        # Approximate public rates — verify against current Google pricing.
+        cost_per_1m_input_tokens=0.10,
+        cost_per_1m_output_tokens=0.40,
+        context_window_tokens=1_000_000,
+        supports_effort=False,
+    ),
     # --- Anthropic tier ladder (v2 `claude_tiers` roster) --------------------
     # Haiku 4.5's 200K context is 5x smaller than its stablemates' 1M. That is
     # the single most consequential line in this file for routing: it makes
@@ -182,6 +192,16 @@ ROSTERS: dict[str, Roster] = {
         mid="claude-sonnet-5",
         frontier="claude-opus-4-8",
     ),
+    # v2: 4th vendor (Google) swapped in at budget, widening the output price
+    # range beyond "cross_vendor"'s ~41x. Tests whether cross-vendor savings
+    # climb past the v1/v2 ceiling or plateau once price range is no longer
+    # the binding constraint.
+    "cross_vendor_4": Roster(
+        name="cross_vendor_4",
+        budget="gemini-2.0-flash",
+        mid="deepseek-chat",
+        frontier="claude-opus-4-8",
+    ),
 }
 
 DEFAULT_ROSTER = "cross_vendor"
@@ -216,6 +236,7 @@ MODEL_TIER: dict[str, str] = {
     "claude-haiku-4-5": "budget",
     "claude-sonnet-5": "mid",
     "claude-opus-4-8": "frontier",
+    "gemini-2.0-flash": "budget",
 }
 
 # Valid values for output_config.effort on models where supports_effort is True.
