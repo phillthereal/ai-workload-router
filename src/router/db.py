@@ -14,6 +14,7 @@ optional `db_path` override for tests.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -40,7 +41,8 @@ CREATE TABLE IF NOT EXISTS runs (
     effort TEXT,
     roster TEXT NOT NULL DEFAULT 'cross_vendor',
     routing_cost_usd REAL NOT NULL DEFAULT 0.0,
-    classifier_agreed INTEGER
+    classifier_agreed INTEGER,
+    verifier_scores TEXT
 )
 """
 
@@ -61,6 +63,13 @@ CREATE TABLE IF NOT EXISTS runs (
 #                       overhead instead of quietly excluding it.
 #   classifier_agreed — whether the predicted label matched the hand label
 #                       (NULL when unlabelled or when labels were used directly).
+#   verifier_scores   — JSON list of the cascade verifier's per-tier adequacy
+#                       scores for this task, e.g. "[0.85]" (NULL for non-cascade
+#                       strategies, which have no verifier). Persisting it makes
+#                       the escalate_threshold tunable directly from the run log
+#                       instead of reconstructing scores by cache replay; see
+#                       tune_cascade.py for why that reconstruction was needed
+#                       before this column existed.
 _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN simulated INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE runs ADD COLUMN response_text TEXT NOT NULL DEFAULT ''",
@@ -68,6 +77,7 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN roster TEXT NOT NULL DEFAULT 'cross_vendor'",
     "ALTER TABLE runs ADD COLUMN routing_cost_usd REAL NOT NULL DEFAULT 0.0",
     "ALTER TABLE runs ADD COLUMN classifier_agreed INTEGER",
+    "ALTER TABLE runs ADD COLUMN verifier_scores TEXT",
 ]
 
 
@@ -121,6 +131,7 @@ def log_run(
     roster: str = "cross_vendor",
     routing_cost_usd: float = 0.0,
     classifier_agreed: Optional[bool] = None,
+    verifier_scores: Optional[list[float]] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -144,6 +155,10 @@ def log_run(
             routing decision. Zero when labels were used directly.
         classifier_agreed: Whether the classifier's prediction matched the
             task's hand label, or None when there was nothing to compare.
+        verifier_scores: The cascade verifier's per-tier adequacy scores for
+            this task (JSON-encoded on write). None for non-cascade strategies,
+            which have no verifier. Persisting it lets the escalate_threshold be
+            re-tuned directly from the log instead of by cache replay.
 
     Returns:
         The auto-generated row id.
@@ -157,8 +172,9 @@ def log_run(
                 run_group, strategy, task_id, task_type, difficulty, model,
                 input_tokens, output_tokens, cost_usd, latency_ms,
                 quality_score, success, simulated, response_text,
-                effort, roster, routing_cost_usd, classifier_agreed
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                effort, roster, routing_cost_usd, classifier_agreed,
+                verifier_scores
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
@@ -166,6 +182,7 @@ def log_run(
                 quality_score, int(success), int(simulated), response_text,
                 effort, roster, routing_cost_usd,
                 None if classifier_agreed is None else int(classifier_agreed),
+                None if verifier_scores is None else json.dumps(verifier_scores),
             ),
         )
         conn.commit()

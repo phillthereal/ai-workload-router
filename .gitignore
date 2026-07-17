@@ -21,6 +21,10 @@ ENV/
 # must never be mistaken for findings or land in the repo.
 data/benchmark_report_simulated_*.md
 
+# Cascade threshold-sweep output (tune_cascade.py): a local tuning artifact
+# reconstructed by cache replay, not a published result.
+data/cascade_threshold_sweep.md
+
 # IDE
 .vscode/
 .idea/

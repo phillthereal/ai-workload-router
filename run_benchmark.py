@@ -232,6 +232,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             routing_cost = 0.0
             agreed: Optional[bool] = None
             effort: Optional[str] = None
+            verifier_scores: Optional[list[float]] = None
 
             if strategy == "cascade":
                 # React-to-failure: try cheap, verify, escalate only on a failed
@@ -246,6 +247,9 @@ def main(argv: Optional[list[str]] = None) -> None:
                 model_name = response.model
                 cost = result.answer_cost
                 routing_cost = result.overhead_cost
+                # Persist the per-tier verifier scores so escalate_threshold can
+                # be re-tuned directly from the log (see tune_cascade.py).
+                verifier_scores = result.verifier_scores
             elif strategy == "router":
                 # Predict-then-route. The classifier runs on this arm only; the
                 # baseline does not route, so charging it overhead would
@@ -300,6 +304,7 @@ def main(argv: Optional[list[str]] = None) -> None:
                 roster=args.roster,
                 routing_cost_usd=routing_cost,
                 classifier_agreed=agreed,
+                verifier_scores=verifier_scores,
             )
 
     report = build_report(run_group, experimental_strategy=args.strategy)

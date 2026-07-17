@@ -1,5 +1,6 @@
 """Tests for router.db: SQLite performance log (P0-5)."""
 
+import json
 import sys
 import tempfile
 import unittest
@@ -61,6 +62,17 @@ class TestDb(unittest.TestCase):
         rows = db.fetch_runs("g1", db_path=self.db_path)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["task_id"], "t1")
+
+    def test_verifier_scores_persisted_as_json(self):
+        self._log(task_id="casc", strategy="cascade", verifier_scores=[0.85, 0.2])
+        rows = db.fetch_runs("g1", db_path=self.db_path)
+        self.assertEqual(json.loads(rows[0]["verifier_scores"]), [0.85, 0.2])
+
+    def test_verifier_scores_default_null(self):
+        # Non-cascade rows (and pre-existing callers) leave it NULL, not "".
+        self._log(task_id="r")
+        rows = db.fetch_runs("g1", db_path=self.db_path)
+        self.assertIsNone(rows[0]["verifier_scores"])
 
 
 if __name__ == "__main__":
