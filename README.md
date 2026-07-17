@@ -1,5 +1,11 @@
 # AI Workload Router
 
+<!-- CI badge — activated when the repo goes live on GitHub:
+![tests](https://github.com/YOUR_USERNAME/ai-workload-router/actions/workflows/tests.yml/badge.svg)
+-->
+
+**[Read the full product case study →](https://claude.ai/code/artifact/205c2a5e-9447-48dc-96d3-dd4459dc3531)** (visual writeup with the benchmark data) · License: MIT
+
 Teams building on LLMs default to sending every request to one expensive frontier model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well — across three vendors (OpenAI, DeepSeek, Anthropic) — logging cost, latency, and quality on every call. On a live 25-task benchmark, routing cut cost 53.6% and mean latency 46% with no quality loss, validated by two independent LLM judges from rival vendors.
 
 ## Results

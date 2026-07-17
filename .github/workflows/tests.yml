@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # The suite is fully offline by design (AWR_FORCE_MOCK routes all
+      # provider calls to the deterministic mock adapter), so CI needs no
+      # API keys and costs nothing to run.
+      - name: Run test suite (offline)
+        env:
+          AWR_FORCE_MOCK: "1"
+        run: python -m unittest discover -s tests -v
+      - name: Offline benchmark smoke run
+        env:
+          AWR_FORCE_MOCK: "1"
+        run: python run_benchmark.py
