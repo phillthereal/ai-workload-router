@@ -177,6 +177,7 @@ def route_task(
     effort_policy: Optional[dict[str, Optional[str]]] = None,
     task_type: Optional[str] = None,
     difficulty: Optional[str] = None,
+    tier_override: Optional[str] = None,
 ) -> RoutingDecision:
     """
     Route a task to a (model, effort) pair.
@@ -198,6 +199,14 @@ def route_task(
             identical policy as a hand-authored one, which is what makes the
             classified and labelled arms comparable.
         difficulty: Overrides `task['difficulty']`.
+        tier_override: Skip the (task_type, difficulty) -> tier policy lookup
+            entirely and start from this tier instead. This is the seam
+            router.learned plugs into: its evidence-based decision already
+            resolved a TIER (not a relabelled task_type/difficulty pair), so
+            re-deriving one just to look the tier back up through the policy
+            table would mean inventing a fake label. Gates and quality_floor
+            still apply on top of the override — history can pick a cheaper
+            tier, but it does not get to bypass "does this prompt even fit".
 
     Returns:
         RoutingDecision with chosen_model, effort, reason, and any gate hits.
@@ -205,13 +214,14 @@ def route_task(
     Raises:
         KeyError: If task_type/difficulty has no matching rule, or roster_name
             is not a known roster.
-        ValueError: If effort_policy names an unknown effort level.
+        ValueError: If effort_policy names an unknown effort level, or
+            tier_override names an unknown tier.
     """
     rules = routing_rules or DEFAULT_ROUTING_RULES
     roster = get_roster(roster_name)
-    resolved_type = task_type if task_type is not None else task["task_type"]
+    resolved_type = task_type if task_type is not None else task.get("task_type")
     resolved_difficulty = (
-        difficulty if difficulty is not None else task["difficulty"]
+        difficulty if difficulty is not None else task.get("difficulty")
     )
 
     if effort_policy:
@@ -222,17 +232,23 @@ def route_task(
                     f"{EFFORT_STATES}"
                 )
 
-    if resolved_type not in rules:
-        raise KeyError(f"No routing rule for task_type={resolved_type!r}")
-    type_rules = rules[resolved_type]
-    if resolved_difficulty not in type_rules:
-        raise KeyError(
-            f"No routing rule for task_type={resolved_type!r}, "
-            f"difficulty={resolved_difficulty!r}"
-        )
+    if tier_override is not None:
+        if tier_override not in TIER_ORDER:
+            raise ValueError(f"Unknown tier {tier_override!r}; expected one of {TIER_ORDER}")
+        tier = tier_override
+        reason_parts = [f"tier={tier_override} (explicit override, e.g. from router.learned)"]
+    else:
+        if resolved_type not in rules:
+            raise KeyError(f"No routing rule for task_type={resolved_type!r}")
+        type_rules = rules[resolved_type]
+        if resolved_difficulty not in type_rules:
+            raise KeyError(
+                f"No routing rule for task_type={resolved_type!r}, "
+                f"difficulty={resolved_difficulty!r}"
+            )
+        tier = type_rules[resolved_difficulty]
+        reason_parts = [f"{resolved_type}/{resolved_difficulty} -> {tier} tier per default policy"]
 
-    tier = type_rules[resolved_difficulty]
-    reason_parts = [f"{resolved_type}/{resolved_difficulty} -> {tier} tier per default policy"]
     quality_floor_applied = False
 
     if quality_floor is not None:

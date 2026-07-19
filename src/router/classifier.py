@@ -82,6 +82,47 @@ _CLASSIFICATION_MARKERS = (
 )
 _GENERATION_MARKERS = ("rewrite", "summarize", "summarise", "write a", "draft")
 
+# Named for reuse by router.learned's feature bucketing (see
+# keyword_signal_groups below) — the SAME marker groups heuristic_classify
+# uses to pick a single task_type, exposed here as a set rather than a
+# single winner so a caller can see when a prompt's signal is ambiguous
+# (multiple groups matched) rather than only which one heuristic_classify's
+# priority order picked.
+_MARKER_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("reasoning", _REASONING_MARKERS),
+    ("extraction", _EXTRACTION_MARKERS),
+    ("classification", _CLASSIFICATION_MARKERS),
+    ("generation", _GENERATION_MARKERS),
+)
+
+
+def keyword_signal_groups(prompt: str) -> tuple[str, ...]:
+    """
+    Which of heuristic_classify's marker groups appear in `prompt`, sorted.
+
+    This is deliberately NOT the same thing as heuristic_classify's
+    task_type: task_type picks the single highest-priority group that
+    matched (reasoning beats the rest), discarding whether other groups also
+    matched. A prompt with markers from two groups ("Classify each item,
+    then explain your reasoning...") is a genuinely different, more
+    ambiguous shape than one that only ever matched one group — and that
+    ambiguity is itself a useful similarity feature for router.learned's
+    evidence bucketing, independent of whichever task_type a classifier
+    (heuristic or real model) ultimately assigned.
+
+    Args:
+        prompt: Raw prompt text.
+
+    Returns:
+        Sorted tuple of group names ("classification", "extraction",
+        "generation", "reasoning") whose markers appear in the prompt.
+        Empty tuple if none matched (e.g. a short_generation prompt that hit
+        none of the marker lists, which heuristic_classify still labels
+        short_generation as its default).
+    """
+    p = prompt.lower()
+    return tuple(sorted(name for name, markers in _MARKER_GROUPS if any(m in p for m in markers)))
+
 
 @dataclass(frozen=True)
 class Classification:
