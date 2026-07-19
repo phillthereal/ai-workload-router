@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Do you need an LLM router?</title>
+<style>
+  :root {
+    --paper: #f3f3ef;
+    --raised: #fbfbf9;
+    --ink: #1a1d23;
+    --muted: #5c6472;
+    --faint: #8b909b;
+    --hair: #e2e1da;
+    --teal: #0c7a6b;
+    --teal-soft: #d6ebe6;
+    --amber: #a86e18;
+    --amber-soft: #efe2c8;
+    --accent: var(--teal);
+    --shadow: 0 1px 2px rgba(20,22,28,.05), 0 8px 28px rgba(20,22,28,.06);
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #101318;
+      --raised: #191d24;
+      --ink: #e9eae6;
+      --muted: #9aa2ae;
+      --faint: #6b7280;
+      --hair: #262b33;
+      --teal: #33d1b8;
+      --teal-soft: #12332e;
+      --amber: #e0aa54;
+      --amber-soft: #33291596;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #f3f3ef; --raised: #fbfbf9; --ink: #1a1d23; --muted: #5c6472;
+    --faint: #8b909b; --hair: #e2e1da; --teal: #0c7a6b; --teal-soft: #d6ebe6;
+    --amber: #a86e18; --amber-soft: #efe2c8;
+    --shadow: 0 1px 2px rgba(20,22,28,.05), 0 8px 28px rgba(20,22,28,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #101318; --raised: #191d24; --ink: #e9eae6; --muted: #9aa2ae;
+    --faint: #6b7280; --hair: #262b33; --teal: #33d1b8; --teal-soft: #12332e;
+    --amber: #e0aa54; --amber-soft: #33291596;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; overflow-x: hidden; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(1.25rem, 4vw, 3rem) 1.25rem 4rem;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  p { margin: 0 0 1rem; max-width: 66ch; }
+  strong { font-weight: 650; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 .9rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .eyebrow::before {
+    content: ""; width: 1.6rem; height: 1px; background: var(--accent); opacity: .6;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.1rem);
+    line-height: 1.05;
+    letter-spacing: -.025em;
+    font-weight: 700;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(1.25rem, 3.2vw, 1.5rem);
+    letter-spacing: -.015em;
+    line-height: 1.2;
+    font-weight: 660;
+    margin: 0 0 .9rem;
+    text-wrap: balance;
+  }
+  .lede { font-size: 1.1rem; color: var(--muted); max-width: 60ch; }
+
+  .byline {
+    font-family: var(--mono); font-size: .8rem; color: var(--faint);
+    margin: 1.4rem 0 0; letter-spacing: .01em;
+  }
+
+  section { margin-top: clamp(2.2rem, 5vw, 3.2rem); }
+  .kicker {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 .5rem;
+  }
+
+  .panel {
+    background: var(--raised); border: 1px solid var(--hair);
+    border-radius: 14px; padding: clamp(1.25rem, 3vw, 1.9rem);
+    box-shadow: var(--shadow); margin-top: 1.6rem;
+  }
+  .panel-title {
+    font-family: var(--mono); font-size: .72rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 1.3rem;
+  }
+
+  .insight {
+    border-left: 3px solid var(--teal); padding: .3rem 0 .3rem 1.4rem; margin: 1.6rem 0;
+  }
+  .insight p:last-child { margin-bottom: 0; }
+  .insight .big { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+
+  /* --- Controls --- */
+  .field { margin-bottom: 1.7rem; }
+  .field:last-child { margin-bottom: 0; }
+  .field-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+    margin-bottom: .5rem;
+  }
+  .field-label { font-size: .92rem; font-weight: 600; }
+  .field-val {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: 1rem; font-weight: 600; color: var(--teal); white-space: nowrap;
+  }
+  .field-help {
+    font-size: .82rem; color: var(--muted); margin: .4rem 0 0; max-width: 62ch;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 999px;
+    background: var(--hair); outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--teal); border: 3px solid var(--raised);
+    box-shadow: 0 0 0 1px var(--teal); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--teal); border: 3px solid var(--raised);
+    box-shadow: 0 0 0 1px var(--teal); cursor: pointer;
+  }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .2rem; }
+  .btn {
+    font-family: var(--mono); font-size: .78rem; letter-spacing: .02em;
+    color: var(--muted); background: var(--paper); border: 1px solid var(--hair);
+    border-radius: 8px; padding: .55rem .85rem; cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .btn:hover { border-color: var(--faint); color: var(--ink); }
+  .btn.active {
+    background: var(--teal-soft); border-color: var(--teal); color: var(--teal); font-weight: 600;
+  }
+  .btn.active.amber-active {
+    background: var(--amber-soft); border-color: var(--amber); color: var(--amber);
+  }
+
+  .num-inline {
+    display: flex; align-items: center; gap: .5rem; margin-top: .7rem;
+  }
+  .num-inline label {
+    font-family: var(--mono); font-size: .78rem; color: var(--faint);
+  }
+  .num-inline input[type="number"] {
+    font-family: var(--mono); font-size: .88rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--hair); border-radius: 7px;
+    padding: .4rem .55rem; width: 6.5rem;
+  }
+
+  .money-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 560px) {
+    .money-grid { grid-template-columns: 1fr; }
+  }
+  .money-field label {
+    display: block; font-family: var(--mono); font-size: .74rem;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--faint); margin-bottom: .4rem;
+  }
+  .money-field input[type="number"] {
+    width: 100%; font-family: var(--mono); font-size: .95rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--hair); border-radius: 8px;
+    padding: .6rem .7rem;
+  }
+
+  /* --- Verdict banner --- */
+  .verdict {
+    border-radius: 14px; padding: clamp(1.5rem, 4vw, 2.2rem);
+    margin-top: 1.6rem; box-shadow: var(--shadow); border: 1px solid var(--hair);
+    transition: background .2s, border-color .2s;
+  }
+  .verdict.pos { background: var(--teal-soft); border-color: var(--teal); }
+  .verdict.mid { background: var(--amber-soft); border-color: var(--amber); }
+  .verdict.neg { background: var(--amber-soft); border-color: var(--amber); }
+  .verdict-kicker {
+    font-family: var(--mono); font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+    margin: 0 0 .6rem; opacity: .8;
+  }
+  .verdict.pos .verdict-kicker, .verdict.pos .verdict-headline { color: var(--teal); }
+  .verdict.mid .verdict-kicker, .verdict.mid .verdict-headline,
+  .verdict.neg .verdict-kicker, .verdict.neg .verdict-headline { color: var(--amber); }
+  .verdict-headline {
+    font-size: clamp(1.3rem, 4vw, 1.8rem); font-weight: 700; letter-spacing: -.015em;
+    line-height: 1.15; margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .verdict-number {
+    font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700;
+    font-size: clamp(2.4rem, 9vw, 3.4rem); line-height: 1; letter-spacing: -.02em;
+    color: var(--ink); margin: 0 0 .3rem;
+  }
+  .verdict-sub {
+    font-family: var(--mono); font-size: .85rem; color: var(--muted); margin: 0;
+  }
+
+  .track { height: 26px; background: color-mix(in srgb, var(--hair) 55%, transparent); border-radius: 6px; overflow: hidden; margin-top: 1.1rem; }
+  .fill { height: 100%; border-radius: 6px; transition: width .5s cubic-bezier(.2,.7,.2,1); }
+  .fill.pos { background: linear-gradient(90deg, var(--teal), color-mix(in srgb, var(--teal) 80%, var(--ink))); }
+  .fill.neg { background: linear-gradient(90deg, var(--amber), color-mix(in srgb, var(--amber) 78%, var(--ink))); }
+
+  .proj-line {
+    font-family: var(--mono); font-size: .95rem; margin-top: 1.4rem;
+    padding-top: 1.1rem; border-top: 1px dashed var(--hair);
+  }
+  .proj-line b.pos { color: var(--teal); }
+  .proj-line b.neg { color: var(--amber); }
+
+  /* --- Reference strip --- */
+  .ref-strip {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+    background: var(--hair); border: 1px solid var(--hair); border-radius: 12px;
+    overflow: hidden; margin-top: 1.4rem;
+  }
+  @media (max-width: 560px) {
+    .ref-strip { grid-template-columns: 1fr; }
+  }
+  .ref-cell { background: var(--raised); padding: 1rem 1.1rem; }
+  .ref-label {
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 .4rem;
+  }
+  .ref-val {
+    font-family: var(--mono); font-size: .95rem; font-weight: 600; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .ref-val .neg { color: var(--amber); }
+  .ref-val .pos { color: var(--teal); }
+
+  ul.limits { padding: 0; margin: 1.2rem 0 0; list-style: none; display: flex; flex-direction: column; gap: .9rem; }
+  ul.limits li { position: relative; padding-left: 1.5rem; color: var(--muted); font-size: .92rem; }
+  ul.limits li::before { content: "\2014"; position: absolute; left: 0; color: var(--faint); font-family: var(--mono); }
+  ul.limits li b { color: var(--ink); }
+  ul.limits li code {
+    background: color-mix(in srgb, var(--hair) 50%, transparent); padding: .1rem .35rem;
+    border-radius: 4px; color: var(--muted); font-size: .86rem; font-family: var(--mono);
+  }
+
+  .foot {
+    margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--hair);
+    font-family: var(--mono); font-size: .8rem; color: var(--faint); line-height: 1.7;
+  }
+  .foot a { color: var(--teal); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fill, .verdict { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <p class="eyebrow">Router ROI &middot; before you build</p>
+      <h1>Do you even need an LLM router?</h1>
+      <p class="lede">Savings = workload composition &times; price range. Set your two numbers below and see your ceiling &mdash; before you spend a single engineering hour building one.</p>
+      <p class="byline">Fil Ivanov</p>
+    </header>
+
+    <section aria-label="Controls">
+      <p class="kicker">Your workload</p>
+      <div class="panel">
+        <p class="panel-title">Inputs</p>
+
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label">Easy-task share</span>
+            <span class="field-val" id="easyVal">50%</span>
+          </div>
+          <input type="range" id="easySlider" min="0" max="100" value="50" step="1">
+          <p class="field-help">The share of your traffic (by <em>cost</em>, not just task count) a cheap model can genuinely handle as well as your frontier model. Estimate this honestly: pull a real sample of your prompts and score a cheap model against your current one &mdash; don't guess high. Hard tasks tend to cost more per task than easy ones, so this is usually lower than your gut count-based estimate.</p>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label">Price range</span>
+            <span class="field-val" id="rangeVal">41&times;</span>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn active" id="btnCross" data-range="41">Cross-vendor (~41&times;)</button>
+            <button type="button" class="btn" id="btnSingle" data-range="5">Single-vendor (~5&times;)</button>
+          </div>
+          <div class="num-inline">
+            <label for="rangeCustom">or custom:</label>
+            <input type="number" id="rangeCustom" min="1.1" max="200" step="0.1" placeholder="e.g. 12">
+            <label for="rangeCustom">&times;</label>
+          </div>
+          <p class="field-help">The output-price ratio between the priciest model you'd route to and the cheapest you're allowed to use. Cross-vendor (e.g. Opus &rarr; GPT-4o mini) opens a wider range than staying inside one vendor's own tier ladder (e.g. Opus &rarr; Haiku).</p>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label">Overhead strategy</span>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn active" id="btnClassifier" data-strategy="classifier">Classifier</button>
+            <button type="button" class="btn" id="btnCascade" data-strategy="cascade">Cascade</button>
+          </div>
+          <p class="field-help" id="strategyHelp">Classifier: predict difficulty upfront, route once. Overhead is a cheap classification call &mdash; small (&asymp;1% of savings cross-vendor, &asymp;11% within-vendor).</p>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <span class="field-label">Monthly volume (optional)</span>
+          </div>
+          <div class="money-grid">
+            <div class="money-field">
+              <label for="reqInput">Monthly requests</label>
+              <input type="number" id="reqInput" min="0" step="1000" placeholder="e.g. 100000">
+            </div>
+            <div class="money-field">
+              <label for="costInput">Avg frontier cost / request ($)</label>
+              <input type="number" id="costInput" min="0" step="0.0001" placeholder="e.g. 0.005">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section aria-label="Verdict">
+      <p class="kicker">Your ceiling</p>
+      <div class="verdict pos" id="verdictBox">
+        <p class="verdict-kicker" id="verdictKicker">A router pays for itself here</p>
+        <p class="verdict-number" id="verdictNumber">+22.1%</p>
+        <p class="verdict-sub" id="verdictSub">Predicted net savings vs. sending everything to your frontier model</p>
+        <div class="track"><div class="fill pos" id="verdictFill" style="width:0%"></div></div>
+        <p class="proj-line" id="projLine">Add monthly volume above to see a projected $ figure.</p>
+      </div>
+    </section>
+
+    <section aria-label="Reference points">
+      <p class="kicker">Live-validated reference points</p>
+      <p class="field-help" style="margin-top:-.3rem;margin-bottom:1rem;">Real numbers from a 25-task live benchmark (three vendors, LLM-judge scored) &mdash; not simulated. Set the inputs above to match a row and this model should land in or near its band.</p>
+      <div class="ref-strip">
+        <div class="ref-cell">
+          <p class="ref-label">Cross-vendor &middot; easy-skewed workload</p>
+          <p class="ref-val"><span class="pos">53.6&ndash;65.6%</span> measured</p>
+        </div>
+        <div class="ref-cell">
+          <p class="ref-label">Single-vendor &middot; easy-skewed workload</p>
+          <p class="ref-val"><span class="pos">42.5&ndash;53.1%</span> measured</p>
+        </div>
+        <div class="ref-cell">
+          <p class="ref-label">All-hard workload (single-vendor)</p>
+          <p class="ref-val"><span class="neg">&minus;6.3%</span> classifier &middot; <span class="neg">&minus;19.9%</span> cascade</p>
+        </div>
+        <div class="ref-cell">
+          <p class="ref-label">v3 learned router (upside note)</p>
+          <p class="ref-val">up to <span class="pos">+22.7%</span> over static, on repeat task shapes</p>
+        </div>
+      </div>
+      <div class="insight">
+        <p>The learned-router upside isn't a slider here &mdash; it only applies once you have enough run history to detect repeated task shapes. It's a reason to log everything from day one, not a number to plan around before you've shipped anything.</p>
+      </div>
+    </section>
+
+    <section aria-label="Assumptions">
+      <p class="kicker">Assumptions &amp; caveats</p>
+      <div class="panel">
+        <p class="panel-title">How this model works</p>
+        <ul class="limits">
+          <li><b>Formula:</b> <code>net savings &asymp; (easy_fraction &times; cost_share_factor &times; (1 &minus; 1/price_range)) &minus; overhead</code>. <code>cost_share_factor</code> (fixed at 0.90 for the classifier, 1.30 for the cascade &mdash; the cascade tries the cheap model on everything and only escalates failures, so it captures savings on borderline tasks a predict-then-route classifier would conservatively send straight to the frontier) is not a slider; it's baked in from the live benchmark's task-mix.</li>
+          <li><b>Overhead is a flat cost, not a cut of savings.</b> The classifier/verifier call still runs &mdash; and still costs money &mdash; even when there's no easy work to find. That's <b>the entire reason the negative-savings case exists:</b> on an all-hard workload, savings collapse toward zero but the overhead doesn't, so the net goes negative. Overhead is interpolated between the single-vendor and cross-vendor measured values by your price-range input.</li>
+          <li><b>Cascade + cross-vendor is extrapolated, not measured.</b> Every live cascade number in the source benchmark is single-vendor. Its cross-vendor overhead is estimated from the classifier's cross-vs-single overhead ratio &mdash; treat cascade results at high price ranges as more speculative than everything else on this page.</li>
+          <li><b>Verdict thresholds are a judgment call:</b> &ge;20% net &rarr; "pays for itself," 0&ndash;20% &rarr; "marginal," below 0% &rarr; negative. Real anchors cluster at 40&ndash;65% for genuinely easy-skewed workloads, so 20% is a deliberately conservative bar, not the midpoint of observed results.</li>
+          <li><b>One decimal, always.</b> Nothing here is precise to the second decimal &mdash; the underlying benchmark is 25 tasks. Treat every number on this page as <b>directional</b>, calibrated on a 25-task live benchmark; n is small.</li>
+          <li>The cascade's overhead can be cut further with a cheap (budget-tier) verifier instead of an independent one &mdash; down to &asymp;6% of savings &mdash; but that configuration is quality-unsafe on hard traffic (it can't reliably catch its own model's failures) and isn't modeled here as a separate mode.</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="foot">
+      This is the calculator behind <a href="https://claude.ai/code/artifact/205c2a5e-9447-48dc-96d3-dd4459dc3531">the case study</a> for the AI Workload Router &mdash; a routing layer benchmarked live across three vendors.<br>
+      Code &amp; benchmark: <a href="https://github.com/phillthereal/ai-workload-router">github.com/phillthereal/ai-workload-router</a>
+    </p>
+
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var easySlider = document.getElementById('easySlider');
+  var easyVal = document.getElementById('easyVal');
+  var rangeVal = document.getElementById('rangeVal');
+  var btnCross = document.getElementById('btnCross');
+  var btnSingle = document.getElementById('btnSingle');
+  var rangeCustom = document.getElementById('rangeCustom');
+  var btnClassifier = document.getElementById('btnClassifier');
+  var btnCascade = document.getElementById('btnCascade');
+  var strategyHelp = document.getElementById('strategyHelp');
+  var reqInput = document.getElementById('reqInput');
+  var costInput = document.getElementById('costInput');
+
+  var verdictBox = document.getElementById('verdictBox');
+  var verdictKicker = document.getElementById('verdictKicker');
+  var verdictNumber = document.getElementById('verdictNumber');
+  var verdictSub = document.getElementById('verdictSub');
+  var verdictFill = document.getElementById('verdictFill');
+  var projLine = document.getElementById('projLine');
+
+  var state = {
+    easyFraction: 50,   // 0-100
+    priceRange: 41,     // multiplier
+    strategy: 'classifier'
+  };
+
+  var HELP_TEXT = {
+    classifier: 'Classifier: predict difficulty upfront, route once. Overhead is a cheap classification call — small (≈1% of savings cross-vendor, ≈11% within-vendor).',
+    cascade: 'Cascade: try the cheap model on everything, verify, escalate on failure. Out-saves the classifier within a vendor by being less conservative — but pays for it: ≈31% overhead with an independent verifier.'
+  };
+
+  function fmt1(n) {
+    return (Math.round(n * 10) / 10).toFixed(1);
+  }
+
+  function calc() {
+    var ef = state.easyFraction / 100;
+    var range = Math.max(state.priceRange, 1.01);
+    var csc = state.strategy === 'cascade' ? 1.30 : 0.90;
+    var effShare = Math.min(ef * csc, 0.97);
+    var raw = effShare * (1 - 1 / range);
+
+    // interpolate overhead between single-vendor (range=5) and cross-vendor (range=41)
+    var t = (range - 5) / (41 - 5);
+    t = Math.min(Math.max(t, 0), 1);
+    var overheadPct = state.strategy === 'cascade'
+      ? (19.9 - t * (19.9 - 2.1))
+      : (6.0 - t * (6.0 - 0.7));
+
+    var netPct = raw * 100 - overheadPct;
+    return netPct;
+  }
+
+  function render() {
+    easyVal.textContent = state.easyFraction + '%';
+    rangeVal.textContent = fmt1(state.priceRange) + '×';
+
+    var net = calc();
+    var netClamped = Math.max(Math.min(net, 95), -60);
+    var sign = net >= 0 ? '+' : '';
+    verdictNumber.textContent = sign + fmt1(net) + '%';
+
+    verdictBox.classList.remove('pos', 'mid', 'neg');
+    verdictFill.classList.remove('pos', 'neg');
+
+    if (net >= 20) {
+      verdictBox.classList.add('pos');
+      verdictFill.classList.add('pos');
+      verdictKicker.textContent = 'A router pays for itself here';
+    } else if (net >= 0) {
+      verdictBox.classList.add('mid');
+      verdictFill.classList.add('neg');
+      verdictKicker.textContent = 'Marginal — measure before you build';
+    } else {
+      verdictBox.classList.add('neg');
+      verdictFill.classList.add('neg');
+      verdictKicker.textContent = 'Don’t buy a router — you’d lose money on this workload';
+    }
+
+    var barWidth = Math.min(Math.abs(netClamped), 95);
+    verdictFill.style.width = barWidth + '%';
+
+    // projected $
+    var req = parseFloat(reqInput.value);
+    var cost = parseFloat(costInput.value);
+    if (req > 0 && cost > 0) {
+      var monthlySpend = req * cost;
+      var monthlyDelta = monthlySpend * (net / 100);
+      var abs = Math.abs(monthlyDelta).toLocaleString(undefined, { maximumFractionDigits: 0 });
+      if (monthlyDelta >= 0) {
+        projLine.innerHTML = 'At ' + req.toLocaleString() + ' requests/month: <b class="pos">~$' + abs + ' saved</b> per month vs. frontier-only, on a baseline spend of ~$' + monthlySpend.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '.';
+      } else {
+        projLine.innerHTML = 'At ' + req.toLocaleString() + ' requests/month: <b class="neg">~$' + abs + ' lost</b> per month to routing overhead vs. just using the frontier model directly.';
+      }
+    } else {
+      projLine.textContent = 'Add monthly volume above to see a projected $ figure.';
+    }
+  }
+
+  easySlider.addEventListener('input', function () {
+    state.easyFraction = parseInt(easySlider.value, 10);
+    render();
+  });
+
+  function setRange(val, activeBtn) {
+    state.priceRange = val;
+    rangeCustom.value = '';
+    [btnCross, btnSingle].forEach(function (b) { b.classList.remove('active'); });
+    if (activeBtn) activeBtn.classList.add('active');
+    render();
+  }
+
+  btnCross.addEventListener('click', function () { setRange(41, btnCross); });
+  btnSingle.addEventListener('click', function () { setRange(5, btnSingle); });
+  rangeCustom.addEventListener('input', function () {
+    var v = parseFloat(rangeCustom.value);
+    if (!isNaN(v) && v > 1) {
+      state.priceRange = v;
+      [btnCross, btnSingle].forEach(function (b) { b.classList.remove('active'); });
+      render();
+    }
+  });
+
+  function setStrategy(s, activeBtn) {
+    state.strategy = s;
+    [btnClassifier, btnCascade].forEach(function (b) {
+      b.classList.remove('active', 'amber-active');
+    });
+    activeBtn.classList.add('active');
+    strategyHelp.textContent = HELP_TEXT[s];
+    render();
+  }
+
+  btnClassifier.addEventListener('click', function () { setStrategy('classifier', btnClassifier); });
+  btnCascade.addEventListener('click', function () { setStrategy('cascade', btnCascade); });
+
+  reqInput.addEventListener('input', render);
+  costInput.addEventListener('input', render);
+
+  render();
+})();
+</script>
+</body>
+</html>
