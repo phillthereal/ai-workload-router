@@ -44,6 +44,7 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from router import db  # noqa: E402
+from router import learned  # noqa: E402
 from router.adapters import get_adapter  # noqa: E402
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.cascade import run_cascade  # noqa: E402
@@ -100,6 +101,7 @@ def _report_path(
     strategy: str = "router",
     tasks: Optional[str] = None,
     verifier: Optional[str] = None,
+    learned_flag: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -128,6 +130,11 @@ def _report_path(
     because a live `--verifier claude-haiku-4-5` run once did exactly that
     clobber before the tag was added — see git history / docs/V2_FINDINGS.md's
     verifier-economics note.)
+
+    `learned_flag` (v3) is part of the run shape for the same reason: a
+    `--learned` run consults outcome history and can route differently from
+    the identical flags without it, so it must not overwrite the
+    no-history report — and it must never claim the canonical v1 filename.
     """
     data_dir = Path(__file__).parent / "data"
     tag = _tasks_tag(tasks)
@@ -142,6 +149,7 @@ def _report_path(
         and not effort_policy
         and tag is None
         and verifier is None
+        and not learned_flag
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -151,6 +159,8 @@ def _report_path(
         parts.append(strategy)
     if classify:
         parts.append("classified")
+    if learned_flag:
+        parts.append("learned")
     if effort_policy:
         parts.append("effort")
     if verifier:
@@ -188,6 +198,23 @@ def _build_parser() -> argparse.ArgumentParser:
             "labels. This is what a real deployment has. Costs one budget-model "
             "call per task; that cost is logged and reported as routing "
             "overhead rather than excluded from the savings figure. "
+            "(--strategy router only.)"
+        ),
+    )
+    parser.add_argument(
+        "--learned",
+        action="store_true",
+        help=(
+            "After classifying (predicted labels, or hand labels if "
+            "--classify is omitted), consult data/runs.db for logged "
+            "outcomes on tasks like this one and let history override the "
+            "classifier's tier toward something cheaper — only under a "
+            "strict evidence threshold (n>=5 similar prior outcomes at or "
+            "above the 95%%-of-frontier quality bar), and it can also "
+            "escalate the tier if recent evidence looks concerning. See "
+            "router.learned and docs/V3_DESIGN.md. Costs nothing extra: "
+            "the lookup is pure SQL/dict logic, so routing overhead is "
+            "still just the classifier's own cost (0 if using hand labels). "
             "(--strategy router only.)"
         ),
     )
@@ -258,6 +285,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             agreed: Optional[bool] = None
             effort: Optional[str] = None
             verifier_scores: Optional[list[float]] = None
+            learned_evidence: Optional[dict] = None
 
             if strategy == "cascade":
                 # React-to-failure: try cheap, verify, escalate only on a failed
@@ -285,13 +313,34 @@ def main(argv: Optional[list[str]] = None) -> None:
                 )
                 routing_cost = classification.cost_usd
                 agreed = classification.agreed_with_label
-                decision = route_task(
-                    task,
-                    roster_name=args.roster,
-                    effort_policy=effort_policy,
-                    task_type=classification.task_type,
-                    difficulty=classification.difficulty,
-                )
+
+                if args.learned:
+                    # History gets a chance to override the classifier's
+                    # tier — but only toward cheaper, and only under the
+                    # evidence threshold; see router.learned. `run_group` is
+                    # the chronological cutoff: this task can only see
+                    # evidence strictly earlier than the run it's part of,
+                    # which excludes both the future and its own siblings
+                    # logged earlier in this same loop.
+                    learned_decision = learned.evaluate(
+                        task, classification.task_type, classification.difficulty,
+                        roster_name=args.roster, before_run_group=run_group,
+                    )
+                    learned_evidence = learned_decision.to_log_dict()
+                    decision = route_task(
+                        task,
+                        roster_name=args.roster,
+                        effort_policy=effort_policy,
+                        tier_override=learned_decision.chosen_tier,
+                    )
+                else:
+                    decision = route_task(
+                        task,
+                        roster_name=args.roster,
+                        effort_policy=effort_policy,
+                        task_type=classification.task_type,
+                        difficulty=classification.difficulty,
+                    )
                 model_name = decision.chosen_model
                 effort = decision.effort
                 response = get_adapter(model_name).complete(task["prompt"], effort=effort)
@@ -331,6 +380,7 @@ def main(argv: Optional[list[str]] = None) -> None:
                 routing_cost_usd=routing_cost,
                 classifier_agreed=agreed,
                 verifier_scores=verifier_scores,
+                learned_evidence=learned_evidence,
             )
 
     report = build_report(run_group, experimental_strategy=args.strategy)
@@ -338,7 +388,7 @@ def main(argv: Optional[list[str]] = None) -> None:
 
     out_path = _report_path(
         args.roster, report.all_real, args.classify, effort_policy, args.strategy, args.tasks,
-        args.verifier,
+        args.verifier, args.learned,
     )
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")

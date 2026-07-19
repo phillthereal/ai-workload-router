@@ -95,6 +95,17 @@ cheaper as it learns your workload — never trading away the quality floor to
 do it. Full design, including the cold-start rule and the safety asymmetry
 borrowed from the v2 verifier finding, in [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
 
+**Built and evaluated (live):** the prototype (`src/router/learned.py`,
+`run_benchmark.py --learned`) routed a 14-task held-out set **22.7% cheaper
+than the static router at identical quality** (26.1% vs 4.4% net savings
+against frontier-only), for **zero routing overhead** — its lookup is SQL,
+not an LLM call. It downgraded 9 tasks on n≥5 logged successes, refused 3
+downgrades where history showed the cheap tier failing that shape, and fell
+back to the classifier on 2 cold starts. The saving is conditional on the
+workload repeating task shapes; a no-repeat workload gets exactly the static
+router. Numbers, evidence records, and caveats in
+[`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md).
+
 ## Run It Yourself
 
 **Setup:**

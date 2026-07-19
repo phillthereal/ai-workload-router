@@ -1,0 +1,118 @@
+{
+  "version": 2,
+  "_comment": "v3 held-out evaluation set. AUTHORSHIP: written by hand for the v3 learned-router eval (docs/V3_FINDINGS.md) as NEW tasks that deliberately REPEAT the feature shapes (task_type x difficulty x prompt-length band x keyword-signal group, see router.learned.extract_features) of tasks already in data/tasks.json / data/tasks_hard.json - because the learned router can only ever act on repeated shapes. None of these prompts appears in any earlier task file or cached response; every model answer to them is a fresh, live call. Composition: 9 tasks in buckets whose logged budget-tier evidence clears the downgrade threshold, 3 in buckets whose budget evidence exists but FAILS the quality bar (the router must refuse to downgrade), 2 in cold-start buckets with no/thin evidence (the router must fall back to the classifier). Where a task carries a trap (overflow cap, per-unit vs total, affirming the consequent, coreference), it mirrors the trap style of the tasks_hard.json shape it repeats.",
+  "tasks": [
+    {
+      "id": "cls-v301",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the sentiment of this product review as positive, negative, or mixed. Answer with one word only. Review: 'Setup took five minutes and the app looks gorgeous, but it drains my battery so fast I barely get through a morning.'",
+      "reference": "mixed",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-v302",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the intent of this customer message (complaint, inquiry, praise, or request). Answer with one word only. Message: 'Could you tell me whether the Pro plan includes offline access before I commit to annual billing?'",
+      "reference": "inquiry",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-v303",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the tone of this workplace message as formal or casual. Answer with one word only. Message: 'Hey! Quick heads up - gonna push our sync to 3ish, got double-booked. That cool with you?'",
+      "reference": "casual",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-v301",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Three sales reps closed deals last month. Ana: 12 deals worth $48,000 total. Ben: 30 deals worth $60,000 total. Carla: 8 deals worth $36,000 total. Considering the average value per deal, name the rep whose deals were most valuable on a per-deal basis. Answer with one name only.",
+      "reference": "Carla",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-v302",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Read this and name the person accountable for the launch date: 'Priya owns the release calendar. Marco, reporting to Priya, coordinates the QA signoffs. The launch date itself belongs to the release calendar owner, though Marco communicates it to clients.' Answer with one name only.",
+      "reference": "Priya",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-v303",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "From this status note, name the owner of the only task that has both a named owner and an explicit date: 'Tomas will refresh the pricing page. The security audit is due March 3 and belongs to Ines. Someone should update the FAQ soon. The offsite agenda, owned by Raj, is still unscheduled.' Answer with one name only.",
+      "reference": "Ines",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-v301",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Four sprinters finished a race with no ties. Maya finished before Liam but after Zoe. Kai finished after Liam. Which sprinter finished last? Answer with one name only.",
+      "reference": "Kai",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-v302",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A notebook and a pen cost $3.30 together. The notebook costs $3.00 more than the pen. What is the price of the pen, in dollars? Answer with just the number, e.g. 0.40.",
+      "reference": "0.15",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "ext-v304",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract the invoice number from this line and answer with the invoice number only: 'Invoice INV-2091, issued 12 May, is payable no later than 26 May by bank transfer to the account below.'",
+      "reference": "INV-2091",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-v303",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A water butt holds at most 180 liters and starts empty. Rain fills it at 20 L/min for 10 minutes, then a pump drains it at 10 L/min for 5 minutes, then rain fills it at 30 L/min for 4 minutes. The butt can never exceed 180 liters; any overflow is lost. How many liters are in the butt at the end? Answer with just the number.",
+      "reference": "180",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-v304",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Three colleagues (Priya, Quinn, Ravi) each drink a different beverage (coffee, tea, juice), and no two share a beverage. Priya does not drink tea. Quinn drinks neither coffee nor tea. Deduce who drinks tea and answer with one name only.",
+      "reference": "Ravi",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "cls-v304",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Is the following argument logically valid (does the conclusion necessarily follow)? 'Every prize-winning novel is widely reviewed. This novel is widely reviewed. Therefore this novel is a prize-winning novel.' Answer with one word only: valid or invalid.",
+      "reference": "invalid",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "rsn-v305",
+      "task_type": "reasoning",
+      "difficulty": "medium",
+      "prompt": "A commuter train leaves the depot with 45 passengers. At the first stop, 15 get off and 6 board. At the second stop, half of the passengers then aboard get off, and 3 board. At the third stop, 9 more board. Work out the number of passengers now aboard, and answer with just the number.",
+      "reference": "30",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "gen-v301",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Rewrite this sentence so a ten-year-old could understand it, in one short sentence: 'The municipality's fiscal shortfall necessitated a moratorium on discretionary expenditures.'",
+      "reference": "A faithful plain-language rewrite in one short sentence: the town ran short of money, so it paused optional (non-essential) spending. Must preserve both the shortfall and the pause; no jargon.",
+      "scoring": "rubric_judge"
+    }
+  ]
+}
