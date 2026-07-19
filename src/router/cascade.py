@@ -65,8 +65,12 @@ Respond with ONLY a single number from 0.0 (clearly inadequate — escalate) to 
 1.0 (clearly adequate — return it). No words."""
 
 # Same permissive float-in-[0,1] parse the scoring judge uses; the verifier is
-# not forced into structured output either.
-_SCORE_RE = re.compile(r"(?<![\d.])(0(?:\.\d+)?|1(?:\.0+)?)(?![\d])")
+# not forced into structured output either. The trailing lookahead rejects a
+# following digit OR dot, so malformed replies like "0.7.5" find no match and
+# fail safe to escalate instead of being half-read as 0.7. (A bare trailing
+# period — "0.7." — also fails safe; the verifier prompt asks for only a
+# number, so treating a decorated one as unreadable errs toward quality.)
+_SCORE_RE = re.compile(r"(?<![\d.])(0(?:\.\d+)?|1(?:\.0+)?)(?![\d.])")
 
 # When the verifier's output can't be parsed as a number, ASSUME INADEQUATE and
 # escalate. An unreadable quality gate must fail toward quality, not toward cost

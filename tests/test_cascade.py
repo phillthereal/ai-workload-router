@@ -41,13 +41,13 @@ class TestParseAdequacy(unittest.TestCase):
         # fails safe rather than being read as adequate.
         self.assertEqual(_parse_adequacy("5"), 0.0)
 
-    def test_trailing_garbage_after_a_valid_number_still_parses(self):
-        """FLAGGING CURRENT BEHAVIOR (not a fix): _SCORE_RE's lookahead only
-        rejects a following DIGIT, not a following '.', so "0.7.5" matches
-        the leading "0.7" and is accepted as 0.7 rather than failing safe as
-        unparseable junk. Documented here so a future regex change doesn't
-        silently flip this without a test noticing either way."""
-        self.assertEqual(_parse_adequacy("score: 0.7.5"), 0.7)
+    def test_malformed_multi_dot_number_fails_safe(self):
+        """"0.7.5" is not a number; it must not be half-read as 0.7 and
+        accepted. The lookahead rejects a following digit or dot, so this
+        finds no match and fails safe to escalate — the same direction as
+        every other unreadable verifier reply."""
+        self.assertEqual(_parse_adequacy("score: 0.7.5"), 0.0)
+        self.assertEqual(_parse_adequacy("0.7."), 0.0)  # decorated -> unreadable
 
     def test_many_trailing_zeros_parses_as_one(self):
         self.assertEqual(_parse_adequacy("1.00000"), 1.0)
