@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -42,7 +43,9 @@ CREATE TABLE IF NOT EXISTS runs (
     roster TEXT NOT NULL DEFAULT 'cross_vendor',
     routing_cost_usd REAL NOT NULL DEFAULT 0.0,
     classifier_agreed INTEGER,
-    verifier_scores TEXT
+    verifier_scores TEXT,
+    created_at TEXT,
+    learned_evidence TEXT
 )
 """
 
@@ -70,6 +73,22 @@ CREATE TABLE IF NOT EXISTS runs (
 #                       instead of reconstructing scores by cache replay; see
 #                       tune_cascade.py for why that reconstruction was needed
 #                       before this column existed.
+#
+# The v3 columns:
+#   created_at        — ISO-8601 UTC timestamp, populated by log_run (via
+#                       datetime.now(timezone.utc)) for every row logged from
+#                       this point forward. Rows logged before this column
+#                       existed stay NULL FOREVER (SQLite ALTER TABLE ADD
+#                       COLUMN cannot backfill a real timestamp for history
+#                       that was never recorded — there is no honest value to
+#                       put there). router.learned's evidence-decay weighting
+#                       treats NULL as maximally stale rather than crashing or
+#                       treating it as "now" — see router.learned.decay_weight.
+#   learned_evidence  — JSON summary of the learned router's decision for this
+#                       row (classifier tier, chosen tier, direction, and the
+#                       per-tier evidence it considered) — NULL unless this run
+#                       was routed with `--learned`. Mirrors verifier_scores:
+#                       additive, JSON-encoded, NULL when not applicable.
 _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN simulated INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE runs ADD COLUMN response_text TEXT NOT NULL DEFAULT ''",
@@ -78,6 +97,8 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN routing_cost_usd REAL NOT NULL DEFAULT 0.0",
     "ALTER TABLE runs ADD COLUMN classifier_agreed INTEGER",
     "ALTER TABLE runs ADD COLUMN verifier_scores TEXT",
+    "ALTER TABLE runs ADD COLUMN created_at TEXT",
+    "ALTER TABLE runs ADD COLUMN learned_evidence TEXT",
 ]
 
 
@@ -132,6 +153,8 @@ def log_run(
     routing_cost_usd: float = 0.0,
     classifier_agreed: Optional[bool] = None,
     verifier_scores: Optional[list[float]] = None,
+    created_at: Optional[str] = None,
+    learned_evidence: Optional[dict[str, Any]] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -159,11 +182,20 @@ def log_run(
             this task (JSON-encoded on write). None for non-cascade strategies,
             which have no verifier. Persisting it lets the escalate_threshold be
             re-tuned directly from the log instead of by cache replay.
+        created_at: ISO-8601 timestamp for this row. Defaults to None, which
+            means "now" — `log_run` stamps `datetime.now(timezone.utc)`
+            itself so every caller gets a real timestamp without having to
+            pass one. Tests that need a specific, deterministic timestamp
+            (e.g. to exercise evidence decay) can still pass one explicitly.
+        learned_evidence: The learned router's decision context for this row
+            (JSON-encoded on write) — None unless this run was routed with
+            `--learned`. See router.learned.LearnedDecision.
 
     Returns:
         The auto-generated row id.
     """
     path = _resolve_path(db_path)
+    resolved_created_at = created_at or datetime.now(timezone.utc).isoformat()
     conn = sqlite3.connect(path)
     try:
         cur = conn.execute(
@@ -173,8 +205,8 @@ def log_run(
                 input_tokens, output_tokens, cost_usd, latency_ms,
                 quality_score, success, simulated, response_text,
                 effort, roster, routing_cost_usd, classifier_agreed,
-                verifier_scores
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                verifier_scores, created_at, learned_evidence
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
@@ -183,6 +215,8 @@ def log_run(
                 effort, roster, routing_cost_usd,
                 None if classifier_agreed is None else int(classifier_agreed),
                 None if verifier_scores is None else json.dumps(verifier_scores),
+                resolved_created_at,
+                None if learned_evidence is None else json.dumps(learned_evidence),
             ),
         )
         conn.commit()
@@ -289,6 +323,130 @@ def latest_run_group(db_path: Optional[Union[str, Path]] = None) -> Optional[str
     finally:
         conn.close()
     return row[0] if row else None
+
+
+def outcomes_for_bucket(
+    task_type: str,
+    difficulty: str,
+    before_run_group: Optional[str] = None,
+    db_path: Optional[Union[str, Path]] = None,
+) -> list[dict[str, Any]]:
+    """
+    Fetch logged, non-simulated outcomes matching (task_type, difficulty) —
+    the evidence pool router.learned draws on for one feature bucket.
+
+    Only `task_type`/`difficulty` are filterable in SQL because that is all
+    this table stores about the task shape; the finer-grained bucket
+    (prompt-length band, keyword signal) requires the original prompt text,
+    which `runs` does not persist (only `response_text`, the model's
+    OUTPUT). router.learned resolves each returned row's prompt from the
+    known task registries (by `task_id`) and refines the match itself.
+
+    Args:
+        task_type: Task type to match (the classifier's prediction, not
+            necessarily the hand label — see run_benchmark.py's note that
+            `task_type`/`difficulty` are logged from the task's TRUE label,
+            which is what makes this an honest evidence pool: it is grouped
+            by ground truth, not by what a possibly-wrong classifier guessed
+            on that historical call).
+        difficulty: Difficulty to match.
+        before_run_group: If given, only rows whose `run_group` sorts
+            strictly earlier (plain string comparison) are returned. Every
+            `run_group` this codebase produces starts with a
+            `YYYYMMDDTHHMMSS` timestamp (see run_benchmark.py), so lexical
+            order IS chronological order. This is what makes a chronological
+            held-out eval possible without depending on `created_at` (which
+            is NULL for every pre-v3 row) — the split is enforced by
+            run_group, decay weighting is a separate, second-order concern
+            layered on top of whatever the split already allows in.
+        db_path: Optional db path override.
+
+    Returns:
+        List of row dicts with at least task_id, model, quality_score,
+        success, created_at, run_group, simulated (simulated is always 0 in
+        the returned rows — simulated/mock outcomes are never evidence).
+    """
+    path = _resolve_path(db_path)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    try:
+        if before_run_group is not None:
+            rows = conn.execute(
+                """
+                SELECT task_id, model, quality_score, success, created_at,
+                       run_group, simulated
+                FROM runs
+                WHERE task_type = ? AND difficulty = ? AND simulated = 0
+                      AND run_group < ?
+                """,
+                (task_type, difficulty, before_run_group),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT task_id, model, quality_score, success, created_at,
+                       run_group, simulated
+                FROM runs
+                WHERE task_type = ? AND difficulty = ? AND simulated = 0
+                """,
+                (task_type, difficulty),
+            ).fetchall()
+    finally:
+        conn.close()
+    return [dict(row) for row in rows]
+
+
+def frontier_reference_quality(
+    task_type: str,
+    difficulty: str,
+    frontier_model: str,
+    before_run_group: Optional[str] = None,
+    db_path: Optional[Union[str, Path]] = None,
+) -> Optional[float]:
+    """
+    Mean logged, non-simulated quality of `frontier_model` on this
+    (task_type, difficulty) — the reference the learned router's evidence
+    threshold measures "95% retention" against, so the bar is the SAME
+    95%-of-frontier framing the rest of the benchmark uses, not a new
+    absolute number.
+
+    Args:
+        task_type: Task type to match.
+        difficulty: Difficulty to match.
+        frontier_model: The roster's frontier model name.
+        before_run_group: Same chronological cutoff as outcomes_for_bucket.
+        db_path: Optional db path override.
+
+    Returns:
+        Mean quality_score, or None if no matching frontier evidence exists
+        yet (the caller should treat that as "assume the frontier would
+        score at the ceiling" — i.e. the strictest possible bar — rather
+        than skip the check).
+    """
+    path = _resolve_path(db_path)
+    conn = sqlite3.connect(path)
+    try:
+        if before_run_group is not None:
+            row = conn.execute(
+                """
+                SELECT AVG(quality_score) FROM runs
+                WHERE task_type = ? AND difficulty = ? AND model = ?
+                      AND simulated = 0 AND run_group < ?
+                """,
+                (task_type, difficulty, frontier_model, before_run_group),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT AVG(quality_score) FROM runs
+                WHERE task_type = ? AND difficulty = ? AND model = ?
+                      AND simulated = 0
+                """,
+                (task_type, difficulty, frontier_model),
+            ).fetchone()
+    finally:
+        conn.close()
+    return row[0] if row and row[0] is not None else None
 
 
 def fetch_runs(
