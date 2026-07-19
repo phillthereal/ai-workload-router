@@ -50,6 +50,37 @@ class TestContextGate(unittest.TestCase):
         self.assertFalse(result.eligible)
         self.assertIn("exceeds", result.reason)
 
+    def test_prompt_exactly_at_usable_budget_fits(self):
+        """Boundary case: fits_context compares with <=, so a prompt whose
+        estimated token count lands EXACTLY on the usable-budget line must
+        still pass — the gate is pessimistic about the estimate, not about
+        the comparison operator."""
+        window = get_model("claude-haiku-4-5").context_window_tokens
+        budget = window * 0.70  # _INPUT_BUDGET_FRACTION
+        # 489997 chars -> estimate_prompt_tokens == int(budget) exactly.
+        prompt = "a" * 489_997
+        self.assertEqual(gates.estimate_prompt_tokens(prompt), int(budget))
+        self.assertTrue(gates.fits_context("claude-haiku-4-5", prompt))
+
+    def test_prompt_one_estimated_token_over_budget_does_not_fit(self):
+        """The other side of the same boundary: crossing the usable-budget
+        line by a single estimated token must flip the gate to ineligible,
+        not just 'close enough'."""
+        window = get_model("claude-haiku-4-5").context_window_tokens
+        budget = window * 0.70
+        prompt = "a" * 490_000
+        self.assertEqual(gates.estimate_prompt_tokens(prompt), int(budget) + 1)
+        self.assertFalse(gates.fits_context("claude-haiku-4-5", prompt))
+
+    def test_check_reports_reason_for_unsupported_effort_not_just_context(self):
+        """check() must surface the EFFORT reason (not silently reuse the
+        context-fit message) when a short prompt fits fine but the
+        (model, effort) pairing itself is the failure."""
+        result = gates.check("claude-haiku-4-5", "What is 2 + 2?", effort="high")
+        self.assertFalse(result.eligible)
+        self.assertIn("does not support effort", result.reason)
+        self.assertNotIn("exceeds", result.reason)
+
 
 class TestEffortGate(unittest.TestCase):
     def test_none_effort_supported_everywhere(self):
