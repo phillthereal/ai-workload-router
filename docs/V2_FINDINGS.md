@@ -12,7 +12,7 @@ hard set. Each row links to the committed report that produced it.
 
 | Roster | Strategy | Task set | Net cost ↓ | Quality | Overhead (% of savings) | Report |
 |---|---|---|---|---|---|---|
-| cross-vendor | labels (v1) | easy | **53.6%** | 100% | 0% (free labels) | [benchmark_report.md](../data/benchmark_report.md) |
+| cross-vendor | labels (v1) | easy | **53.6%** | 100.4% | 0% (free labels) | [benchmark_report.md](../data/benchmark_report.md) |
 | cross-vendor | **classifier** | easy | **65.6%** | 99.8% | 1.0% | […cross_vendor_classified](../data/benchmark_report_cross_vendor_classified.md) |
 | claude-tiers | classifier | easy | **42.5%** | 100.3% | 11.3% | [.…claude_tiers_classified](../data/benchmark_report_claude_tiers_classified.md) |
 | claude-tiers | **cascade** | easy | **53.1%** | 99.6% | 31.1% | [.…claude_tiers_cascade](../data/benchmark_report_claude_tiers_cascade.md) |
