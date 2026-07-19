@@ -114,21 +114,47 @@ Everything is additive and reproducible — the default configuration still repr
 3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth, cheaper or faster provider (e.g., a Gemini adapter) is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
 4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
 
-## v3: making the spend compound
+## v3: the router learns from its own log
 
-Item 1 above — adaptive routing — is now a design, not just a line item.
-Every run this project has ever made is sitting in `data/runs.db`: task type,
-model, cost, quality, success. The router currently *re-derives* what it
-already paid to learn — the classifier predicts difficulty cold from the
-prompt, every single time, with no memory of the last hundred times it saw a
-task like this one. v3 is the fix: consult that outcome history before
-routing, and only let it push a task to a cheaper tier when the evidence is
-strong enough to trust — with the same never-trade-quality guarantee that has
-held through every experiment so far, and a decision rule modeled directly on
-the v2 verifier finding (cheap signals are fine on easy tasks and a liability
-on hard ones). Not built — the full design, including the similarity
-approach, the cold-start rule, and the eval plan for proving it beats the
-classifier rather than just agreeing with it, is in
+Item 1 above — adaptive routing — is no longer a design, it's a result. Every
+run this project has ever made is sitting in `data/runs.db`: task type,
+model, cost, quality, success. The router used to *re-derive* what it already
+paid to learn — the classifier predicted difficulty cold from the prompt,
+every single time, with no memory of the last hundred times it saw a task
+like this one. v3 is the fix, built and evaluated: consult that outcome
+history before routing, and only let it push a task to a cheaper tier when
+the evidence clears a quality bar strong enough to trust — the same
+never-trade-quality guarantee that held through v1/v2, applied via a
+decision rule modeled directly on the v2 verifier finding (cheap signals are
+fine on easy tasks and a liability on hard ones).
+
+Held out on 14 tasks the log had never seen (chronological split — no task
+can see outcomes from its own batch or the future), the learned router beat
+the static classifier by **22.7% at identical quality, 1.000 vs. 1.000**:
+$0.014319 against $0.018516. Against the frontier-only baseline, that's
+**26.1% net savings, versus just 4.4% for the static router on this same
+task set** — the held-out mix is mostly hard tasks, exactly where a cold
+policy collapses back to routing everything to the frontier; the learned
+router's log already knew Haiku had handled these shapes. The lookup itself
+is SQL over the run log, not an LLM call, so it costs **$0** to consult.
+
+Task by task: 9 of 14 downgraded on strong evidence, and all 9 scored 1.00
+after the downgrade. 3 more had evidence on file but **refused** to
+downgrade — history showed the cheap tier failing that exact task shape, so
+the task stayed at the frontier and scored 1.00 there. That refusal
+mechanism is the finding that matters most: a router that only kept the 9
+wins, with no refusals, would just be "route everything cheap" with extra
+steps. The remaining 2 tasks hit thin or no history and fell back to the
+static classifier's tier — the designed cold-start rule, not a bug.
+
+**The caveat that has to travel with the 22.7%:** the saving is conditional
+on the workload repeating task shapes the log has already seen. The held-out
+tasks were deliberately authored to repeat shapes logged ≥5 times — the only
+regime in which a learned router does anything at all. A workload with no
+repeated shapes gets cold start everywhere, which is exactly the static
+router's numbers, at the same $0 extra overhead. Full write-up, including the
+feasibility fight over undated history and the per-task evidence log:
+[`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md). Original design:
 [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
 
 ## Honest limitations

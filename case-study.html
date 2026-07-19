@@ -434,12 +434,35 @@
       </ol>
     </section>
 
-    <section aria-label="v3 preview">
-      <p class="kicker">Where this goes next</p>
+    <section aria-label="v3 result">
+      <p class="kicker">V3 &mdash; the router learns from its own log</p>
       <div class="insight">
-        <p class="big">The router currently re-derives what it already paid to learn. v3 makes the spend compound.</p>
-        <p>Every run so far &mdash; task type, model, cost, quality &mdash; is already sitting in the performance log, unused for routing decisions. v3 is a design (not yet built) for a router that consults that history before routing, and only trusts it enough to go cheaper when the evidence is strong &mdash; the same never-trade-quality guarantee as v1/v2, applied to a cold-start rule modeled on the verifier finding above. Full design: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/V3_DESIGN.md" style="color:var(--teal)">docs/V3_DESIGN.md</a>.</p>
+        <p class="big">The router now learns from its own history. On repeat task shapes it beats the static router by 22.7% at identical quality &mdash; and costs nothing to consult.</p>
+        <p>Every run so far &mdash; task type, model, cost, quality &mdash; sits in <code>data/runs.db</code>, previously unused for routing decisions. v3 is built and evaluated: consult that history before routing, and only downgrade a task when the evidence clears a quality bar &mdash; the same never-trade-quality guarantee as v1/v2. Held out on 14 tasks the log had never seen (chronological split, no leakage from a task's own batch or the future):</p>
       </div>
+
+      <div class="panel">
+        <p class="panel-title">Held-out cost, 14 tasks &mdash; static classifier vs. learned router, identical 1.000 quality both arms</p>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-head">
+              <span class="bar-name">Static router <span class="sub">cold classifier, no history &middot; 4.4% net saving vs. frontier</span></span>
+              <span class="bar-val" style="color:var(--amber)">$0.018516</span>
+            </div>
+            <div class="track"><div class="fill cost" data-w="100"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head">
+              <span class="bar-name">Learned router <span class="sub">consults data/runs.db first &middot; 26.1% net saving vs. frontier</span></span>
+              <span class="bar-val" style="color:var(--teal)">$0.014319</span>
+            </div>
+            <div class="track"><div class="fill save" data-w="77.3"></div></div>
+          </div>
+        </div>
+        <p class="delta-note">&#8595;&nbsp;<b>22.7% cheaper</b> than the static router at identical quality (1.000 vs. 1.000) &mdash; and the lookup is SQL over the run log, not an LLM call, so routing overhead is <b>$0</b>. 9 of 14 tasks downgraded on strong evidence (all scored 1.00); 3 downgrades were <b>refused</b> where history showed the cheap tier failing that exact shape (stayed at the frontier, scored 1.00); 2 fell back to the static classifier on thin history (cold start).</p>
+      </div>
+
+      <p>The catch, and it has to travel with the number: this saving is conditional on the workload repeating task shapes it's already logged. The held-out set was written to repeat shapes seen &ge;5 times before &mdash; the only regime a learned router can act in. A workload with no repeated shapes gets cold start everywhere: exactly the static router's numbers, at the same $0 overhead. Full write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/V3_FINDINGS.md" style="color:var(--teal)">docs/V3_FINDINGS.md</a> (design: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/V3_DESIGN.md" style="color:var(--teal)">docs/V3_DESIGN.md</a>).</p>
     </section>
 
     <section>
