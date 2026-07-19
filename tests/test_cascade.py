@@ -41,6 +41,38 @@ class TestParseAdequacy(unittest.TestCase):
         # fails safe rather than being read as adequate.
         self.assertEqual(_parse_adequacy("5"), 0.0)
 
+    def test_trailing_garbage_after_a_valid_number_still_parses(self):
+        """FLAGGING CURRENT BEHAVIOR (not a fix): _SCORE_RE's lookahead only
+        rejects a following DIGIT, not a following '.', so "0.7.5" matches
+        the leading "0.7" and is accepted as 0.7 rather than failing safe as
+        unparseable junk. Documented here so a future regex change doesn't
+        silently flip this without a test noticing either way."""
+        self.assertEqual(_parse_adequacy("score: 0.7.5"), 0.7)
+
+    def test_many_trailing_zeros_parses_as_one(self):
+        self.assertEqual(_parse_adequacy("1.00000"), 1.0)
+
+    def test_first_bare_digit_wins_when_both_present(self):
+        """"0 or 1" contains both a valid 0 and a valid 1 token; the regex
+        takes the first match left-to-right, so this reads as 0.0 (escalate)
+        rather than 1.0 (accept) — the fail-safe direction, since a genuinely
+        ambiguous verifier answer should not be trusted as adequate."""
+        self.assertEqual(_parse_adequacy("0 or 1"), 0.0)
+
+    def test_unicode_digits_fail_safe(self):
+        """Non-ASCII digit glyphs (e.g. Arabic-Indic) never match the regex's
+        literal '0'/'1' characters, so a verifier reply in another digit
+        script must fail safe to escalate rather than silently error or be
+        misread."""
+        self.assertEqual(_parse_adequacy("۰.۷"), 0.0)  # Extended Arabic-Indic "0.7"
+
+    def test_multi_digit_number_fails_safe(self):
+        """A verifier that answers "10" (e.g. mimicking a 0-10 scale instead
+        of 0-1) must not be misparsed as a leading '1' — the lookbehind/
+        lookahead pair rejects any digit adjacent to another digit, so this
+        finds no match at all and fails safe to escalate."""
+        self.assertEqual(_parse_adequacy("10"), 0.0)
+
 
 class TestAcceptCheapAnswer(unittest.TestCase):
     @patch.object(cascade, "verify_adequacy", return_value=(0.9, 0.0001))

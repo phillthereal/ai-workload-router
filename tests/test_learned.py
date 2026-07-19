@@ -210,6 +210,46 @@ class TestThresholdGating(_DbCase):
         )
         self.assertEqual(decision.direction, "unchanged")
 
+    def test_effective_n_exactly_at_ratio_threshold_counts(self):
+        """MIN_EFFECTIVE_N_RATIO's gate is >=, not >. Five raw outcomes each
+        aged exactly one DECAY_HALF_LIFE_DAYS carry weight 0.5 apiece, so
+        effective_n lands EXACTLY on MIN_EVIDENCE_N * MIN_EFFECTIVE_N_RATIO
+        (5 * 0.5 = 2.5) — that boundary value must still clear the gate, not
+        fall just short of it by a hair."""
+        from datetime import timedelta
+
+        self._seed_frontier_reference()
+        aged = (NOW - timedelta(days=learned.DECAY_HALF_LIFE_DAYS)).isoformat()
+        for _ in range(5):
+            self._log("t1", "claude-haiku-4-5", 0.99, created_at=aged)
+        task = {"id": "t1", "prompt": EXTRACTION_PROMPT}
+        decision = learned.evaluate(
+            task, "extraction", "hard", roster_name="claude_tiers",
+            before_run_group="z", db_path=self.db_path, task_registry=REGISTRY, now=NOW,
+        )
+        ev = next(e for e in decision.evidence if e.tier == "budget")
+        self.assertAlmostEqual(ev.effective_n, 2.5, places=6)
+        self.assertTrue(ev.meets_threshold)
+        self.assertEqual(decision.direction, "downgraded")
+
+    def test_weighted_quality_exactly_at_bar_counts(self):
+        """quality_bar's gate is also >=: five fresh outcomes scoring EXACTLY
+        the retention bar (frontier_reference * 95%) must still qualify,
+        not be treated as just missing it."""
+        self._seed_frontier_reference()  # frontier_reference_quality == 0.97
+        bar = 0.97 * (learned.QUALITY_RETENTION_TARGET_PCT / 100)
+        for _ in range(5):
+            self._log("t1", "claude-haiku-4-5", bar, created_at=NOW.isoformat())
+        task = {"id": "t1", "prompt": EXTRACTION_PROMPT}
+        decision = learned.evaluate(
+            task, "extraction", "hard", roster_name="claude_tiers",
+            before_run_group="z", db_path=self.db_path, task_registry=REGISTRY, now=NOW,
+        )
+        ev = next(e for e in decision.evidence if e.tier == "budget")
+        self.assertAlmostEqual(ev.weighted_quality, ev.quality_bar, places=6)
+        self.assertTrue(ev.meets_threshold)
+        self.assertEqual(decision.direction, "downgraded")
+
     def test_chronological_cutoff_hides_future_evidence(self):
         """Evidence logged in a run_group at or after the cutoff must not be
         visible — a learned router that peeks at the future is not testing

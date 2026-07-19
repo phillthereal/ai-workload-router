@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from router import db  # noqa: E402
-from router.report import PROJECTION_VOLUMES, build_report  # noqa: E402
+from router.report import (  # noqa: E402
+    PROJECTION_VOLUMES,
+    build_report,
+    format_report_markdown,
+)
 
 
 class TestReportLatencyAndProjection(unittest.TestCase):
@@ -115,6 +119,66 @@ class TestReportLatencyAndProjection(unittest.TestCase):
         self.assertAlmostEqual(report.cost_per_task_frontier, 0.0)
         for p in report.projections:
             self.assertAlmostEqual(p["baseline_monthly"], 0.0)
+
+    def test_empty_run_group_returns_a_zeroed_report_not_a_crash(self):
+        """A run_group with no logged rows at all (e.g. a benchmark invocation
+        that failed before logging anything) must degrade to a well-formed,
+        all-zero report rather than raising a ZeroDivisionError or KeyError —
+        every ratio in build_report is guarded, and this pins that guard."""
+        report = build_report("no-such-run-group", db_path=self.db_path)
+
+        self.assertEqual(report.router_n, 0)
+        self.assertEqual(report.frontier_n, 0)
+        self.assertAlmostEqual(report.cost_reduction_pct, 0.0)
+        self.assertAlmostEqual(report.quality_retention_pct, 0.0)
+        self.assertFalse(report.hypothesis_passed)
+        self.assertFalse(report.all_real)  # bool([]) is False -> not "real" by construction
+        self.assertIsNone(report.classifier_agreement_pct)
+        for p in report.projections:
+            self.assertAlmostEqual(p["baseline_monthly"], 0.0)
+            self.assertAlmostEqual(p["router_monthly"], 0.0)
+
+    def test_single_strategy_run_group_has_no_frontier_baseline(self):
+        """Only router rows logged, no frontier_only rows at all (e.g. a
+        --strategy router run before the baseline arm has run). The frontier
+        side must read as zero/absent, not crash on a missing summary key."""
+        self._log(task_id="t1", strategy="router", cost_usd=0.02, quality_score=0.9)
+        self._log(task_id="t2", strategy="router", cost_usd=0.03, quality_score=0.8)
+
+        report = build_report("g1", db_path=self.db_path)
+
+        self.assertEqual(report.router_n, 2)
+        self.assertEqual(report.frontier_n, 0)
+        self.assertAlmostEqual(report.frontier_cost, 0.0)
+        # frontier["total_cost"] is falsy -> both ratios guarded to 0.0, not NaN/inf.
+        self.assertAlmostEqual(report.cost_reduction_pct, 0.0)
+        self.assertAlmostEqual(report.quality_retention_pct, 0.0)
+        self.assertFalse(report.hypothesis_passed)
+        # Rendering must not crash on the missing baseline arm either.
+        md = format_report_markdown(report)
+        self.assertIn("frontier_only", md)
+
+    def test_routing_overhead_pct_is_zero_when_gross_savings_not_positive(self):
+        """If the experimental arm costs as much as or more than the
+        baseline (gross_savings <= 0), routing_overhead_pct_of_savings must
+        report 0.0, not a negative or division-by-near-zero percentage —
+        there is no "share of savings" to speak of when there were no
+        savings."""
+        self._log(task_id="t1", strategy="router", cost_usd=0.10,
+                   routing_cost_usd=0.01)
+        self._log(task_id="t1", strategy="frontier_only", cost_usd=0.05,
+                   model="claude-opus-4-8")
+
+        report = build_report("g1", db_path=self.db_path)
+
+        self.assertLessEqual(report.frontier_cost - report.router_cost, 0.0)
+        self.assertAlmostEqual(report.routing_overhead_pct_of_savings, 0.0)
+
+    def test_format_report_markdown_does_not_crash_on_empty_report(self):
+        report = build_report("no-such-run-group", db_path=self.db_path)
+        md = format_report_markdown(report)
+        self.assertIsInstance(md, str)
+        self.assertIn("Benchmark Report", md)
 
 
 if __name__ == "__main__":
