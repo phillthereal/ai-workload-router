@@ -8,6 +8,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -28,12 +29,11 @@ class TestGeminiModelConfig(unittest.TestCase):
 
 class TestGeminiAdapter(unittest.TestCase):
     def test_get_adapter_returns_mock_under_force_mock(self):
-        os.environ["AWR_FORCE_MOCK"] = "1"
-        try:
+        # patch.dict restores the prior value; a bare `del` here used to switch
+        # every later test in the run out of mock mode (live keys, real calls).
+        with patch.dict(os.environ, {"AWR_FORCE_MOCK": "1"}):
             adapter = get_adapter("gemini-2.0-flash")
             self.assertIsInstance(adapter, MockAdapter)
-        finally:
-            del os.environ["AWR_FORCE_MOCK"]
 
 
 class TestCrossVendor4Roster(unittest.TestCase):
