@@ -106,6 +106,26 @@ workload repeating task shapes; a no-repeat workload gets exactly the static
 router. Numbers, evidence records, and caveats in
 [`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md).
 
+## v4: from benchmark to usable router
+
+v1–v3 proved the routing works; v4 makes it something an app can actually call.
+
+- **One API.** `Router(policy).complete(prompt)` returns the answer, the model chosen, answer + routing cost, and a human-readable trace of *why*. Every strategy — rules, classifier, learned, cascade, frontier-only — is a pluggable policy behind the same interface, and the benchmark is now just a loop over policies.
+- **Real failover.** If a provider errors, the router retries the next model up the ladder and records it in the trace, rather than silently substituting a fake answer.
+- **A live learning signal.** The v3 learned router originally learned from an offline judge that needs an answer key — which production traffic never has. `Router.feedback(request_id, score)` now feeds it user ratings or the cascade's verifier score, with verifier evidence down-weighted (the v2 finding: self-verification is unreliable) so it can never trigger a cheaper route on its own.
+- **Drop-in endpoint.** An OpenAI-compatible server (stdlib only): point any OpenAI SDK's `base_url` at it and pick a policy via the `model` field (`router`, `router:cascade`, `router:learned`, `router:frontier`). Localhost-only by default, optional bearer auth (`AWR_SERVER_TOKEN`), 1 MB body limit; each response includes an `x_router` block showing the routing decision and its cost.
+
+```python
+from router.api import Router, CascadePolicy
+r = Router(CascadePolicy(), roster_name="claude_tiers").complete("Summarize: ...")
+print(r.model, r.total_cost_usd, r.trace)
+```
+
+```bash
+python3 serve.py --port 8787                      # then base_url="http://127.0.0.1:8787/v1", model="router"
+python3 serve.py --port 8787 --log-db live.db     # also log requests + enable POST /v1/feedback (stores prompt text)
+```
+
 ## Run It Yourself
 
 **Setup:**
