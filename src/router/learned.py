@@ -187,6 +187,17 @@ def extract_features(prompt: str, task_type: str, difficulty: str) -> FeatureBuc
     )
 
 
+# Per-source evidence weight, multiplied into the decay weight. Judge (offline,
+# reference-based) and user outcomes are trusted fully. Verifier scores are a
+# model grading its own tier's answer without an answer key: the v2 finding
+# showed self-verification is unreliable (a budget verifier scored its own wrong
+# answers 0.95-1.0; see cascade.run_cascade). 0.3 means MIN_EVIDENCE_N verifier
+# rows give effective_n 1.5 < MIN_EVIDENCE_N * MIN_EFFECTIVE_N_RATIO (2.5), so
+# verifier evidence alone can never clear the downgrade bar that the same
+# number of judge rows would; it needs ~9 fresh rows (or a judge/user mix).
+SOURCE_WEIGHT: dict[str, float] = {"judge": 1.0, "user": 1.0, "verifier": 0.3}
+
+
 def decay_weight(created_at: Optional[str], now: Optional[datetime] = None) -> float:
     """
     Exponential recency weight in (0, 1] for one logged outcome.
@@ -364,7 +375,7 @@ def _gather_evidence(
         # across tiers.
         if row["model"] != model:
             continue
-        prompt = task_registry.get(row["task_id"])
+        prompt = task_registry.get(row["task_id"]) or row.get("prompt_text")
         if prompt is None:
             # Can't recompute the fine-grained bucket without the original
             # prompt — this row is invisible to the learned router, not an
@@ -376,7 +387,10 @@ def _gather_evidence(
             continue
         matched.append(row)
 
-    weights = [decay_weight(r["created_at"], now) for r in matched]
+    weights = [
+        decay_weight(r["created_at"], now) * SOURCE_WEIGHT.get(r["quality_source"], 1.0)
+        for r in matched
+    ]
     n = len(matched)
     effective_n = sum(weights)
     weighted_quality = (

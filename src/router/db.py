@@ -45,7 +45,9 @@ CREATE TABLE IF NOT EXISTS runs (
     classifier_agreed INTEGER,
     verifier_scores TEXT,
     created_at TEXT,
-    learned_evidence TEXT
+    learned_evidence TEXT,
+    quality_source TEXT,
+    prompt_text TEXT
 )
 """
 
@@ -99,7 +101,22 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN verifier_scores TEXT",
     "ALTER TABLE runs ADD COLUMN created_at TEXT",
     "ALTER TABLE runs ADD COLUMN learned_evidence TEXT",
+    "ALTER TABLE runs ADD COLUMN quality_source TEXT",
+    "ALTER TABLE runs ADD COLUMN prompt_text TEXT",
 ]
+
+# The v4 (online feedback) columns:
+#   quality_source — who produced quality_score: 'judge' (offline reference-based
+#                    judge), 'user' (Router.feedback), 'verifier' (provisional
+#                    cascade adequacy score), or 'pending' (live row logged, no
+#                    outcome yet; quality_score is a meaningless 0.0 placeholder).
+#                    NULL on every pre-v4 row and read as 'judge' — no rewrite.
+#   prompt_text    — the live request's prompt, so the learned router can bucket
+#                    live rows (benchmark rows resolve prompts via task_id).
+# Live rows use task_id = request_id (a uuid) and strategy 'live:<policy>'.
+SOURCE_PENDING = "pending"
+_SOURCE = "COALESCE(quality_source, 'judge')"
+
 
 
 def _resolve_path(db_path: Optional[Union[str, Path]]) -> Path:
@@ -155,6 +172,8 @@ def log_run(
     verifier_scores: Optional[list[float]] = None,
     created_at: Optional[str] = None,
     learned_evidence: Optional[dict[str, Any]] = None,
+    quality_source: Optional[str] = None,
+    prompt_text: Optional[str] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -205,8 +224,8 @@ def log_run(
                 input_tokens, output_tokens, cost_usd, latency_ms,
                 quality_score, success, simulated, response_text,
                 effort, roster, routing_cost_usd, classifier_agreed,
-                verifier_scores, created_at, learned_evidence
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                verifier_scores, created_at, learned_evidence, quality_source, prompt_text
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
@@ -217,10 +236,30 @@ def log_run(
                 None if verifier_scores is None else json.dumps(verifier_scores),
                 resolved_created_at,
                 None if learned_evidence is None else json.dumps(learned_evidence),
+                quality_source, prompt_text,
             ),
         )
         conn.commit()
         return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def set_outcome(
+    request_id: str, score: float, source: str,
+    db_path: Optional[Union[str, Path]] = None,
+) -> None:
+    """Record an outcome for a live row (task_id == request_id). Raises KeyError if unknown."""
+    conn = sqlite3.connect(_resolve_path(db_path))
+    try:
+        cur = conn.execute(
+            "UPDATE runs SET quality_score = ?, quality_source = ? "
+            "WHERE task_id = ? AND strategy LIKE 'live:%'",
+            (score, source, request_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            raise KeyError(f"unknown request_id {request_id!r}")
     finally:
         conn.close()
 
@@ -374,23 +413,26 @@ def outcomes_for_bucket(
             rows = conn.execute(
                 """
                 SELECT task_id, model, quality_score, success, created_at,
-                       run_group, simulated
+                       run_group, simulated, {src} AS quality_source, prompt_text
                 FROM runs
                 WHERE task_type = ? AND difficulty = ? AND simulated = 0
-                      AND run_group < ?
-                """,
+                      AND {src} != 'pending' AND run_group < ?
+                """.format(src=_SOURCE),
                 (task_type, difficulty, before_run_group),
             ).fetchall()
         else:
             rows = conn.execute(
                 """
                 SELECT task_id, model, quality_score, success, created_at,
-                       run_group, simulated
+                       run_group, simulated, {src} AS quality_source, prompt_text
                 FROM runs
                 WHERE task_type = ? AND difficulty = ? AND simulated = 0
-                """,
+                      AND {src} != 'pending'
+                """.format(src=_SOURCE),
                 (task_type, difficulty),
             ).fetchall()
+    except sqlite3.OperationalError:
+        return []  # no runs table yet (fresh db): no evidence, not an error
     finally:
         conn.close()
     return [dict(row) for row in rows]
@@ -432,7 +474,8 @@ def frontier_reference_quality(
                 SELECT AVG(quality_score) FROM runs
                 WHERE task_type = ? AND difficulty = ? AND model = ?
                       AND simulated = 0 AND run_group < ?
-                """,
+                      AND {src} != 'pending'
+                """.format(src=_SOURCE),
                 (task_type, difficulty, frontier_model, before_run_group),
             ).fetchone()
         else:
@@ -440,10 +483,12 @@ def frontier_reference_quality(
                 """
                 SELECT AVG(quality_score) FROM runs
                 WHERE task_type = ? AND difficulty = ? AND model = ?
-                      AND simulated = 0
-                """,
+                      AND simulated = 0 AND {src} != 'pending'
+                """.format(src=_SOURCE),
                 (task_type, difficulty, frontier_model),
             ).fetchone()
+    except sqlite3.OperationalError:
+        return None  # no runs table yet
     finally:
         conn.close()
     return row[0] if row and row[0] is not None else None

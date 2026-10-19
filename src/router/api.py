@@ -20,10 +20,13 @@ AWR_FORCE_MOCK always yields mock answers, flagged ``Result.simulated``.
 
 from __future__ import annotations
 
+import time
+import uuid
 from dataclasses import dataclass, field
-from typing import Any, Optional, Protocol
+from pathlib import Path
+from typing import Any, Optional, Protocol, Union
 
-from . import gates, learned
+from . import db, gates, learned
 from .adapters import get_adapter
 from .adapters.base import Response
 from .cascade import run_cascade
@@ -50,6 +53,10 @@ class Result:
     classifier_agreed: Optional[bool] = None
     verifier_scores: Optional[list[float]] = None
     learned_evidence: Optional[dict] = None
+    task_type: Optional[str] = None
+    difficulty: Optional[str] = None
+    request_id: Optional[str] = None
+    """Set when the Router logs live traffic (log_to); pass to Router.feedback."""
 
     @property
     def total_cost_usd(self) -> float:
@@ -172,6 +179,7 @@ class RulesPolicy:
             trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model}, "
                    f"agreed_with_label={c.agreed_with_label})", d.reason],
             classifier_agreed=c.agreed_with_label,
+            task_type=c.task_type, difficulty=c.difficulty,
         )
 
 
@@ -201,6 +209,7 @@ class LearnedPolicy(RulesPolicy):
                    f"learned: {ld.direction} {ld.classifier_tier}->{ld.chosen_tier}: {ld.reason}",
                    d.reason],
             classifier_agreed=c.agreed_with_label, learned_evidence=ld.to_log_dict(),
+            task_type=c.task_type, difficulty=c.difficulty,
         )
 
 
@@ -237,11 +246,18 @@ class Router:
         self, policy: Policy, roster_name: Optional[str] = None,
         effort_policy: Optional[dict[str, Optional[str]]] = None,
         allow_mock_fallback: bool = False,
+        log_to: Union[None, bool, str, Path] = None,
     ) -> None:
         self.policy = policy
         self.roster = get_roster(roster_name)
         self.effort_policy = effort_policy
         self.allow_mock_fallback = allow_mock_fallback
+        # None = no logging; True = default data/runs.db; else a db path.
+        self.log_db: Optional[Path] = (
+            None if not log_to else (db.DB_PATH if log_to is True else Path(log_to))
+        )
+        if self.log_db:
+            db.init_db(self.log_db)
 
     def before_run_group(self, run_group: str) -> None:
         """Forward the benchmark's chronological cutoff to the policy."""
@@ -250,6 +266,48 @@ class Router:
     def complete(self, prompt: str, task: Optional[dict[str, Any]] = None) -> Result:
         task = {"id": "adhoc", **(task or {}), "prompt": prompt}
         ctx = Ctx(self)
+        start = time.monotonic()
         result = self.policy.run(prompt, task, ctx)
         result.trace.extend(ctx.events)
+        if self.log_db:
+            self._log_live(prompt, task, result, (time.monotonic() - start) * 1000)
         return result
+
+    def _log_live(self, prompt: str, task: dict, result: Result, latency_ms: float) -> None:
+        """Log a live row; it counts as evidence only once it has an outcome."""
+        rid = str(uuid.uuid4())
+        scores = result.verifier_scores
+        threshold = getattr(self.policy, "escalate_threshold", None)
+        # A cascade answer that PASSED the verifier has a final adequacy score;
+        # an escalated-to-top answer was never verified, so stays pending.
+        provisional = scores[-1] if scores and threshold is not None and scores[-1] >= threshold else None
+        resp = result.response
+        db.log_run(
+            run_group="live", strategy=f"live:{self.policy.name}", task_id=rid,
+            task_type=result.task_type or task.get("task_type") or "unknown",
+            difficulty=result.difficulty or task.get("difficulty") or "unknown",
+            model=result.model,
+            input_tokens=resp.input_tokens if resp else 0,
+            output_tokens=resp.output_tokens if resp else 0,
+            cost_usd=result.total_cost_usd, latency_ms=latency_ms,
+            quality_score=0.0 if provisional is None else provisional,
+            success=True, simulated=result.simulated, response_text=result.text,
+            effort=result.effort, roster=self.roster.name,
+            routing_cost_usd=result.routing_cost_usd,
+            classifier_agreed=result.classifier_agreed,
+            verifier_scores=scores, learned_evidence=result.learned_evidence,
+            quality_source=db.SOURCE_PENDING if provisional is None else "verifier",
+            prompt_text=prompt, db_path=self.log_db,
+        )
+        result.request_id = rid
+
+    def feedback(self, request_id: str, score: float, source: str = "user") -> None:
+        """Record an outcome in [0,1] for a logged request (overrides a provisional score)."""
+        if not self.log_db:
+            raise RuntimeError("feedback() needs Router(log_to=...)")
+        if (isinstance(score, bool) or not isinstance(score, (int, float))
+                or not 0.0 <= score <= 1.0):
+            raise ValueError(f"score must be a number in [0, 1], got {score!r}")
+        if source not in ("user", "judge", "verifier"):
+            raise ValueError(f"unknown source {source!r}")
+        db.set_outcome(request_id, float(score), source, self.log_db)
