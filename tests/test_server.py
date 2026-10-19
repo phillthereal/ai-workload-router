@@ -112,3 +112,42 @@ class AuthTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FeedbackLoopTests(unittest.TestCase):
+    """Endpoint + learning hook together: answer -> request_id -> rating stored."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dbp = Path(self._tmp.name) / "live.db"
+        self.srv = make_server(port=0, allow_mock=True, log_db=self.dbp)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.base = f"http://127.0.0.1:{self.srv.server_port}"
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+        self._tmp.cleanup()
+
+    def test_full_loop(self):
+        _, j, _ = call(self.base, "/v1/chat/completions", {"model": "router", "messages": MSG})
+        rid = j["x_router"]["request_id"]
+        self.assertTrue(rid)
+        self.assertEqual(call(self.base, "/v1/feedback", {"request_id": rid, "score": 0.9})[0], 200)
+        import sqlite3
+        row = sqlite3.connect(self.dbp).execute(
+            "SELECT quality_score, quality_source FROM runs WHERE task_id=?", (rid,)).fetchone()
+        self.assertEqual(row, (0.9, "user"))
+
+    def test_feedback_errors(self):
+        self.assertEqual(call(self.base, "/v1/feedback", {"request_id": "nope", "score": 1})[0], 404)
+        _, j, _ = call(self.base, "/v1/chat/completions", {"model": "router", "messages": MSG})
+        bad = {"request_id": j["x_router"]["request_id"], "score": 7}
+        self.assertEqual(call(self.base, "/v1/feedback", bad)[0], 400)
+
+    def test_feedback_off_without_log_db(self):
+        srv, base = start()
+        try:
+            self.assertEqual(call(base, "/v1/feedback", {"request_id": "x", "score": 1})[0], 400)
+        finally:
+            srv.shutdown(); srv.server_close()
