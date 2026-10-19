@@ -73,16 +73,28 @@ def _build_real_adapter(model_name: str, provider: str, api_key: str) -> Adapter
     return OpenAICompatibleAdapter(model_name, api_key, _PROVIDER_BASE_URL[provider])
 
 
-def get_adapter(model_name: str) -> Adapter:
+class MissingProviderError(RuntimeError):
+    """A real (non-mock) call was required but the provider is unavailable."""
+
+
+def get_adapter(model_name: str, allow_mock_fallback: bool = True) -> Adapter:
     """
     Factory: return an Adapter instance for the given model name.
 
     Args:
         model_name: Model identifier (key in router.config.MODELS).
 
+        allow_mock_fallback: True (default; the offline benchmark) keeps the
+            historical behavior: no key -> MockAdapter, and a failed real call
+            is replaced by a simulated MockAdapter answer. False (production,
+            see router.api.Router) never fabricates: no key raises
+            MissingProviderError and a failed real call comes back as
+            Response(success=False) for the caller to fail over. AWR_FORCE_MOCK
+            still returns MockAdapter either way (explicit offline mode).
+
     Returns:
-        A real, cached, fallback-wrapped Adapter if the model's provider key
-        is configured (and AWR_FORCE_MOCK is not set); otherwise MockAdapter.
+        A real, cached Adapter (mock-fallback-wrapped when allowed) if the
+        model's provider key is configured; otherwise MockAdapter.
     """
     if force_mock():
         return MockAdapter(model_name)
@@ -92,11 +104,13 @@ def get_adapter(model_name: str) -> Adapter:
     env_var = _PROVIDER_ENV_VAR.get(model.provider, "")
     api_key = get_api_key(env_var)
     if not provider_supported or not api_key:
+        if not allow_mock_fallback:
+            raise MissingProviderError(f"no API key/provider support for {model_name}")
         return MockAdapter(model_name)
 
     real = _build_real_adapter(model_name, model.provider, api_key)
     cached = CachedAdapter(real, model_name)
-    return _FallbackToMockAdapter(cached, model_name)
+    return _FallbackToMockAdapter(cached, model_name) if allow_mock_fallback else cached
 
 
 __all__ = ["Adapter", "Response", "MockAdapter", "get_adapter"]

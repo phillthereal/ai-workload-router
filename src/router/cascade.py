@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .adapters import get_adapter
 from .adapters.base import Response
@@ -123,8 +123,14 @@ def _parse_adequacy(text: str) -> float:
         return _UNPARSEABLE_ADEQUACY
 
 
+# (model, prompt, max_tokens) -> Response. Lets router.api inject failover-aware
+# calls; None means the historical direct get_adapter() call.
+CompleteFn = Callable[..., Response]
+
+
 def verify_adequacy(
-    task: dict[str, Any], response: Response, verifier_model: str
+    task: dict[str, Any], response: Response, verifier_model: str,
+    complete: Optional[CompleteFn] = None,
 ) -> tuple[float, float]:
     """
     Reference-free adequacy check of `response` for `task`.
@@ -142,7 +148,10 @@ def verify_adequacy(
     prompt = _VERIFIER_PROMPT_TEMPLATE.format(
         prompt=task.get("prompt", ""), answer=response.text
     )
-    check = get_adapter(verifier_model).complete(prompt, max_tokens=_VERIFIER_MAX_TOKENS)
+    if complete is None:
+        check = get_adapter(verifier_model).complete(prompt, max_tokens=_VERIFIER_MAX_TOKENS)
+    else:
+        check = complete(verifier_model, prompt, max_tokens=_VERIFIER_MAX_TOKENS)
     cost = get_model(verifier_model).cost_for_tokens(
         check.input_tokens, check.output_tokens
     )
@@ -155,6 +164,7 @@ def run_cascade(
     verifier_model: Optional[str] = None,
     escalate_threshold: float = 0.7,
     ladder: Optional[list[str]] = None,
+    complete: Optional[CompleteFn] = None,
 ) -> CascadeResult:
     """
     Run `task` through the cascade, escalating on a failed verifier check.
@@ -211,7 +221,11 @@ def run_cascade(
     response: Optional[Response] = None
 
     for index, model in enumerate(climb):
-        response = get_adapter(model).complete(task["prompt"])
+        if complete is None:
+            response = get_adapter(model).complete(task["prompt"])
+        else:
+            response = complete(model, task["prompt"])
+            model = response.model  # failover may have answered with another tier
         this_cost = get_model(model).cost_for_tokens(
             response.input_tokens, response.output_tokens
         )
@@ -224,7 +238,7 @@ def run_cascade(
             answer_cost = this_cost
             break
 
-        adequacy, verify_cost = verify_adequacy(task, response, verifier)
+        adequacy, verify_cost = verify_adequacy(task, response, verifier, complete)
         overhead_cost += verify_cost
         verifier_scores.append(adequacy)
 
