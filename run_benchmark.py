@@ -44,14 +44,12 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from router import db  # noqa: E402
-from router import learned  # noqa: E402
-from router.adapters import get_adapter  # noqa: E402
+from router.api import (  # noqa: E402
+    CascadePolicy, FrontierOnlyPolicy, LearnedPolicy, Router, RulesPolicy,
+)
 from router.benchmark.tasks import load_tasks  # noqa: E402
-from router.cascade import run_cascade  # noqa: E402
-from router.classifier import classify_task  # noqa: E402
-from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS, get_model, get_roster  # noqa: E402
+from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
 from router.report import BASELINE_STRATEGY, build_report, format_report_markdown, print_report  # noqa: E402
-from router.router import route_task  # noqa: E402
 from router.scoring import score  # noqa: E402
 
 # Experimental arms the benchmark can run against the frontier_only baseline.
@@ -170,6 +168,25 @@ def _report_path(
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
 
 
+def _build_policy(args: argparse.Namespace):
+    """Map CLI flags to the experimental Policy."""
+    if args.strategy == "cascade":
+        return CascadePolicy(args.verifier, args.escalate_threshold)
+    if args.learned:
+        return LearnedPolicy(use_labels=not args.classify)
+    return RulesPolicy(use_labels=not args.classify)
+
+
+def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
+    """_report_path with the run-shape tags derived from the policy's config."""
+    tags = policy.report_tags()
+    return _report_path(
+        roster, all_real, "classified" in tags, effort_policy, policy.name, tasks,
+        next((t[len("verifier-"):] for t in tags if t.startswith("verifier-")), None),
+        "learned" in tags,
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -268,108 +285,43 @@ def main(argv: Optional[list[str]] = None) -> None:
     """Run the full benchmark pipeline end to end and print/save the report."""
     args = _build_parser().parse_args(argv)
     effort_policy = _parse_effort_policy(args.effort_policy)
-    roster = get_roster(args.roster)
 
     tasks = load_tasks(args.tasks)
     db.init_db()
     run_group = f"{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
-    # The experimental arm (router OR cascade) plus the fixed frontier-only
-    # baseline. Both experimental arms charge their decision cost to
-    # routing_cost_usd, so the report's net-savings accounting is identical for
-    # either — the classifier's prediction toll and the cascade's
-    # verifier-plus-discarded-attempt overhead land in the same column.
-    for strategy in (args.strategy, BASELINE_STRATEGY):
+    # The experimental policy plus the fixed frontier-only baseline. Both
+    # experimental policies charge their decision cost to routing_cost_usd, so
+    # the report's net-savings accounting is identical for either. The benchmark
+    # opts into the offline mock fallback (allow_mock_fallback=True) so a run
+    # always completes; real callers use router.api.Router's strict default.
+    policy = _build_policy(args)
+    for pol in (policy, FrontierOnlyPolicy()):
+        router = Router(
+            pol, roster_name=args.roster, effort_policy=effort_policy,
+            allow_mock_fallback=True,
+        )
+        # `run_group` is the chronological cutoff for the learned policy: a
+        # task only sees evidence strictly earlier than the run it is part of.
+        router.before_run_group(run_group)
         for task in tasks:
-            routing_cost = 0.0
-            agreed: Optional[bool] = None
-            effort: Optional[str] = None
-            verifier_scores: Optional[list[float]] = None
-            learned_evidence: Optional[dict] = None
-
-            if strategy == "cascade":
-                # React-to-failure: try cheap, verify, escalate only on a failed
-                # check. cost_usd is the winning answer; overhead (verifier
-                # calls + discarded cheap attempts) is the routing cost.
-                result = run_cascade(
-                    task,
-                    roster_name=args.roster,
-                    verifier_model=args.verifier,
-                    escalate_threshold=args.escalate_threshold,
-                )
-                response = result.response
-                model_name = response.model
-                cost = result.answer_cost
-                routing_cost = result.overhead_cost
-                # Persist the per-tier verifier scores so escalate_threshold can
-                # be re-tuned directly from the log (see tune_cascade.py).
-                verifier_scores = result.verifier_scores
-            elif strategy == "router":
-                # Predict-then-route. The classifier runs on this arm only; the
-                # baseline does not route, so charging it overhead would
-                # understate the router's true cost.
-                classification = classify_task(
-                    task, roster_name=args.roster, use_labels=not args.classify
-                )
-                routing_cost = classification.cost_usd
-                agreed = classification.agreed_with_label
-
-                if args.learned:
-                    # History gets a chance to override the classifier's
-                    # tier — but only toward cheaper, and only under the
-                    # evidence threshold; see router.learned. `run_group` is
-                    # the chronological cutoff: this task can only see
-                    # evidence strictly earlier than the run it's part of,
-                    # which excludes both the future and its own siblings
-                    # logged earlier in this same loop.
-                    learned_decision = learned.evaluate(
-                        task, classification.task_type, classification.difficulty,
-                        roster_name=args.roster, before_run_group=run_group,
-                    )
-                    learned_evidence = learned_decision.to_log_dict()
-                    decision = route_task(
-                        task,
-                        roster_name=args.roster,
-                        effort_policy=effort_policy,
-                        tier_override=learned_decision.chosen_tier,
-                    )
-                else:
-                    decision = route_task(
-                        task,
-                        roster_name=args.roster,
-                        effort_policy=effort_policy,
-                        task_type=classification.task_type,
-                        difficulty=classification.difficulty,
-                    )
-                model_name = decision.chosen_model
-                effort = decision.effort
-                response = get_adapter(model_name).complete(task["prompt"], effort=effort)
-                cost = get_model(model_name).cost_for_tokens(
-                    response.input_tokens, response.output_tokens
-                )
-            else:  # frontier_only baseline
-                model_name = roster.frontier
-                effort = (effort_policy or {}).get("frontier")
-                response = get_adapter(model_name).complete(task["prompt"], effort=effort)
-                cost = get_model(model_name).cost_for_tokens(
-                    response.input_tokens, response.output_tokens
-                )
-
+            result = router.complete(task["prompt"], task=task)
+            response = result.response
             quality = score(task, response)
 
             db.log_run(
                 run_group=run_group,
-                strategy=strategy,
+                strategy=pol.name,
                 task_id=task["id"],
                 # The task's TRUE labels are logged, not the predicted ones, so
                 # the report's per-type/per-difficulty breakdowns stay anchored
                 # to ground truth even when the router acted on a wrong guess.
                 task_type=task["task_type"],
                 difficulty=task["difficulty"],
-                model=model_name,
+                model=result.model,
                 input_tokens=response.input_tokens,
                 output_tokens=response.output_tokens,
-                cost_usd=cost,
+                cost_usd=result.answer_cost_usd,
                 latency_ms=response.latency_ms,
                 quality_score=quality,
                 success=response.success,
@@ -377,19 +329,16 @@ def main(argv: Optional[list[str]] = None) -> None:
                 response_text=response.text,
                 effort=response.effort,
                 roster=args.roster,
-                routing_cost_usd=routing_cost,
-                classifier_agreed=agreed,
-                verifier_scores=verifier_scores,
-                learned_evidence=learned_evidence,
+                routing_cost_usd=result.routing_cost_usd,
+                classifier_agreed=result.classifier_agreed,
+                verifier_scores=result.verifier_scores,
+                learned_evidence=result.learned_evidence,
             )
 
     report = build_report(run_group, experimental_strategy=args.strategy)
     print_report(report)
 
-    out_path = _report_path(
-        args.roster, report.all_real, args.classify, effort_policy, args.strategy, args.tasks,
-        args.verifier, args.learned,
-    )
+    out_path = _policy_report_path(args.roster, report.all_real, policy, effort_policy, args.tasks)
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")
     if not report.all_real:
