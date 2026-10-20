@@ -126,6 +126,25 @@ python3 serve.py --port 8787                      # then base_url="http://127.0.
 python3 serve.py --port 8787 --log-db live.db     # also log requests + enable POST /v1/feedback (stores prompt text)
 ```
 
+## v5: stress-testing the router
+
+Five experiments that each attack a different assumption — results reported as measured, including the ones that didn't work.
+
+| Experiment | Question | Finding |
+|---|---|---|
+| **Jury of cheap models** ([V5_JURY](docs/V5_JURY.md)) | Is agreement between cheap models from 3 vendors a better escalation signal than a verifier? | Best cost/quality balance on easy work (66.1% net, q 0.99), but **not safe on hard work** (q 0.86): cheap models share blind spots — on one task all three vendors agreed on the same wrong answer. |
+| **Fool the router** ([V5_REDTEAM](docs/V5_REDTEAM.md)) | Can a user steer routing with words in the prompt? | Cost-inflation attacks worked 7/10 → **0/10** after hardening. Making a hard task look easy still works 2/9 — the documented residual risk. |
+| **Live price tracking** ([V5_PRICES](docs/V5_PRICES.md)) | Do the numbers survive the market moving? | v1's 53.6% holds at today's prices (53.58%). Caught Sonnet 5 at −33% and an aggregator Kimi price that's 12× below first-party. |
+| **Budget governor + shadow sampling** ([V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md)) | Can a spend cap and a background safety check run the router unattended? | Shadowing 5% of traffic catches a quality drop in 83% of simulated months (~870 requests), for ~6% overhead. Protected task types were never downgraded. |
+| **Kimi K3** | Moonshot's model as a mid-tier rival to Sonnet (`kimi_mid` roster, reasoning effort low/high/max). | Wired and offline-tested; live run pending account credit. A live outage test confirmed failover to Opus with the cause shown safely in the trace. |
+
+```bash
+python3 run_benchmark.py --roster claude_tiers --strategy jury --tasks data/tasks_hard.json
+python3 redteam.py          # attack success rates, before/after hardening
+python3 prices.py           # drift vs the live OpenRouter price list (no key needed)
+python3 simulate_v5.py      # budget + shadow simulations, offline
+```
+
 ## Run It Yourself
 
 **Setup:**
