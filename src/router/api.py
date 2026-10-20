@@ -32,6 +32,7 @@ from .adapters.base import Response
 from .cascade import run_cascade
 from .classifier import classify_task
 from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
+from .jury import JuryPolicy  # noqa: F401  (re-exported)
 from .router import route_task
 
 

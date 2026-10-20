@@ -45,7 +45,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from router import db  # noqa: E402
 from router.api import (  # noqa: E402
-    CascadePolicy, FrontierOnlyPolicy, LearnedPolicy, Router, RulesPolicy,
+    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, Router, RulesPolicy,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
@@ -53,7 +53,7 @@ from router.report import BASELINE_STRATEGY, build_report, format_report_markdow
 from router.scoring import score  # noqa: E402
 
 # Experimental arms the benchmark can run against the frontier_only baseline.
-EXPERIMENTAL_STRATEGIES = ("router", "cascade")
+EXPERIMENTAL_STRATEGIES = ("router", "cascade", "jury")
 
 
 def _parse_effort_policy(raw: Optional[str]) -> Optional[dict[str, Optional[str]]]:
@@ -100,6 +100,7 @@ def _report_path(
     tasks: Optional[str] = None,
     verifier: Optional[str] = None,
     learned_flag: bool = False,
+    jury_mode: Optional[str] = None,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -163,6 +164,8 @@ def _report_path(
         parts.append("effort")
     if verifier:
         parts.append(f"verifier-{verifier}")
+    if jury_mode:
+        parts.append(jury_mode)
     if tag:
         parts.append(tag)
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
@@ -172,6 +175,8 @@ def _build_policy(args: argparse.Namespace):
     """Map CLI flags to the experimental Policy."""
     if args.strategy == "cascade":
         return CascadePolicy(args.verifier, args.escalate_threshold)
+    if args.strategy == "jury":
+        return JuryPolicy(mode=args.jury_mode)
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify)
     return RulesPolicy(use_labels=not args.classify)
@@ -184,6 +189,7 @@ def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
         roster, all_real, "classified" in tags, effort_policy, policy.name, tasks,
         next((t[len("verifier-"):] for t in tags if t.startswith("verifier-")), None),
         "learned" in tags,
+        next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
     )
 
 
@@ -256,6 +262,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "(cheaper, riskier); higher escalates more readily. Default "
             "%(default)s."
         ),
+    )
+    parser.add_argument(
+        "--jury-mode", choices=("unanimous", "majority"), default="unanimous",
+        help="Jury only: escalate unless all jurors agree (unanimous) or a majority does.",
     )
     parser.add_argument(
         "--tasks",
