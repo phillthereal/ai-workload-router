@@ -34,6 +34,8 @@ Misfiling IGNORE, FYI or JOB_ALERT is cheap. Missing ACTION_NEEDED, JOB_REJECTIO
 
 Absolute savings are small (about $3 per month). The next step, if worthwhile, is a live shadow test costing a few cents: run gpt-4o-mini on a sample and compare its categories (especially protected recall) with Haiku's.
 
+**Update — shadow test run ([`SHADOW_TEST.md`](SHADOW_TEST.md)):** the 81% cascade figure above was a projection; measured on the same 150 real prompts, the gpt-4o-mini cascade saves **76.4%** at 95.3% agreement with Haiku — but still misses 1 of 13 action-needed emails, so it is not yet a safe silent replacement.
+
 ## 5. Backlog estimate (2026-08-03 to 2026-10-20, 78 days)
 **Estimate**, assuming Haiku and the blended $0.00256 per email: about $9.57 at the observed rate (about 3,740 emails) or $8.56 at 300/week (about 3,340 emails).
 

@@ -170,6 +170,7 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 
 ## Project Docs
 
+- **[`docs/REAL_TRAFFIC_ASSESSMENT.md`](docs/REAL_TRAFFIC_ASSESSMENT.md) + [`docs/SHADOW_TEST.md`](docs/SHADOW_TEST.md)** — the router tested on real production email traffic: its length-based difficulty shortcut routed 100% to the expensive model (0% saved), while a measured cheap-first cascade saves 76% at 95% agreement — but still misses 1 in 13 action-needed emails.
 - **[`docs/ANALYSIS.md`](docs/ANALYSIS.md)** — confidence intervals for every headline result and SQL answers to product questions (where routing loses money, which tasks never to route). Power BI-ready tables in `data/bi/`, build guide in [`docs/POWER_BI_GUIDE.md`](docs/POWER_BI_GUIDE.md).
 - **[`docs/DECISION_LOG.md`](docs/DECISION_LOG.md)** — the 15 product calls behind the router: what was decided, what it was traded against, and the evidence.
 - **[`docs/PRD.md`](docs/PRD.md)** — product requirements, success metrics, and the core hypothesis being tested.
