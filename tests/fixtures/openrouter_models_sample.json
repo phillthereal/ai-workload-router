@@ -1,0 +1,46 @@
+{
+ "data": [
+  {
+   "id": "moonshotai/kimi-k3",
+   "pricing": {
+    "prompt": "0.000000239",
+    "completion": "0.000011936"
+   }
+  },
+  {
+   "id": "anthropic/claude-sonnet-5",
+   "pricing": {
+    "prompt": "0.000002",
+    "completion": "0.00001"
+   }
+  },
+  {
+   "id": "anthropic/claude-opus-4.8",
+   "pricing": {
+    "prompt": "0.000005",
+    "completion": "0.000025"
+   }
+  },
+  {
+   "id": "anthropic/claude-haiku-4.5",
+   "pricing": {
+    "prompt": "0.000001",
+    "completion": "0.000005"
+   }
+  },
+  {
+   "id": "deepseek/deepseek-chat",
+   "pricing": {
+    "prompt": "0.0000002574",
+    "completion": "0.0000010287"
+   }
+  },
+  {
+   "id": "openai/gpt-4o-mini",
+   "pricing": {
+    "prompt": "0.00000015",
+    "completion": "0.0000006"
+   }
+  }
+ ]
+}
