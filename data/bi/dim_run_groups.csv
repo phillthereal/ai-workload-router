@@ -1,0 +1,31 @@
+run_group,experiment
+20260714T180519-c008506f,unlabelled/replay
+20260714T180710-04f0c3d6,unlabelled/replay
+20260714T180827-a3c26fb2,unlabelled/replay
+20260714T180945-2260f1c3,unlabelled/replay
+20260714T181140-442867ff,unlabelled/replay
+20260714T182438-f774de65,unlabelled/replay
+20260717T082024-098a7982,v1 cross_vendor / labels / easy
+20260717T164636-ee1ddc99,v2 cross_vendor / classifier / easy
+20260717T164758-d2d01eaa,v2 claude_tiers / classifier / easy
+20260717T171702-e98b914b,v2 claude_tiers / cascade (Sonnet verifier) / easy
+20260717T172816-428aceeb,v2 claude_tiers / classifier / hard
+20260717T172831-e7fe3e42,v2 claude_tiers / cascade (Sonnet verifier) / hard
+20260717T203938-fd4ce2e6,unlabelled/replay
+20260717T204112-3f400d73,unlabelled/replay
+20260717T204417-7af1dd0c,v2 claude_tiers / cascade (Haiku verifier) / hard
+20260717T204417-eb79487b,v2 claude_tiers / cascade (Haiku verifier) / easy
+20260719T112902-bc4a496e,unlabelled/replay
+20260719T112928-e0664b00,unlabelled/replay
+20260719T112937-0624526b,unlabelled/replay
+20260719T112943-2b116ba0,unlabelled/replay
+20260719T112944-451a183f,unlabelled/replay
+20260719T112944-b08ff8dd,unlabelled/replay
+20260719T112950-485bab78,unlabelled/replay
+20260719T112950-4a1b0192,unlabelled/replay
+20260719T113230-91e5c641,v3 claude_tiers / static router / held-out
+20260719T113315-b7ff3a62,v3 claude_tiers / learned router / held-out
+20261020T080527-be9155da,v5 claude_tiers / jury unanimous / hard
+20261020T080613-682c20d2,v5 claude_tiers / jury majority / hard
+20261020T080621-38d36e09,v5 claude_tiers / jury unanimous / easy
+20261020T081455-eea145f9,unlabelled/replay
