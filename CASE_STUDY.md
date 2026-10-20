@@ -111,7 +111,7 @@ Everything is additive and reproducible — the default configuration still repr
 
 1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one; the v2 classifier is a first step — prediction from the prompt rather than a static rule.)
 2. **Confidence-based escalation** — ✅ *built in v2 (the cascade): try the cheap model first, a reference-free verifier checks the answer, escalate only on a failed check.* Next: tune the escalate threshold per task type from the performance log, rather than a single global value.
-3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth, cheaper or faster provider (e.g., a Gemini adapter) is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
+3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); v5 added Kimi (Moonshot) as a fourth, offline-only so far; a Gemini adapter is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
 4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
 
 ## v3: the router learns from its own log
@@ -157,10 +157,32 @@ feasibility fight over undated history and the per-task evidence log:
 [`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md). Original design:
 [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
 
+## v4: from benchmark to usable router
+
+v1–v3 proved routing works, but the router only existed inside a benchmark script — nothing an app could call. v4 has no new headline number; it is the product surface:
+
+- **One API.** `Router(policy).complete(prompt)` returns the answer, the model, the cost and a "why" trace. Every strategy is an interchangeable policy behind it.
+- **Real failover.** A provider error retries the next model up the ladder and is recorded in the trace, instead of a silent fake answer.
+- **A live learning signal.** The v3 learned router needed an answer key that production never has. `feedback(request_id, score)` replaces it; self-verification evidence is down-weighted so it can never trigger a cheaper route alone.
+- **Drop-in endpoint.** OpenAI-compatible — change one URL in an existing app. Localhost-only by default, optional auth, 1 MB request cap, logging opt-in because it stores prompts.
+
+I also found and fixed a test bug that had silently switched later tests to live paid APIs (6 tiny calls, under $0.001), and added a guard so it can't recur.
+
+## v5: stress-testing the router
+
+Five experiments, each attacking an assumption, reported as measured — including what didn't work.
+
+1. **Jury of cheap models (3 vendors, escalate only on disagreement).** Easy set: 66.1% net savings at 0.99 quality, between the independent verifier (53.1%) and the self-verifier (85.0%). Hard set: quality 0.86, against 1.00 for the independent verifier and 0.70 for self-verification. On one hard task all three vendors agreed on the same wrong answer. **Cheap models share blind spots — agreement isn't correctness.**
+2. **Fool the router (red-team, defensive).** Cost-inflation prompts ("use your most capable model") moved routing 7/10 → 0/10 after hardening; verifier/jury injection is 0 after hardening. Making a hard task look easy still works 2/9 — a documented residual risk. Original prompts are pinned so published results still reproduce.
+3. **Live price tracking** (free OpenRouter price list, treated as untrusted). v1's 53.6% holds at today's prices (53.58%). It caught Sonnet 5 at −33% vs list and a Kimi resale price ~12× below first-party; no roster's model order would change.
+4. **Budget governor + shadow sampling (offline simulation).** Shadow-checking 5% of traffic detects an injected quality drop in 83% of simulated months (median ~870 requests) for ~6% overhead (1%: 29%; 10%: 93%). Protected task types were never downgraded. With reasoning protected, a 60% budget is infeasible (reasoning is ~64% of cost) and the governor flags that rather than hiding it.
+5. **Kimi K3 (Moonshot).** Same per-token price as Sonnet ($3/$15) plus mandatory billed reasoning, so on short mid-tier tasks it can only compete on quality, never price (offline projection from real token counts; live quality run pending). The router now defaults Kimi to low reasoning effort, because Moonshot's own default is its most expensive. A live outage confirmed failover to Opus.
+
 ## Honest limitations
 
 - **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
 - **25 tasks is a starting eval,** not a production-scale one. It's enough to demonstrate the method and the composition insight; it's not enough to certify a production savings figure.
+- **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
 - **Single-turn tasks only.** Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.
 - **The at-scale projection is directional.** It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's task mix — real traffic will differ, sometimes substantially.
 

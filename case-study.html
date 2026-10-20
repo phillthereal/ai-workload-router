@@ -429,7 +429,7 @@
       <ol class="next">
         <li><span class="n">1</span><b>Adaptive routing.</b> Feed the performance log back into the router so model choice is learned per task type, not hand-configured. The log was designed for this from day one.</li>
         <li><span class="n">2</span><b>Confidence-based escalation.</b> Try the cheap model first; auto-retry on a stronger one only when the judge score is low &mdash; more savings without breaching the quality floor.</li>
-        <li><span class="n">3</span><b>More vendors.</b> Cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); a fourth &mdash; e.g. a Gemini adapter &mdash; is the next test of whether the ceiling keeps climbing or starts to plateau.</li>
+        <li><span class="n">3</span><b>More vendors.</b> Cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); v5 added Kimi (Moonshot) as a fourth, offline-only so far; a Gemini adapter is the next test of whether the ceiling keeps climbing or starts to plateau.</li>
         <li><span class="n">4</span><b>Judge-vs-human validation.</b> The cross-judge check passed (96.7% agreement); next is scoring the exported human label sheet against both judges, and growing past 25 tasks, before quoting absolute quality numbers as precise.</li>
       </ol>
     </section>
@@ -465,12 +465,52 @@
       <p>The catch, and it has to travel with the number: this saving is conditional on the workload repeating task shapes it's already logged. The held-out set was written to repeat shapes seen &ge;5 times before &mdash; the only regime a learned router can act in. A workload with no repeated shapes gets cold start everywhere: exactly the static router's numbers, at the same $0 overhead. Full write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/V3_FINDINGS.md" style="color:var(--teal)">docs/V3_FINDINGS.md</a> (design: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/V3_DESIGN.md" style="color:var(--teal)">docs/V3_DESIGN.md</a>).</p>
     </section>
 
+    <section aria-label="v4 result">
+      <p class="kicker">V4 &mdash; from benchmark to usable router</p>
+      <h2>v1&ndash;v3 proved routing works. v4 makes it something an app can call.</h2>
+      <p>Until now the router only existed inside a benchmark script. There is no new headline number here &mdash; v4 is the product surface.</p>
+      <div class="panel">
+        <p class="panel-title">What shipped</p>
+        <ul class="limits">
+          <li><b>One API.</b> <code>Router(policy).complete(prompt)</code> returns the answer, the model, the cost and a &ldquo;why&rdquo; trace. Every strategy is an interchangeable policy behind it.</li>
+          <li><b>Real failover.</b> A provider error retries the next model up the ladder, recorded in the trace, instead of a silent fake answer.</li>
+          <li><b>A live learning signal.</b> <code>feedback(request_id, score)</code> replaces the answer key production never has. Self-verification evidence is down-weighted so it can never trigger a cheaper route alone.</li>
+          <li><b>Drop-in endpoint.</b> OpenAI-compatible: change one URL in an existing app. Localhost-only by default, optional auth, 1 MB request cap, logging opt-in because it stores prompts.</li>
+        </ul>
+        <p class="delta-note">Also found and fixed a test bug that had silently switched later tests to live paid APIs (6 tiny calls, under <b>$0.001</b>), and added a guard so it can't recur.</p>
+      </div>
+    </section>
+
+    <section aria-label="v5 results">
+      <p class="kicker">V5 &mdash; stress-testing the router</p>
+      <h2>Five experiments, reported as measured.</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Experiment</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Jury of cheap models<br><span style="font-weight:400;color:var(--faint);font-size:.8rem">3 vendors, escalate on disagreement</span></td><td style="text-align:left"><span class="save-cell">Easy set: 66.1% net at 0.99 quality</span> (between independent verifier 53.1% and self-verifier 85.0%).<br><span class="flat-cell">Hard set: 0.86 quality</span> vs 1.00 independent verifier, 0.70 self-verifier.</td></tr>
+            <tr><td>Fool the router<br><span style="font-weight:400;color:var(--faint);font-size:.8rem">red-team, defensive</span></td><td style="text-align:left"><span class="save-cell">Cost inflation 7/10 &rarr; 0/10</span> after hardening; <span class="save-cell">verifier/jury injection 0</span>.<br><span class="flat-cell">Making a hard task look easy still works 2/9</span> &mdash; documented residual risk.</td></tr>
+            <tr><td>Live price tracking<br><span style="font-weight:400;color:var(--faint);font-size:.8rem">free OpenRouter list, untrusted</span></td><td style="text-align:left"><span class="save-cell">v1's 53.6% holds at today's prices (53.58%).</span> Caught Sonnet 5 at &minus;33% vs list and a Kimi resale price ~12&times; below first-party; no roster order would change.</td></tr>
+            <tr><td>Budget governor + shadow sampling<br><span style="font-weight:400;color:var(--faint);font-size:.8rem">offline simulation</span></td><td style="text-align:left"><span class="save-cell">5% shadow-checking detects an injected quality drop in 83% of simulated months</span> (median ~870 requests) for ~6% overhead (1%: 29%; 10%: 93%). Protected task types never downgraded.<br><span class="flat-cell">With reasoning protected, a 60% budget is infeasible</span> (reasoning is ~64% of cost) &mdash; the governor flags it rather than hiding it.</td></tr>
+            <tr><td>Kimi K3 (Moonshot)<br><span style="font-weight:400;color:var(--faint);font-size:.8rem">offline projection</span></td><td style="text-align:left">Same per-token price as Sonnet ($3/$15) plus mandatory billed reasoning, so on short mid-tier tasks it <span class="flat-cell">can compete on quality, never price</span>. Router now defaults Kimi to low reasoning effort. <span class="save-cell">A live outage confirmed failover to Opus.</span> Live quality run pending.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="insight">
+        <p class="big">Cheap models share blind spots &mdash; agreement isn't correctness.</p>
+        <p>On one hard task all three vendors agreed on the same wrong answer. The jury is the best balance on easy work and not safe on hard work, which is why it stays an option rather than the default. Original red-team prompts are pinned so the published results still reproduce.</p>
+      </div>
+    </section>
+
     <section>
       <p class="kicker">Honest limitations</p>
       <h2>What this does and doesn't prove.</h2>
       <ul class="limits">
         <li><b>The judge is validated, not proven.</b> LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) &mdash; but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet is exported; scoring it is the remaining step.</li>
         <li><b>25 tasks is a starting eval,</b> enough to demonstrate the method and the composition insight &mdash; not to certify a production savings figure.</li>
+        <li><b>v5 results are small-n and partly modelled.</b> The jury's errors are correlated (shared blind spots), the red-team runs use n of 5&ndash;10, the budget simulation imputes some mid-tier quality (optimistic), and Kimi's quality is unmeasured &mdash; only its price is projected.</li>
         <li><b>Single-turn tasks only.</b> Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.</li>
         <li><b>The at-scale projection is directional.</b> It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's mix &mdash; real traffic will differ.</li>
       </ul>
