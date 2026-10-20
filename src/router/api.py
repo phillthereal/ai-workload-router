@@ -104,9 +104,11 @@ class Ctx:
                     if i:
                         self.events.append(f"failover: answered by {m}")
                     return response
-                last_error = "unsuccessful response (error/refusal)"
+                last_error = response.error or "unsuccessful response (error/refusal)"
             except Exception as exc:  # noqa: BLE001 - any provider/adapter failure
-                last_error = f"{type(exc).__name__}: {exc}"
+                # Type name only: exception text can embed raw provider
+                # responses (account ids), and the trace reaches API callers.
+                last_error = type(exc).__name__
             self.events.append(f"provider error on {m} ({last_error})")
         raise ProviderError(f"all tiers failed, last error: {last_error}")
 

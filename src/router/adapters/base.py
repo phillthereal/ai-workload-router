@@ -52,6 +52,12 @@ class Response:
     get_adapter()'s fallback wrapper turns a failed call into a simulated
     MockAdapter response so the benchmark run always completes."""
 
+    error: Optional[str] = None
+    """On a failed call, a SAFE short reason (e.g. "HTTP 429
+    exceeded_current_quota_error") — status and error type only, never the
+    provider's message text, which can carry account/org identifiers and ends
+    up in Result.trace returned to endpoint callers."""
+
     effort: Optional[str] = None
     """The effort level this response was produced at, or None if no effort /
     thinking config was sent. Echoed back on the Response (rather than only

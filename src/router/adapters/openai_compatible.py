@@ -75,6 +75,7 @@ class OpenAICompatibleAdapter(Adapter):
         body = self.build_body(prompt, effort, max_tokens)
 
         last_latency_ms = 0.0
+        last_error: Optional[str] = None
         for attempt in range(_MAX_ATTEMPTS):
             start = time.perf_counter()
             try:
@@ -95,8 +96,9 @@ class OpenAICompatibleAdapter(Adapter):
                     simulated=False,
                     success=True,
                 )
-            except Exception:
+            except Exception as exc:
                 last_latency_ms = (time.perf_counter() - start) * 1000
+                last_error = _safe_error(exc)
                 continue
 
         # Every attempt raised (HTTP error, timeout, malformed JSON, ...) —
@@ -111,7 +113,21 @@ class OpenAICompatibleAdapter(Adapter):
             model=self.model_name,
             simulated=False,
             success=False,
+            error=last_error,
         )
+
+
+def _safe_error(exc: Exception) -> str:
+    """HTTP status + provider error *type* only — never the message body."""
+    resp = getattr(exc, "response", None)
+    if resp is None:
+        return type(exc).__name__
+    try:
+        etype = resp.json().get("error", {}).get("type")
+    except Exception:  # noqa: BLE001 - non-JSON error body
+        etype = None
+    etype = etype if isinstance(etype, str) and etype.replace("_", "").isalnum() else None
+    return f"HTTP {resp.status_code}" + (f" {etype}" if etype else "")
 
 
 def _billed_output_tokens(usage: dict) -> int:
