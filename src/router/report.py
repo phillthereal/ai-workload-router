@@ -382,9 +382,9 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     lines.append("")
     lines.append("| Strategy | Mean latency (ms) | Median latency (ms) | N |")
     lines.append("|---|---|---|---|")
-    for strat in (ROUTER_STRATEGY, BASELINE_STRATEGY):
+    for strat in (report.experimental_strategy, BASELINE_STRATEGY):
         stats = report.latency_by_strategy.get(strat, {"mean_ms": 0.0, "median_ms": 0.0, "n": 0})
-        label = "router" if strat == ROUTER_STRATEGY else "frontier_only (baseline)"
+        label = strat if strat != BASELINE_STRATEGY else "frontier_only (baseline)"
         lines.append(
             f"| {label} | {stats['mean_ms']:.1f} | {stats['median_ms']:.1f} | {stats['n']} |"
         )

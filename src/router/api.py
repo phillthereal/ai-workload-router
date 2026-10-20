@@ -32,6 +32,7 @@ from .adapters.base import Response
 from .cascade import run_cascade
 from .classifier import classify_task
 from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
+from .governors import BudgetPolicy, ShadowPolicy  # noqa: F401  (re-exported)
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
 from .router import route_task
 from .untrusted import DEFAULT_PROMPT_VERSION, check_version
@@ -57,6 +58,8 @@ class Result:
     learned_evidence: Optional[dict] = None
     task_type: Optional[str] = None
     difficulty: Optional[str] = None
+    latency_ms: float = 0.0
+    """Summed latency of every provider call the policy made (set by Router.complete)."""
     request_id: Optional[str] = None
     """Set when the Router logs live traffic (log_to); pass to Router.feedback."""
 
@@ -74,6 +77,7 @@ class Ctx:
         self.roster = router.roster
         self.effort_policy = router.effort_policy
         self.events: list[str] = []
+        self.latency_ms = 0.0  # sum of all successful call latencies
 
     def call(
         self, model: str, prompt: str, effort: Optional[str] = None,
@@ -96,6 +100,7 @@ class Ctx:
                     prompt, effort=use_effort, max_tokens=max_tokens
                 )
                 if response.success:
+                    self.latency_ms += response.latency_ms
                     if i:
                         self.events.append(f"failover: answered by {m}")
                     return response
@@ -278,8 +283,10 @@ class Router:
         start = time.monotonic()
         result = self.policy.run(prompt, task, ctx)
         result.trace.extend(ctx.events)
+        if not result.latency_ms:
+            result.latency_ms = ctx.latency_ms  # same measure for every policy
         if self.log_db:
-            self._log_live(prompt, task, result, (time.monotonic() - start) * 1000)
+            self._log_live(prompt, task, result, result.latency_ms or (time.monotonic() - start) * 1000)
         return result
 
     def _log_live(self, prompt: str, task: dict, result: Result, latency_ms: float) -> None:
