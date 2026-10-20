@@ -34,6 +34,7 @@ from .classifier import classify_task
 from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
 from .router import route_task
+from .untrusted import DEFAULT_PROMPT_VERSION, check_version
 
 
 class ProviderError(RuntimeError):
@@ -155,8 +156,10 @@ class RulesPolicy:
 
     name = "router"
 
-    def __init__(self, use_labels: bool = True) -> None:
+    def __init__(self, use_labels: bool = True,
+                 prompt_version: str = DEFAULT_PROMPT_VERSION) -> None:
         self.use_labels = use_labels
+        self.prompt_version = check_version(prompt_version)
 
     def report_tags(self) -> list[str]:
         return [] if self.use_labels else ["classified"]
@@ -168,7 +171,8 @@ class RulesPolicy:
         # Labels only exist for benchmark tasks; a bare prompt must be classified.
         labelled = bool(task.get("task_type") and task.get("difficulty"))
         return classify_task(
-            task, roster_name=ctx.roster_name, use_labels=self.use_labels and labelled
+            task, roster_name=ctx.roster_name, use_labels=self.use_labels and labelled,
+            prompt_version=self.prompt_version,
         )
 
     def run(self, prompt, task, ctx) -> Result:
@@ -187,8 +191,9 @@ class RulesPolicy:
 class LearnedPolicy(RulesPolicy):
     """RulesPolicy's classification, then outcome history may override the tier."""
 
-    def __init__(self, use_labels: bool = True, before_run_group: Optional[str] = None) -> None:
-        super().__init__(use_labels)
+    def __init__(self, use_labels: bool = True, before_run_group: Optional[str] = None,
+                 prompt_version: str = DEFAULT_PROMPT_VERSION) -> None:
+        super().__init__(use_labels, prompt_version)
         self._cutoff = before_run_group
 
     def report_tags(self) -> list[str]:
@@ -217,8 +222,10 @@ class LearnedPolicy(RulesPolicy):
 class CascadePolicy:
     name = "cascade"
 
-    def __init__(self, verifier_model: Optional[str] = None, escalate_threshold: float = 0.7):
+    def __init__(self, verifier_model: Optional[str] = None, escalate_threshold: float = 0.7,
+                 prompt_version: str = DEFAULT_PROMPT_VERSION):
         self.verifier_model = verifier_model
+        self.prompt_version = check_version(prompt_version)
         self.escalate_threshold = escalate_threshold
 
     def report_tags(self) -> list[str]:
@@ -231,6 +238,7 @@ class CascadePolicy:
         r = run_cascade(
             task, roster_name=ctx.roster_name, verifier_model=self.verifier_model,
             escalate_threshold=self.escalate_threshold, complete=ctx.call,
+            prompt_version=self.prompt_version,
         )
         trace = [f"cascade tried {' -> '.join(r.tiers_used)}; verifier scores "
                  f"{r.verifier_scores} (threshold {self.escalate_threshold})"]

@@ -171,15 +171,20 @@ def _report_path(
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
 
 
+# The benchmark replays PUBLISHED cached results, which were recorded with the
+# pre-hardening ("v2") meta-prompts; API/server callers get the hardened default.
+_PV = "v2"
+
+
 def _build_policy(args: argparse.Namespace):
     """Map CLI flags to the experimental Policy."""
     if args.strategy == "cascade":
-        return CascadePolicy(args.verifier, args.escalate_threshold)
+        return CascadePolicy(args.verifier, args.escalate_threshold, prompt_version=_PV)
     if args.strategy == "jury":
-        return JuryPolicy(mode=args.jury_mode)
+        return JuryPolicy(mode=args.jury_mode, prompt_version=_PV)
     if args.learned:
-        return LearnedPolicy(use_labels=not args.classify)
-    return RulesPolicy(use_labels=not args.classify)
+        return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
+    return RulesPolicy(use_labels=not args.classify, prompt_version=_PV)
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
