@@ -48,6 +48,11 @@ class ModelConfig:
     these values pass router.gates.effort_supported (None is always allowed).
     kimi-k3 uses ("low", "high", "max") -> sent as top-level reasoning_effort."""
 
+    default_effort: Optional[str] = None
+    """Effort the Router sends when the caller specifies none. None (every
+    model but Kimi) keeps the v1 'send nothing' request shape. Exists because a
+    provider's own default can be its most expensive setting (Kimi: max)."""
+
     def cost_for_tokens(self, input_tokens: int, output_tokens: int) -> float:
         """
         Calculate cost for a given token count.
@@ -139,10 +144,11 @@ MODELS: dict[str, ModelConfig] = {
     ),
     # Moonshot Kimi K3 (docs verified 2026-10-20). OpenAI-compatible endpoint.
     # It ALWAYS reasons; reasoning is billed as OUTPUT tokens. effort=None sends
-    # no reasoning_effort, which Moonshot treats as its default "max" -- i.e.
-    # None means MAXIMUM cost here, unlike every other model. Pass an explicit
-    # "low"/"high" to spend less. Sticker price equals Sonnet's, so it competes
-    # in the MID slot; real per-task cost at max is far above the sticker.
+    # no reasoning_effort, which Moonshot treats as its default "max". So the
+    # Router defaults Kimi to "low" (default_effort); pass "high"/"max"
+    # explicitly to spend more. Offline projection (docs/V5_KIMI_OFFLINE.md):
+    # on short mid-tier answers reasoning dominates the bill. Sticker price
+    # equals Sonnet's, so it competes in the MID slot.
     "kimi-k3": ModelConfig(
         name="kimi-k3",
         provider="moonshot",
@@ -152,6 +158,7 @@ MODELS: dict[str, ModelConfig] = {
         context_window_tokens=1_048_576,
         supports_effort=True,
         effort_levels=("low", "high", "max"),
+        default_effort="low",
     ),
 }
 

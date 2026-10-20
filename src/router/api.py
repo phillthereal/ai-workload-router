@@ -94,7 +94,9 @@ class Ctx:
             candidates += [self.roster.model_for_tier(t) for t in above]
         last_error = "unknown"
         for i, m in enumerate(candidates):
-            use_effort = effort if gates.effort_supported(m, effort) else None
+            # Per candidate: a failover hop to Opus must not inherit Kimi's default.
+            want = effort if effort is not None else get_model(m).default_effort
+            use_effort = want if gates.effort_supported(m, want) else None
             try:
                 response = get_adapter(m, self.router.allow_mock_fallback).complete(
                     prompt, effort=use_effort, max_tokens=max_tokens

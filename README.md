@@ -136,7 +136,7 @@ Five experiments that each attack a different assumption — results reported as
 | **Fool the router** ([V5_REDTEAM](docs/V5_REDTEAM.md)) | Can a user steer routing with words in the prompt? | Cost-inflation attacks worked 7/10 → **0/10** after hardening. Making a hard task look easy still works 2/9 — the documented residual risk. |
 | **Live price tracking** ([V5_PRICES](docs/V5_PRICES.md)) | Do the numbers survive the market moving? | v1's 53.6% holds at today's prices (53.58%). Caught Sonnet 5 at −33% and an aggregator Kimi price that's 12× below first-party. |
 | **Budget governor + shadow sampling** ([V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md)) | Can a spend cap and a background safety check run the router unattended? | Shadowing 5% of traffic catches a quality drop in 83% of simulated months (~870 requests), for ~6% overhead. Protected task types were never downgraded. |
-| **Kimi K3** | Moonshot's model as a mid-tier rival to Sonnet (`kimi_mid` roster, reasoning effort low/high/max). | Wired and offline-tested; live run pending account credit. A live outage test confirmed failover to Opus with the cause shown safely in the trace. |
+| **Kimi K3** ([V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md)) | Is Moonshot's model a cheaper mid-tier rival to Sonnet? | Same per-token price as Sonnet **plus** mandatory billed reasoning, so on short mid-tier tasks it can only win on quality, never price (offline projection from real token counts). Router now defaults Kimi to `low` effort — Moonshot's own default is its most expensive. Live quality run pending account credit; a live outage test confirmed failover to Opus. |
 
 ```bash
 python3 run_benchmark.py --roster claude_tiers --strategy jury --tasks data/tasks_hard.json

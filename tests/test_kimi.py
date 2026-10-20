@@ -63,3 +63,39 @@ class KimiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestKimiDefaultEffort(unittest.TestCase):
+    """Moonshot's own default is its MOST expensive setting (max), so the Router
+    sends Kimi "low" unless the caller asks otherwise."""
+
+    MID_TASK = {"id": "k", "task_type": "extraction", "difficulty": "medium",
+                "prompt": "Extract the year: signed in 1648."}
+
+    def _run(self, fail_kimi=False, effort_policy=None):
+        from unittest import mock
+        from router import api
+        from router.adapters.base import Adapter, Response
+        seen = []
+
+        class Rec(Adapter):
+            def __init__(self, m): self.m = m
+            def complete(self, prompt, effort=None, max_tokens=None):
+                seen.append((self.m, effort))
+                ok = not (fail_kimi and self.m == "kimi-k3")
+                return Response(text="1648" if ok else "", input_tokens=5, output_tokens=2,
+                                latency_ms=1.0, model=self.m, simulated=False, success=ok)
+
+        with mock.patch.object(api, "get_adapter", lambda m, allow_mock_fallback=True: Rec(m)):
+            api.Router(api.RulesPolicy(use_labels=True), "kimi_mid",
+                       effort_policy=effort_policy).complete(self.MID_TASK["prompt"], task=self.MID_TASK)
+        return seen
+
+    def test_kimi_defaults_to_low(self):
+        self.assertEqual(self._run(), [("kimi-k3", "low")])
+
+    def test_explicit_effort_wins(self):
+        self.assertEqual(self._run(effort_policy={"mid": "max"}), [("kimi-k3", "max")])
+
+    def test_failover_hop_does_not_inherit_kimi_default(self):
+        self.assertEqual(self._run(fail_kimi=True), [("kimi-k3", "low"), ("claude-opus-4-8", None)])
