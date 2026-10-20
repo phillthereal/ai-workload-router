@@ -16,7 +16,8 @@ Live three-vendor benchmark (25 tasks, real API calls, real LLM judge — run `2
 | Frontier-only (baseline: every task → Claude Opus 4.8) | $0.1260 | 0.992 | 4,155 ms |
 | **Router** (cheapest capable model per task) | **$0.0585** | **0.996** | **2,237 ms** |
 
-- **Cost reduction: 53.6%** · **Quality retention: 100%** · **Latency: 46.2% faster**
+- **Cost reduction: 53.6%** (95% CI 30–83%) · **Quality retention: 100%** (95% CI 99–102%) · **Latency: 46.2% faster**
+- With 25 tasks the interval is wide, but it sits well clear of zero: routing reliably pays on this kind of workload. Bootstrap method, every result's interval, and SQL analysis in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 - Hypothesis (≥40% cost reduction at ≥95% quality): **PASSED**
 - Judge validation: an independent second judge (GPT-4o-mini) agreed with the primary judge (Claude Opus 4.8) on **96.7%** of 30 scored answers (mean |diff| 0.010).
 - At-scale projection (directional): ~**$2,700/month saved per 1M requests** at this task mix.
@@ -169,6 +170,7 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 
 ## Project Docs
 
+- **[`docs/ANALYSIS.md`](docs/ANALYSIS.md)** — confidence intervals for every headline result and SQL answers to product questions (where routing loses money, which tasks never to route). Power BI-ready tables in `data/bi/`, build guide in [`docs/POWER_BI_GUIDE.md`](docs/POWER_BI_GUIDE.md).
 - **[`docs/DECISION_LOG.md`](docs/DECISION_LOG.md)** — the 15 product calls behind the router: what was decided, what it was traded against, and the evidence.
 - **[`docs/PRD.md`](docs/PRD.md)** — product requirements, success metrics, and the core hypothesis being tested.
 - **[`CASE_STUDY.md`](CASE_STUDY.md)** — decision rationale, how scope was cut, benchmark methodology, and full results breakdown.
