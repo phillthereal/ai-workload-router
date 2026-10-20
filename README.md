@@ -169,9 +169,10 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 
 ## Project Docs
 
+- **[`docs/DECISION_LOG.md`](docs/DECISION_LOG.md)** — the 15 product calls behind the router: what was decided, what it was traded against, and the evidence.
 - **[`docs/PRD.md`](docs/PRD.md)** — product requirements, success metrics, and the core hypothesis being tested.
 - **[`CASE_STUDY.md`](CASE_STUDY.md)** — decision rationale, how scope was cut, benchmark methodology, and full results breakdown.
-- **[`docs/V3_DESIGN.md`](docs/V3_DESIGN.md)** — design for the learned router (v3, not yet built): closing the feedback loop from `runs.db`.
+- **[`docs/V3_DESIGN.md`](docs/V3_DESIGN.md)** — design for the learned router (built and evaluated in v3 — results in [`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md)).
 
 ## Limitations
 
