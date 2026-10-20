@@ -20,15 +20,36 @@ from .base import Adapter, Response
 _MAX_TOKENS = 1024
 _MAX_ATTEMPTS = 2
 _TIMEOUT_S = 60.0
+_MOONSHOT_EFFORTS = ("low", "high", "max")
 
 
 class OpenAICompatibleAdapter(Adapter):
     """Real Adapter backed by an OpenAI-compatible chat/completions endpoint."""
 
-    def __init__(self, model_name: str, api_key: str, base_url: str) -> None:
+    def __init__(
+        self, model_name: str, api_key: str, base_url: str, provider: str = ""
+    ) -> None:
+        self.provider = provider
         self.model_name = model_name
         self.api_key = api_key
         self.base_url = base_url
+
+    def build_body(
+        self, prompt: str, effort: Optional[str], max_tokens: Optional[int]
+    ) -> dict:
+        body = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens or _MAX_TOKENS,
+        }
+        # !! Moonshot kimi-k3 ALWAYS reasons. effort=None sends NO
+        # reasoning_effort, and Moonshot then defaults to "max" -- the MOST
+        # EXPENSIVE setting (reasoning is billed as output tokens). Pass an
+        # explicit "low"/"high" to spend less. Never send Anthropic-style
+        # thinking/output_config here.
+        if self.provider == "moonshot" and effort in _MOONSHOT_EFFORTS:
+            body["reasoning_effort"] = effort
+        return body
 
     def complete(
         self,
@@ -39,8 +60,8 @@ class OpenAICompatibleAdapter(Adapter):
         """
         Complete `prompt` against an OpenAI-compatible endpoint.
 
-        `effort` is accepted and ignored: it is an Anthropic parameter with no
-        equivalent here. Neither model in the cross-vendor roster that uses this
+        `effort` is ignored except for provider "moonshot" (see build_body);
+        elsewhere it is an Anthropic parameter with no equivalent here. Neither model in the cross-vendor roster that uses this
         adapter (gpt-4o-mini, deepseek-chat) supports it, so router.gates never
         constructs such a pairing — the parameter is in the signature only to
         satisfy the Adapter contract.
@@ -51,11 +72,7 @@ class OpenAICompatibleAdapter(Adapter):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        body = {
-            "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens or _MAX_TOKENS,
-        }
+        body = self.build_body(prompt, effort, max_tokens)
 
         last_latency_ms = 0.0
         for attempt in range(_MAX_ATTEMPTS):
@@ -72,7 +89,7 @@ class OpenAICompatibleAdapter(Adapter):
                 return Response(
                     text=text,
                     input_tokens=usage.get("prompt_tokens", 0),
-                    output_tokens=usage.get("completion_tokens", 0),
+                    output_tokens=_billed_output_tokens(usage),
                     latency_ms=latency_ms,
                     model=self.model_name,
                     simulated=False,
@@ -95,3 +112,18 @@ class OpenAICompatibleAdapter(Adapter):
             simulated=False,
             success=False,
         )
+
+
+def _billed_output_tokens(usage: dict) -> int:
+    """
+    Output tokens to bill, reasoning included.
+
+    ASSUMPTION (unverified until the first live Moonshot call): like OpenAI,
+    `completion_tokens` already INCLUDES reasoning tokens
+    (completion_tokens_details.reasoning_tokens is a subset). If a response
+    instead reports reasoning separately so that reasoning_tokens >
+    completion_tokens, it cannot be a subset, so we add it.
+    """
+    completion = usage.get("completion_tokens", 0) or 0
+    reasoning = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0
+    return completion + reasoning if reasoning > completion else completion

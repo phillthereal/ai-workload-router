@@ -18,7 +18,8 @@ Every call is content-addressed in .cache/, so re-running this after the first
 live sweep is free and deterministic.
 
 Usage:
-    python run_effort_grid.py
+    python run_effort_grid.py            # Claude grid
+    python run_effort_grid.py --kimi     # kimi-k3 at low/high/max only
 """
 
 from __future__ import annotations  # 3.9-safe: stringizes str|None annotations
@@ -44,6 +45,12 @@ GRID: list[tuple[str, Optional[str]]] = [
     ("claude-opus-4-8", "off"),
     ("claude-opus-4-8", "low"),
     ("claude-opus-4-8", "high"),
+]
+
+# Opt-in (`--kimi`): kimi-k3 always reasons; None would mean Moonshot's default
+# "max", so every cell is explicit. Live cost is much higher than its sticker.
+KIMI_GRID: list[tuple[str, Optional[str]]] = [
+    ("kimi-k3", "low"), ("kimi-k3", "high"), ("kimi-k3", "max"),
 ]
 
 
@@ -118,9 +125,11 @@ def format_markdown(rows: list[dict]) -> str:
     return "\n".join(out)
 
 
-def main() -> None:
+def main(argv: Optional[list[str]] = None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
+    grid = KIMI_GRID if "--kimi" in argv else GRID
     rows = []
-    for model, effort in GRID:
+    for model, effort in grid:
         row = run_cell(model, effort)
         rows.append(row)
         flag = "  [SIMULATED]" if row["simulated"] else ""

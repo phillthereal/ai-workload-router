@@ -104,7 +104,10 @@ def effort_supported(model_name: str, effort: Optional[str]) -> bool:
     """
     if effort is None:
         return True
-    return get_model(model_name).supports_effort
+    m = get_model(model_name)
+    if m.effort_levels is not None:
+        return effort in m.effort_levels
+    return m.supports_effort
 
 
 def check(model_name: str, prompt: str, effort: Optional[str] = None) -> GateResult:

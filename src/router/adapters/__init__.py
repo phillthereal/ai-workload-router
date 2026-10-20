@@ -34,12 +34,14 @@ _PROVIDER_ENV_VAR: dict[str, str] = {
     "openai": "OPENAI_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
     "google": "GOOGLE_API_KEY",
+    "moonshot": "MOONSHOT_API_KEY",
 }
 
 _PROVIDER_BASE_URL: dict[str, str] = {
     "openai": "https://api.openai.com/v1/chat/completions",
     "deepseek": "https://api.deepseek.com/v1/chat/completions",
     "google": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    "moonshot": "https://api.moonshot.ai/v1/chat/completions",
 }
 
 
@@ -70,7 +72,9 @@ def _build_real_adapter(model_name: str, provider: str, api_key: str) -> Adapter
 
     from .openai_compatible import OpenAICompatibleAdapter
 
-    return OpenAICompatibleAdapter(model_name, api_key, _PROVIDER_BASE_URL[provider])
+    return OpenAICompatibleAdapter(
+        model_name, api_key, _PROVIDER_BASE_URL[provider], provider=provider
+    )
 
 
 class MissingProviderError(RuntimeError):

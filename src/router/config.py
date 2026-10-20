@@ -17,7 +17,7 @@ class ModelConfig:
     name: str
     """Model identifier (e.g., 'claude-opus-4-8')."""
 
-    provider: Literal["anthropic", "openai", "google", "deepseek"]
+    provider: Literal["anthropic", "openai", "google", "deepseek", "moonshot"]
     """LLM provider."""
 
     display_name: str
@@ -41,6 +41,12 @@ class ModelConfig:
     and Opus 4.8 do; Haiku 4.5 does not (it predates the parameter and returns
     a 400). This asymmetry is why the (model x effort) grid has holes — see
     EFFORT_LEVELS and router.gates.effort_supported()."""
+
+    effort_levels: Optional[tuple[str, ...]] = None
+    """Per-model allowed effort set. None (every existing model) = the legacy
+    rule: any non-None effort is accepted iff supports_effort. When set, ONLY
+    these values pass router.gates.effort_supported (None is always allowed).
+    kimi-k3 uses ("low", "high", "max") -> sent as top-level reasoning_effort."""
 
     def cost_for_tokens(self, input_tokens: int, output_tokens: int) -> float:
         """
@@ -131,6 +137,22 @@ MODELS: dict[str, ModelConfig] = {
         context_window_tokens=1_000_000,
         supports_effort=True,
     ),
+    # Moonshot Kimi K3 (docs verified 2026-10-20). OpenAI-compatible endpoint.
+    # It ALWAYS reasons; reasoning is billed as OUTPUT tokens. effort=None sends
+    # no reasoning_effort, which Moonshot treats as its default "max" -- i.e.
+    # None means MAXIMUM cost here, unlike every other model. Pass an explicit
+    # "low"/"high" to spend less. Sticker price equals Sonnet's, so it competes
+    # in the MID slot; real per-task cost at max is far above the sticker.
+    "kimi-k3": ModelConfig(
+        name="kimi-k3",
+        provider="moonshot",
+        display_name="Kimi K3",
+        cost_per_1m_input_tokens=3.00,
+        cost_per_1m_output_tokens=15.00,
+        context_window_tokens=1_048_576,
+        supports_effort=True,
+        effort_levels=("low", "high", "max"),
+    ),
 }
 
 
@@ -202,6 +224,14 @@ ROSTERS: dict[str, Roster] = {
         mid="deepseek-chat",
         frontier="claude-opus-4-8",
     ),
+    # Kimi K3 lists at Sonnet's price ($3/$15), so it competes in the MID slot,
+    # not budget. NOTE effort=None on kimi means Moonshot's default "max" (costly).
+    "kimi_mid": Roster(
+        name="kimi_mid",
+        budget="gpt-4o-mini",
+        mid="kimi-k3",
+        frontier="claude-opus-4-8",
+    ),
 }
 
 DEFAULT_ROSTER = "cross_vendor"
@@ -237,6 +267,7 @@ MODEL_TIER: dict[str, str] = {
     "claude-sonnet-5": "mid",
     "claude-opus-4-8": "frontier",
     "gemini-2.0-flash": "budget",
+    "kimi-k3": "mid",
 }
 
 # Valid values for output_config.effort on models where supports_effort is True.
