@@ -1,0 +1,432 @@
+{
+ "cls-001": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 395,
+  "cost": 1.6590000000000002e-05
+ },
+ "cls-002": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.95,
+   "mid": 0.05,
+   "frontier": 0.0
+  },
+  "tokens": 429,
+  "cost": 1.8018000000000003e-05
+ },
+ "cls-003": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 427,
+  "cost": 1.7934e-05
+ },
+ "cls-004": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 408,
+  "cost": 1.7136e-05
+ },
+ "cls-005": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 409,
+  "cost": 1.7178e-05
+ },
+ "cls-006": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.99,
+   "mid": 0.01,
+   "frontier": 0.0
+  },
+  "tokens": 429,
+  "cost": 1.8018000000000003e-05
+ },
+ "cls-007": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.83,
+   "mid": 0.17,
+   "frontier": 0.0
+  },
+  "tokens": 414,
+  "cost": 1.7388e-05
+ },
+ "cls-008": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.57,
+   "mid": 0.43,
+   "frontier": 0.0
+  },
+  "tokens": 417,
+  "cost": 1.7514000000000002e-05
+ },
+ "cls-h01": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.95,
+   "mid": 0.05,
+   "frontier": 0.0
+  },
+  "tokens": 417,
+  "cost": 1.7514000000000002e-05
+ },
+ "cls-h02": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.89,
+   "mid": 0.1,
+   "frontier": 0.01
+  },
+  "tokens": 421,
+  "cost": 1.7682e-05
+ },
+ "cls-v301": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.86,
+   "mid": 0.14,
+   "frontier": 0.0
+  },
+  "tokens": 425,
+  "cost": 1.785e-05
+ },
+ "cls-v302": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 422,
+  "cost": 1.7724000000000002e-05
+ },
+ "cls-v303": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 423,
+  "cost": 1.7766e-05
+ },
+ "ext-001": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 394,
+  "cost": 1.6548e-05
+ },
+ "ext-002": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 417,
+  "cost": 1.7514000000000002e-05
+ },
+ "ext-003": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 410,
+  "cost": 1.722e-05
+ },
+ "ext-004": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 407,
+  "cost": 1.7094000000000003e-05
+ },
+ "ext-005": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 410,
+  "cost": 1.722e-05
+ },
+ "ext-006": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 435,
+  "cost": 1.827e-05
+ },
+ "ext-007": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.94,
+   "mid": 0.06,
+   "frontier": 0.0
+  },
+  "tokens": 468,
+  "cost": 1.9656e-05
+ },
+ "ext-h02": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 427,
+  "cost": 1.7934e-05
+ },
+ "ext-h03": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.98,
+   "mid": 0.02,
+   "frontier": 0.0
+  },
+  "tokens": 451,
+  "cost": 1.8942000000000003e-05
+ },
+ "ext-v301": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.33,
+   "mid": 0.67,
+   "frontier": 0.0
+  },
+  "tokens": 458,
+  "cost": 1.9236000000000004e-05
+ },
+ "ext-v302": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 432,
+  "cost": 1.8144e-05
+ },
+ "ext-v303": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.99,
+   "mid": 0.01,
+   "frontier": 0.0
+  },
+  "tokens": 450,
+  "cost": 1.8900000000000002e-05
+ },
+ "ext-v304": {
+  "choice": "budget",
+  "probs": {
+   "budget": 1.0,
+   "mid": 0.0,
+   "frontier": 0.0
+  },
+  "tokens": 422,
+  "cost": 1.7724000000000002e-05
+ },
+ "gen-001": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.7,
+   "mid": 0.3,
+   "frontier": 0.0
+  },
+  "tokens": 403,
+  "cost": 1.6926e-05
+ },
+ "gen-002": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.1,
+   "mid": 0.9,
+   "frontier": 0.0
+  },
+  "tokens": 427,
+  "cost": 1.7934e-05
+ },
+ "gen-003": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.8,
+   "mid": 0.2,
+   "frontier": 0.0
+  },
+  "tokens": 399,
+  "cost": 1.6758e-05
+ },
+ "gen-004": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.73,
+   "mid": 0.27,
+   "frontier": 0.0
+  },
+  "tokens": 395,
+  "cost": 1.6590000000000002e-05
+ },
+ "gen-005": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.29,
+   "mid": 0.71,
+   "frontier": 0.0
+  },
+  "tokens": 406,
+  "cost": 1.7052000000000002e-05
+ },
+ "gen-006": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.2,
+   "mid": 0.8,
+   "frontier": 0.0
+  },
+  "tokens": 429,
+  "cost": 1.8018000000000003e-05
+ },
+ "gen-h01": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.28,
+   "mid": 0.72,
+   "frontier": 0.0
+  },
+  "tokens": 441,
+  "cost": 1.8522e-05
+ },
+ "rsn-001": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.92,
+   "mid": 0.08,
+   "frontier": 0.0
+  },
+  "tokens": 397,
+  "cost": 1.6674e-05
+ },
+ "rsn-002": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.33,
+   "mid": 0.66,
+   "frontier": 0.01
+  },
+  "tokens": 440,
+  "cost": 1.8480000000000003e-05
+ },
+ "rsn-003": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.61,
+   "mid": 0.39,
+   "frontier": 0.0
+  },
+  "tokens": 415,
+  "cost": 1.743e-05
+ },
+ "rsn-004": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.22,
+   "mid": 0.77,
+   "frontier": 0.01
+  },
+  "tokens": 501,
+  "cost": 2.1042000000000003e-05
+ },
+ "rsn-h01": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.13,
+   "mid": 0.87,
+   "frontier": 0.0
+  },
+  "tokens": 462,
+  "cost": 1.9404000000000003e-05
+ },
+ "rsn-h02": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.51,
+   "mid": 0.49,
+   "frontier": 0.0
+  },
+  "tokens": 412,
+  "cost": 1.7304e-05
+ },
+ "rsn-h03": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.55,
+   "mid": 0.44,
+   "frontier": 0.01
+  },
+  "tokens": 429,
+  "cost": 1.8018000000000003e-05
+ },
+ "rsn-h04": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.24,
+   "mid": 0.76,
+   "frontier": 0.0
+  },
+  "tokens": 422,
+  "cost": 1.7724000000000002e-05
+ },
+ "rsn-v301": {
+  "choice": "budget",
+  "probs": {
+   "budget": 0.76,
+   "mid": 0.24,
+   "frontier": 0.0
+  },
+  "tokens": 411,
+  "cost": 1.7262000000000002e-05
+ },
+ "rsn-v302": {
+  "choice": "mid",
+  "probs": {
+   "budget": 0.49,
+   "mid": 0.51,
+   "frontier": 0.0
+  },
+  "tokens": 427,
+  "cost": 1.7934e-05
+ }
+}
