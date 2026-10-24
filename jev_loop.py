@@ -1,6 +1,6 @@
 """Jev learning loop: can a teacher LLM's generic rulebook edits raise Jev's handled share? (offline replay)
 
-Usage:  python3 jev_loop.py run    <real-traffic-dir> [--cap 1.00] [--rounds 8] [--teacher claude-haiku-4-5]   # live Jev + Haiku-teacher calls
+Usage:  python3 jev_loop.py run    <real-traffic-dir> [--cap 1.00] [--rounds 8] [--teacher claude-haiku-4-5|manual]  # live Jev + teacher calls; manual = file handshake, $0 API
         python3 jev_loop.py report <real-traffic-dir>                              # aggregates only, no calls
 
 Jev (current rulebook) -> sure (p >= 0.9, not protected)? -> handled
@@ -184,11 +184,18 @@ def live(d, cap, rounds, teacher_model=HAIKU):
     loop = Path(d) / "loop"; loop.mkdir(exist_ok=True)
     sp = _spend_path(d)
     spent = [json.loads(sp.read_text())["spent"] if sp.exists() else 0.0]
-    jev, memo = JevClient(), {}
-    prov = get_model(teacher_model).provider
-    key = get_api_key(prov.upper() + "_API_KEY")
-    teacher = (AnthropicAdapter(teacher_model, key) if prov == "anthropic" else
-               OpenAICompatibleAdapter(teacher_model, key, _PROVIDER_BASE_URL[prov], provider=prov))
+    jev = JevClient()
+    # Jev decisions persist (private dir) so a re-run replays them: needed by the manual teacher, which
+    # restarts the loop once per round, and it keeps re-runs deterministic and free.
+    mp = loop / "jev_memo.json"
+    memo = {tuple(json.loads(k)): v for k, v in json.loads(mp.read_text()).items()} if mp.exists() else {}
+    manual = teacher_model == "manual"
+    if not manual:
+        prov = get_model(teacher_model).provider
+        key = get_api_key(prov.upper() + "_API_KEY")
+        teacher = (AnthropicAdapter(teacher_model, key) if prov == "anthropic" else
+                   OpenAICompatibleAdapter(teacher_model, key, _PROVIDER_BASE_URL[prov], provider=prov))
+    n_taught = [0]
     soft = cap * 0.8
 
     def pay(x):
@@ -207,10 +214,18 @@ def live(d, cap, rounds, teacher_model=HAIKU):
                 pay(dec.cost_usd)
                 memo[k] = dict(i=i, ref=calls[i]["cat"], choice=dec.choice, p=dec.top_prob,
                                tok=dec.input_tokens, hcost=cost(HAIKU, calls[i]["pt"], calls[i]["ct"]))
+                mp.write_text(json.dumps({json.dumps(list(kk)): v for kk, v in memo.items()}))
             rows.append(memo[k])
         return rows
 
     def teach(prompt):
+        n_taught[0] += 1
+        if manual:  # file handshake: an out-of-band teacher (e.g. a Claude Code agent) answers, $0 API
+            reply = loop / f"teacher_reply_{n_taught[0]}.txt"
+            if reply.exists():
+                return reply.read_text()
+            (loop / f"teacher_prompt_{n_taught[0]}.txt").write_text(prompt)
+            raise Stop(f"awaiting {reply.name} (prompt written next to it); re-run after writing it")
         r = teacher.complete(prompt, max_tokens=400)
         if not r.success:
             raise Stop(f"teacher call failed ({r.error or 'provider error, e.g. no credit'})")
