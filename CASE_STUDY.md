@@ -178,11 +178,26 @@ Five experiments, each attacking an assumption, reported as measured — includi
 4. **Budget governor + shadow sampling (offline simulation).** Shadow-checking 5% of traffic detects an injected quality drop in 83% of simulated months (median ~870 requests) for ~6% overhead (1%: 29%; 10%: 93%). Protected task types were never downgraded. With reasoning protected, a 60% budget is infeasible (reasoning is ~64% of cost) and the governor flags that rather than hiding it.
 5. **Kimi K3 (Moonshot).** Same per-token price as Sonnet ($3/$15) plus mandatory billed reasoning, so on short mid-tier tasks it can only compete on quality, never price (offline projection from real token counts; live quality run pending). The router now defaults Kimi to low reasoning effort, because Moonshot's own default is its most expensive. A live outage confirmed failover to Opus.
 
+## v6: a classifier that teaches itself
+
+Test the one assumption first, then build, then measure honestly. v5's shadow test on 150 real emails showed a cheap model (GPT-4o mini) agreeing with the expensive one 90% of the time, but sometimes confidently wrong, so "escalate when unsure" couldn't be trusted. The assumption worth testing: does a model with *calibrated* confidence fix that?
+
+**Step 0, under half a cent.** TypeSafe's Jev is a decision model that returns calibrated probabilities. At 90% confidence or higher, Jev agreed with Haiku on 86 of 86 emails (57% coverage) with 0 missed action items. GPT-4o mini at the same bar was wrong on 7 of 113, with 1 missed action item. Jev's confidence separates right from wrong 92% of the time against mini's 68%. Jev agrees with Haiku less overall (80% vs 90%); the honesty of its confidence is what matters.
+
+**The loop.** Jev decides; if unsure, the expensive model does. A teacher proposes one generic rulebook edit per round, kept only if a re-test on training emails shows more right answers and no new missed action items. Data split by date: the 100 oldest emails to learn from, the 50 newest never seen.
+
+**Result on the 50 unseen emails.** The share Jev handled alone rose from 36% to 60% by round 6 (36, 38, 44, 60, 60 at rounds 0, 1, 3, 4, 6) with 0 missed action items. Cascade cost fell from $1.09 to $0.68 per 1,000 emails against $1.68 for Haiku-only, a 59% saving. 6 edits were kept and 2 rejected by the gate. Total spend was about $0.06; the teacher ran on a Claude subscription, not paid API.
+
+**Confidence you can trust is worth more than accuracy on average.**
+
+**The overfitting lesson.** Rounds 7-8 reached 66% but caused 1 missed action item the training-only gate couldn't see, so round 6 is the keeper. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md).
+
 ## Honest limitations
 
 - **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
 - **25 tasks is a starting eval,** not a production-scale one. It's enough to demonstrate the method and the composition insight; it's not enough to certify a production savings figure.
 - **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
+- **The Jev result is small-n.** 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.
 - **Single-turn tasks only.** Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.
 - **The at-scale projection is directional.** It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's task mix — real traffic will differ, sometimes substantially.
 

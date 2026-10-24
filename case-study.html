@@ -504,6 +504,64 @@
       </div>
     </section>
 
+    <section aria-label="jev result">
+      <p class="kicker">V6 &mdash; a classifier that teaches itself</p>
+      <h2>Test the one assumption first, then build, then measure honestly.</h2>
+      <p>v5's shadow test on 150 real emails showed a cheap model (GPT-4o mini) agreeing with the expensive one 90% of the time, but sometimes confidently wrong, so &ldquo;escalate when unsure&rdquo; couldn't be trusted. The assumption worth testing: does a model whose confidence is <em>calibrated</em> fix that? Step 0 cost under half a cent: TypeSafe's Jev, a decision model that returns probabilities.</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>At &ge;90% confidence</th><th>Jev</th><th>GPT-4o mini</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Emails covered</td><td>86 (57%)</td><td>113</td></tr>
+            <tr><td>Disagreed with Haiku</td><td class="save-cell">0 of 86</td><td class="flat-cell">7 of 113</td></tr>
+            <tr><td>Missed action items</td><td class="save-cell">0</td><td class="flat-cell">1</td></tr>
+            <tr><td>Confidence separates right from wrong</td><td class="save-cell">92%</td><td class="flat-cell">68%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:1rem">Jev agrees with Haiku less overall (80% vs 90%). It's the honesty of its confidence that matters, not the average.</p>
+      <p>Then the loop: Jev decides; if unsure, the expensive model does. A teacher proposes <b>one</b> generic rulebook edit per round, kept only if a re-test on training emails shows more right and no new missed action items. The data is split by date: the 100 oldest emails to learn from, the 50 newest never seen.</p>
+
+      <div class="panel">
+        <p class="panel-title">Share handled by Jev alone, by round &mdash; 50 unseen emails</p>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 0 <span class="sub">base rulebook</span></span><span class="bar-val">36%</span></div>
+            <div class="track"><div class="fill save" data-w="36"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 1</span><span class="bar-val">38%</span></div>
+            <div class="track"><div class="fill save" data-w="38"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 3</span><span class="bar-val">44%</span></div>
+            <div class="track"><div class="fill save" data-w="44"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 4</span><span class="bar-val">60%</span></div>
+            <div class="track"><div class="fill save" data-w="60"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 6 <span class="sub">the keeper &middot; 0 missed action items</span></span><span class="bar-val" style="color:var(--teal)">60%</span></div>
+            <div class="track"><div class="fill save" data-w="60"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">Round 8 <span class="sub">1 missed action item</span></span><span class="bar-val" style="color:var(--amber)">66%</span></div>
+            <div class="track"><div class="fill cost" data-w="66"></div></div>
+          </div>
+        </div>
+        <p class="delta-note">&#8595;&nbsp;By round 6: <b>36% &rarr; 60% handled alone, 0 missed action items</b>. Cascade cost <b>$1.09 &rarr; $0.68</b> per 1,000 emails vs $1.68 Haiku-only (<b>59% saving</b>). 6 edits kept, 2 rejected by the gate. Total spend about $0.06; the teacher ran on a Claude subscription, not paid API.</p>
+      </div>
+
+      <div class="insight">
+        <p class="big">Confidence you can trust is worth more than accuracy on average.</p>
+      </div>
+
+      <p><b>The overfitting lesson.</b> Rounds 7&ndash;8 reached 66% but caused one missed action item that the training-only gate couldn't see, so round 6 is the version to keep. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/JEV_LOOP.md" style="color:var(--teal)">docs/JEV_LOOP.md</a>.</p>
+    </section>
+
     <section>
       <p class="kicker">Honest limitations</p>
       <h2>What this does and doesn't prove.</h2>
@@ -511,6 +569,7 @@
         <li><b>The judge is validated, not proven.</b> LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) &mdash; but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet is exported; scoring it is the remaining step.</li>
         <li><b>25 tasks is a starting eval,</b> enough to demonstrate the method and the composition insight &mdash; not to certify a production savings figure.</li>
         <li><b>v5 results are small-n and partly modelled.</b> The jury's errors are correlated (shared blind spots), the red-team runs use n of 5&ndash;10, the budget simulation imputes some mid-tier quality (optimistic), and Kimi's quality is unmeasured &mdash; only its price is projected.</li>
+        <li><b>The Jev result is small-n.</b> 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.</li>
         <li><b>Single-turn tasks only.</b> Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.</li>
         <li><b>The at-scale projection is directional.</b> It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's mix &mdash; real traffic will differ.</li>
       </ul>
