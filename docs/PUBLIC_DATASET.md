@@ -38,9 +38,27 @@ Teacher: `--teacher manual` file handshake (`loop/teacher_prompt_N.txt` -> `loop
 | round | edit | gate (VAL) | VAL handled / acc@0.9 / acc | TEST300 handled / acc@0.9 / acc |
 |---|---|---|---|---|
 | 0 | base rulebook | baseline | 72% / 87% / 78% | 71% / 93% / 84% |
-| _TBD_ | | | | |
+| 1 | note disambiguating transfer intents | rejected: accuracy among sure decisions dropped | — | — |
+| 2 | broaden a top-up-fee description | rejected: no gain | — | — |
+| 3 | broaden a card-top-up-fee description | rejected: no gain | — | — |
+
+Stopped after 3 consecutive rejections; **selected version = round 0 (the base rulebook)**. TEST unchanged at
+71% / 93% / 84%. Teacher: a Claude Sonnet agent via the file handshake. Total spend $0.29.
+
+### Verdict: an honest null result
+- **The calibration finding replicates on real ground truth.** On 800 public queries with true labels, Jev's
+  confident answers are 94.2% right at 71.5% coverage, against 83.7% for GPT-4o mini, whose confidence separates
+  right from wrong far worse (AUROC 0.70 vs 0.84; ECE 0.143 vs 0.058). The email result was not a quirk of one inbox.
+- **The self-improving loop did not help here, and the gate correctly refused all three edits.** Two reasons are
+  likely: the base rulebook already starts at 84% accuracy with clearly named intents, and Banking77's remaining
+  errors sit between near-duplicate intents, where a one-line wording change trades one confusion for another.
+  On the email task the starting descriptions were vague, which is where a teacher's clarifications paid off
+  (holdout handled share 36% -> 60%).
+- **The safety gate is doing its job in both directions:** it accepted useful edits on email, and here it kept
+  three plausible-sounding edits out of production because they did not measurably help.
+- Next lever if wanted: allow multi-edit proposals per round, or a larger LEARN slice, rather than loosening the gate.
 
 ## Limits
 - Single run, one seed; 300-query slices move about 0.3 points per query. VAL is used for both gate and selection, so only TEST is unbiased.
 - Jev decisions are not perfectly repeatable between runs; within a run they are memoised (`loop/jev_memo.json`).
-- Spend so far $0.208 of the $0.50 cap (Jev $0.130, mini $0.078).
+- Total spend $0.29 of the $0.50 cap (calibration: Jev $0.130, mini $0.078; loop rounds $0.084).

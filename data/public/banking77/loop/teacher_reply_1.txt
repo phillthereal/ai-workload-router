@@ -1,0 +1,1 @@
+{"edit": "note", "text": "Transfer disambiguation: money sent out that the recipient has not got -> transfer_not_received_by_recipient; money sent into own account not yet in balance -> balance_not_updated_after_bank_transfer; transfer_timing only for general duration questions with no specific transfer made."}

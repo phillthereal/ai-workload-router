@@ -1,0 +1,1 @@
+{"edit": "criterion", "option": "top_up_by_card_charge", "text": "Questions about fees or costs of topping up the account with a card, including fees tied to the type or region of the card used to add money; not fees on purchases made with the card."}

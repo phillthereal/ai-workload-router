@@ -1,0 +1,8 @@
+| round | accepted | why | LEARN | VAL | TEST300 |
+|---|---|---|---|---|---|
+| 0 | None | baseline | 72% / 92% / 80% | 72% / 87% / 78% | 71% / 93% / 84% |
+| 1 | False | agreement among sure decisions dropped | 72% / 92% / 80% | 72% / 87% / 78% | 71% / 93% / 84% |
+| 2 | False | no gain in handled share or agreement | 72% / 92% / 80% | 72% / 87% / 78% | 71% / 93% / 84% |
+| 3 | False | no gain in handled share or agreement | 72% / 92% / 80% | 72% / 87% / 78% | 71% / 93% / 84% |
+
+(cells: handled / accuracy at p>=0.9 / overall accuracy). Selected by best VAL score: round 0 (v1); TEST300 71% / 93% / 84%; spend $0.2924

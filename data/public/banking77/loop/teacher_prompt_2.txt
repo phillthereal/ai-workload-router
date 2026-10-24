@@ -1,0 +1,97 @@
+You maintain a rulebook that a small classifier uses to sort customer banking queries into intents.
+
+Current intents:
+- Refund_not_showing_up: The customer expects a refund that has not yet appeared in their account.
+- activate_my_card: How to activate a new card or a card that has not been activated yet.
+- age_limit: Questions about minimum age or age requirements for having an account.
+- apple_pay_or_google_pay: Using, adding or setting up a mobile wallet such as Apple Pay or Google Pay.
+- atm_support: Which ATMs can be used, where they are, or whether ATMs are supported.
+- automatic_top_up: Setting up, changing or understanding automatic or recurring top-ups.
+- balance_not_updated_after_bank_transfer: A bank transfer was made but the balance has not updated.
+- balance_not_updated_after_cheque_or_cash_deposit: A cheque or cash deposit was made but the balance has not updated.
+- beneficiary_not_allowed: A transfer is blocked or refused because of the recipient or beneficiary.
+- cancel_transfer: The customer wants to cancel or stop a transfer they made.
+- card_about_to_expire: The card is close to its expiry date; asking about renewal or replacement.
+- card_acceptance: Where the card is accepted or whether merchants will take it.
+- card_arrival: Asking where an ordered card is or whether it has arrived yet.
+- card_delivery_estimate: How long card delivery takes or when it is expected to arrive.
+- card_linking: Linking or connecting an existing card to the account or app.
+- card_not_working: The card does not work, with no specific payment or cash withdrawal given.
+- card_payment_fee_charged: A fee was charged on a card payment.
+- card_payment_not_recognised: A card payment on the account that the customer does not recognise.
+- card_payment_wrong_exchange_rate: A card payment used an exchange rate the customer thinks is wrong.
+- card_swallowed: A cash machine kept or swallowed the card.
+- cash_withdrawal_charge: A fee or charge applied to a cash withdrawal.
+- cash_withdrawal_not_recognised: A cash withdrawal on the account that the customer does not recognise.
+- change_pin: Changing or updating a card PIN.
+- compromised_card: The card or its details may have been compromised, hacked or used by someone else.
+- contactless_not_working: Contactless payments are not working.
+- country_support: Which countries the service or account is available or supported in.
+- declined_card_payment: A card payment was declined or rejected.
+- declined_cash_withdrawal: A cash withdrawal was declined or rejected.
+- declined_transfer: A transfer was declined or rejected.
+- direct_debit_payment_not_recognised: A direct debit payment that the customer does not recognise.
+- disposable_card_limits: Spending or usage limits on disposable cards.
+- edit_personal_details: Changing or updating personal details such as name, address or phone number.
+- exchange_charge: Fees or charges for exchanging currencies.
+- exchange_rate: Asking what exchange rate is used or how it is determined.
+- exchange_via_app: Exchanging currencies inside the app.
+- extra_charge_on_statement: An unexpected or extra charge shown on the statement.
+- failed_transfer: A transfer failed to complete.
+- fiat_currency_support: Which traditional currencies can be held, exchanged or used.
+- get_disposable_virtual_card: How to get or create a disposable virtual card.
+- get_physical_card: How to get a physical card.
+- getting_spare_card: How to get an additional or spare card.
+- getting_virtual_card: How to get a virtual card.
+- lost_or_stolen_card: The card has been lost or stolen.
+- lost_or_stolen_phone: The phone with the app has been lost or stolen.
+- order_physical_card: Ordering a physical card.
+- passcode_forgotten: The customer forgot their passcode or app password.
+- pending_card_payment: A card payment is still pending.
+- pending_cash_withdrawal: A cash withdrawal is still pending.
+- pending_top_up: A top-up is still pending.
+- pending_transfer: A transfer is still pending.
+- pin_blocked: The PIN is blocked or locked after wrong attempts.
+- receiving_money: How to receive money or how incoming payments work.
+- request_refund: The customer wants to ask for a refund.
+- reverted_card_payment?: A card payment was reversed or cancelled.
+- supported_cards_and_currencies: Which cards and currencies are supported.
+- terminate_account: Closing or deleting the account.
+- top_up_by_bank_transfer_charge: Fees charged for topping up by bank transfer.
+- top_up_by_card_charge: Fees charged for topping up by card.
+- top_up_by_cash_or_cheque: Topping up using cash or a cheque.
+- top_up_failed: A top-up failed.
+- top_up_limits: Limits on how much can be topped up.
+- top_up_reverted: A top-up was reversed or taken back.
+- topping_up_by_card: How to top up the account using a card.
+- transaction_charged_twice: A transaction was charged two times.
+- transfer_fee_charged: A fee was charged on a transfer.
+- transfer_into_account: How to transfer money into the account.
+- transfer_not_received_by_recipient: A transfer was sent but the recipient has not received it.
+- transfer_timing: How long a transfer takes.
+- unable_to_verify_identity: The customer cannot complete identity verification.
+- verify_my_identity: How to verify the customer's identity.
+- verify_source_of_funds: Proving or verifying where the money came from.
+- verify_top_up: Verifying a top-up or confirming that it worked.
+- virtual_card_not_working: A virtual card does not work.
+- visa_or_mastercard: Whether the card is Visa or Mastercard, or choosing between them.
+- why_verify_identity: Why identity verification is needed.
+- wrong_amount_of_cash_received: The amount of cash from a machine was different than requested.
+- wrong_exchange_rate_for_cash_withdrawal: A cash withdrawal used an exchange rate the customer thinks is wrong.
+
+Current clarifying notes:
+(none)
+
+Below are queries where the classifier was wrong or unsure. The true label is ground truth.
+
+[0] "Are there any fees associated with receiving money?" true=top_up_by_bank_transfer_charge classifier=receiving_money (p=0.97)
+[1] "I want to be sure that everything is okay here. I just made a transfer from a UK account and it is still not showing up. How long does this typically take?" true=balance_not_updated_after_bank_transfer classifier=transfer_timing (p=0.72)
+[2] "What are the fees for using a European bank card?" true=top_up_by_card_charge classifier=card_payment_fee_charged (p=0.44)
+[3] "My app shows cash I didn't get." true=cash_withdrawal_not_recognised classifier=wrong_amount_of_cash_received (p=0.61)
+[4] "Hey, I ordered a thing but changed my mind and want a refund on it. Since I haven't received the thing, would you just go ahead and cancel the payment for me?" true=request_refund classifier=request_refund (p=0.87)
+[5] "I can't use the app because I got mugged yesterday and they took everything. Please help." true=lost_or_stolen_phone classifier=lost_or_stolen_phone (p=0.76)
+
+Propose exactly ONE edit that helps on this kind of case: reword one intent description (sharpen the boundary with the intent it is confused with), or add one short clarifying note. It must be a GENERIC rule, not a copy of any query. Maximum 300 characters. Do not repeat these rejected ideas:
+- Transfer disambiguation: money sent out that the recipient has not got -> transfer_not_received_by_recipient; money sent into own account not yet in balance -> balance_not_updated_after_bank_transfer; transfer_timing only for general duration questions with no specific transfer made.
+
+Reply with ONLY JSON: {"edit":"criterion","option":"<INTENT>","text":"<new description>"} or {"edit":"note","text":"<note>"}

@@ -1,0 +1,186 @@
+{
+ "rounds": [
+  {
+   "round": 0,
+   "version": 1,
+   "hash": "1954094fbc23",
+   "accepted": null,
+   "reason": "baseline",
+   "learn": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.9166666666666666,
+    "n_hi": 216,
+    "agree": 0.8033333333333333,
+    "miss": [],
+    "score": 0.66,
+    "per1k": 0.09242576000000001
+   },
+   "val": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.8703703703703703,
+    "n_hi": 216,
+    "agree": 0.7833333333333333,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.0924266
+   },
+   "test": {
+    "n": 300,
+    "handled": 0.71,
+    "agree_hi": 0.9342723004694836,
+    "n_hi": 213,
+    "agree": 0.84,
+    "miss": [],
+    "score": 0.6633333333333333,
+    "per1k": 0.0923559
+   }
+  },
+  {
+   "round": 1,
+   "version": 1,
+   "hash": "1954094fbc23",
+   "accepted": false,
+   "reason": "agreement among sure decisions dropped",
+   "kind": "note",
+   "learn": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.9166666666666666,
+    "n_hi": 216,
+    "agree": 0.8033333333333333,
+    "miss": [],
+    "score": 0.66,
+    "per1k": 0.09242576000000001
+   },
+   "val": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.8703703703703703,
+    "n_hi": 216,
+    "agree": 0.7833333333333333,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.0924266
+   },
+   "test": {
+    "n": 300,
+    "handled": 0.71,
+    "agree_hi": 0.9342723004694836,
+    "n_hi": 213,
+    "agree": 0.84,
+    "miss": [],
+    "score": 0.6633333333333333,
+    "per1k": 0.0923559
+   },
+   "candidate_val": {
+    "n": 300,
+    "handled": 0.73,
+    "agree_hi": 0.867579908675799,
+    "n_hi": 219,
+    "agree": 0.7766666666666666,
+    "miss": [],
+    "score": 0.6333333333333333,
+    "per1k": 0.0949886
+   }
+  },
+  {
+   "round": 2,
+   "version": 1,
+   "hash": "1954094fbc23",
+   "accepted": false,
+   "reason": "no gain in handled share or agreement",
+   "kind": "criterion",
+   "learn": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.9166666666666666,
+    "n_hi": 216,
+    "agree": 0.8033333333333333,
+    "miss": [],
+    "score": 0.66,
+    "per1k": 0.09242576000000001
+   },
+   "val": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.8703703703703703,
+    "n_hi": 216,
+    "agree": 0.7833333333333333,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.0924266
+   },
+   "test": {
+    "n": 300,
+    "handled": 0.71,
+    "agree_hi": 0.9342723004694836,
+    "n_hi": 213,
+    "agree": 0.84,
+    "miss": [],
+    "score": 0.6633333333333333,
+    "per1k": 0.0923559
+   },
+   "candidate_val": {
+    "n": 300,
+    "handled": 0.7166666666666667,
+    "agree_hi": 0.8744186046511628,
+    "n_hi": 215,
+    "agree": 0.78,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.09326660000000002
+   }
+  },
+  {
+   "round": 3,
+   "version": 1,
+   "hash": "1954094fbc23",
+   "accepted": false,
+   "reason": "no gain in handled share or agreement",
+   "kind": "criterion",
+   "learn": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.9166666666666666,
+    "n_hi": 216,
+    "agree": 0.8033333333333333,
+    "miss": [],
+    "score": 0.66,
+    "per1k": 0.09242576000000001
+   },
+   "val": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.8703703703703703,
+    "n_hi": 216,
+    "agree": 0.7833333333333333,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.0924266
+   },
+   "test": {
+    "n": 300,
+    "handled": 0.71,
+    "agree_hi": 0.9342723004694836,
+    "n_hi": 213,
+    "agree": 0.84,
+    "miss": [],
+    "score": 0.6633333333333333,
+    "per1k": 0.0923559
+   },
+   "candidate_val": {
+    "n": 300,
+    "handled": 0.72,
+    "agree_hi": 0.8703703703703703,
+    "n_hi": 216,
+    "agree": 0.7833333333333333,
+    "miss": [],
+    "score": 0.6266666666666667,
+    "per1k": 0.09372860000000001
+   }
+  }
+ ],
+ "spent": 0.29242951799999684
+}

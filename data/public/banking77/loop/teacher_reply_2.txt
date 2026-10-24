@@ -1,0 +1,1 @@
+{"edit": "criterion", "option": "top_up_by_bank_transfer_charge", "text": "Fees charged when adding money to the account by bank transfer, including fees for receiving or accepting incoming bank transfers; not about how to receive money."}
