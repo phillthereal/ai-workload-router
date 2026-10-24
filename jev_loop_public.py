@@ -81,6 +81,7 @@ def run_loop(items, learn, val, test, rb, evaluate, teach, rounds=8, patience=3,
     cur_tr = evaluate(rb, learn); cur_val = metrics(evaluate(rb, val)); cur_te = metrics(evaluate(rb, test[:N_TEST_ROUND]))
     out = [dict(round=0, version=rb.version, hash=rb.content_hash(), accepted=None, reason="baseline",
                 learn=metrics(cur_tr), val=cur_val, test=cur_te)]
+    log(dict(out[0], proposal=None, rulebook=rb.to_dict()))
     past, rejects = [], 0
     for rnd in range(1, rounds + 1):
         ex = L.select_examples(cur_tr, rnd)
@@ -274,9 +275,8 @@ def parse_mini(text, criteria):
 
 
 def report():
-    r = json.loads((LOOP / "rounds.json").read_text()) if (LOOP / "rounds.json").exists() else None
-    if r is None:
-        sys.exit("no rounds.json yet (loop still waiting on the teacher or not finished)")
+    rows = [json.loads(l) for l in open(LOOP / "proposals.jsonl")]  # rebuilt every (re)start; includes unfinished loops
+    r = dict(rounds=rows, spent=json.loads((LOOP / "spend.json").read_text())["spent"])
     f = lambda m: f"{m['handled']*100:.0f}% / {m['agree_hi']*100:.0f}% / {m['agree']*100:.0f}%"
     print("| round | accepted | why | LEARN | VAL | TEST300 |\n|---|---|---|---|---|---|")
     for x in r["rounds"]:
