@@ -562,6 +562,52 @@
       <p><b>The overfitting lesson.</b> Rounds 7&ndash;8 reached 66% but caused one missed action item that the training-only gate couldn't see, so round 6 is the version to keep. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/JEV_LOOP.md" style="color:var(--teal)">docs/JEV_LOOP.md</a>.</p>
     </section>
 
+    <section aria-label="production chain">
+      <p class="kicker">V7 &mdash; into production</p>
+      <h2>The cheapest model is no model.</h2>
+      <p>The last step was deploying these ideas into the owner's live email automation. First, a reality check on 150 real emails from the live classifier: the router's free length-based difficulty heuristic sent <b>100% to the expensive model &mdash; 0% saved</b>. The benchmark shortcut didn't survive real data. What did: rules learned only from the older 100 emails and tested on the newest 50 unseen.</p>
+
+      <div class="panel">
+        <p class="panel-title">Share decided with no paid model &mdash; 50 unseen emails, cheapest stage first</p>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">1 &middot; Sender rules <span class="sub">exact sender &rarr; folder &middot; 14/14 correct, 0 important misfiled</span></span><span class="bar-val" style="color:var(--teal)">28%</span></div>
+            <div class="track"><div class="fill save" data-w="28"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">2 &middot; + Jev <span class="sub">round-6 rulebook, decides only at &ge;90% sure &middot; all correct in sample</span></span><span class="bar-val" style="color:var(--teal)">62%</span></div>
+            <div class="track"><div class="fill save" data-w="62"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-head"><span class="bar-name">3 &middot; GPT-4o mini fallback <span class="sub">the rest, plus every important category</span></span><span class="bar-val" style="color:var(--amber)">38%</span></div>
+            <div class="track"><div class="fill cost" data-w="38"></div></div>
+          </div>
+        </div>
+        <p class="delta-note">&#8595;&nbsp;The owner's own hand-audited sender map (~560 senders from inbox history) covered <b>77%</b> of emails; its Job Alerts folder agreed 21/21 and Promos 35/38. <b>29 recruiter-like senders</b> filed under promos were excluded, so a rejection or interview invite can never be auto-ignored. Action needed, rejections, recruiter replies and confirmations always go to the fallback. Every decision records which stage made it, and no Anthropic API dependency remains.</p>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Stage</th><th>Pre-release replay, 23 emails</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Sender rules vs old classifier</td><td class="save-cell">5/5 agreed</td></tr>
+            <tr><td>Jev vs old classifier</td><td class="save-cell">7/7 agreed</td></tr>
+            <tr><td>Fallback vs old classifier</td><td class="save-cell">10/11 agreed</td></tr>
+            <tr><td>Important emails decided by a cheap stage</td><td class="save-cell">0</td></tr>
+            <tr><td>Errors</td><td class="save-cell">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="insight">
+        <p class="big">Most of the savings came from not calling a model at all &mdash; and the biggest quality win was a bug you only find by measuring.</p>
+      </div>
+
+      <p><b>Release discipline, and two bugs.</b> The chain was built as a switched-off copy and replayed with all Notion writing disabled, then cut over with the old version kept for one-click rollback. Measuring found the first bug: the live classifier had never been shown who sent an email &mdash; a field-shape mismatch rendered an empty sender on every prompt since July. One-line fix. The first live job alert exposed the second, a duplicate-check bug dating from July that stayed hidden while the automation was off; it was found from the run log and fixed and verified offline the same day. First verified live run: 2 emails decided by Jev, no paid model, no errors.</p>
+    </section>
+
     <section>
       <p class="kicker">Honest limitations</p>
       <h2>What this does and doesn't prove.</h2>
@@ -570,6 +616,7 @@
         <li><b>25 tasks is a starting eval,</b> enough to demonstrate the method and the composition insight &mdash; not to certify a production savings figure.</li>
         <li><b>v5 results are small-n and partly modelled.</b> The jury's errors are correlated (shared blind spots), the red-team runs use n of 5&ndash;10, the budget simulation imputes some mid-tier quality (optimistic), and Kimi's quality is unmeasured &mdash; only its price is projected.</li>
         <li><b>The Jev result is small-n.</b> 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.</li>
+        <li><b>The live chain numbers are early.</b> They come from a 23-email pre-release test and the first live runs; the fallback path and the fixed job-saving step had not yet run live at time of writing. The old classifier is the reference, not truth.</li>
         <li><b>Single-turn tasks only.</b> Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.</li>
         <li><b>The at-scale projection is directional.</b> It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's mix &mdash; real traffic will differ.</li>
       </ul>

@@ -192,12 +192,33 @@ Test the one assumption first, then build, then measure honestly. v5's shadow te
 
 **The overfitting lesson.** Rounds 7-8 reached 66% but caused 1 missed action item the training-only gate couldn't see, so round 6 is the keeper. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md).
 
+## v7: into production
+
+**The cheapest model is no model.** The last step was deploying these ideas into the owner's live email automation. A reality check on 150 real emails from the live classifier: the router's free length-based difficulty heuristic sent 100% to the expensive model, so 0% saved. The benchmark shortcut didn't survive real data.
+
+**What did survive.** Rules learned only from the older 100 emails, tested on the newest 50 unseen: exact-sender rules decided 28% (14/14 correct, 0 important emails misfiled); adding Jev on the rest brought it to 62% decided with no paid model, all correct in that sample. The owner's own hand-audited sender map (~560 senders from inbox history) covered 77% of emails; its Job Alerts folder agreed 21/21 and Promos 35/38. 29 recruiter-like senders filed under promos were excluded, so a rejection or interview invite can never be auto-ignored.
+
+**The shipped chain, cheapest first.** Sender rules (278 free decisions) → Jev with the learned round-6 rulebook (decides only when at least 90% sure) → GPT-4o mini fallback. Important categories (action needed, rejections, recruiter replies, confirmations) always go to the fallback. Each decision records which stage made it. No Anthropic API dependency remains: the old Haiku classifier stopped when its API credit ran out, and the new chain doesn't need it.
+
+| Stage | Pre-release replay, 23 emails |
+|---|---|
+| Sender rules vs old classifier | 5/5 agreed |
+| Jev vs old classifier | 7/7 agreed |
+| Fallback vs old classifier | 10/11 agreed |
+| Important emails decided by a cheap stage | 0 |
+| Errors | 0 |
+
+**Most of the savings came from not calling a model at all — and the biggest quality win was a bug you only find by measuring.**
+
+**Release discipline, and two bugs.** Built as a switched-off copy, replayed with all Notion writing disabled, then cut over with the old version kept for one-click rollback. Measuring found the first bug: the live classifier had never been shown who sent an email (a field-shape mismatch rendered an empty sender on every prompt since July). One-line fix. The first live job alert exposed the second, a duplicate-check bug dating from July, hidden because the automation had been off; found from the run log, fixed and verified offline the same day. First verified live run: 2 emails decided by Jev, no paid model, no errors.
+
 ## Honest limitations
 
 - **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
 - **25 tasks is a starting eval,** not a production-scale one. It's enough to demonstrate the method and the composition insight; it's not enough to certify a production savings figure.
 - **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
 - **The Jev result is small-n.** 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.
+- **The live chain numbers are early.** They come from a 23-email pre-release test and the first live runs; the fallback path and the fixed job-saving step had not yet run live at time of writing. The old classifier is the reference, not truth.
 - **Single-turn tasks only.** Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.
 - **The at-scale projection is directional.** It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's task mix — real traffic will differ, sometimes substantially.
 
