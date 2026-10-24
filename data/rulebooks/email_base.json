@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "instructions": "Classify the email into exactly one category.",
+  "criteria": {
+    "ACTION_NEEDED": "A non-job-search message that needs the reader to respond or act, such as replying, paying, scheduling or deciding.",
+    "JOB_CONFIRMATION": "An automated acknowledgement that a job application was received.",
+    "JOB_REJECTION": "A message that clearly declines a job application.",
+    "RECRUITER_REPLY": "A real person at a recruiter or employer writing personally to the reader: replying, reaching out or arranging a call. Not an automated notice.",
+    "JOB_ALERT": "An automated digest or alert listing job openings from a job board.",
+    "FYI": "Informational mail that needs no action and is not junk, such as newsletters the reader follows, receipts and non-job confirmations.",
+    "IGNORE": "Spam, promotions and low-value automated notifications."
+  },
+  "notes": [],
+  "hash": "646a34f32046"
+}
