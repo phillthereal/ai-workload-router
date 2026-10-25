@@ -8,14 +8,15 @@ version = "0.1.0"
 description = "Routes LLM tasks to the cheapest capable model while logging cost, latency, and quality"
 requires-python = ">=3.11"
 dependencies = [
-    "anthropic",
-    "openai",
-    "google-generativeai",
-    "httpx",
-    "pydantic",
-    "python-dotenv",
-    "pytest",
+    "anthropic>=0.116,<1",
+    "httpx>=0.28,<1",
+    # transitive floors: PYSEC-2026-4024/4025 (anyio), PYSEC-2026-4320 (certifi); pip-audit 2026-10-25
+    "anyio>=4.14.2",
+    "certifi>=2026.10.19",
 ]
+
+[project.optional-dependencies]
+dev = ["pytest"]
 
 [project.scripts]
 # Entry point: python run_benchmark.py (see README for usage)

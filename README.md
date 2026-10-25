@@ -114,7 +114,7 @@ v1–v3 proved the routing works; v4 makes it something an app can actually call
 - **One API.** `Router(policy).complete(prompt)` returns the answer, the model chosen, answer + routing cost, and a human-readable trace of *why*. Every strategy — rules, classifier, learned, cascade, frontier-only — is a pluggable policy behind the same interface, and the benchmark is now just a loop over policies.
 - **Real failover.** If a provider errors, the router retries the next model up the ladder and records it in the trace, rather than silently substituting a fake answer.
 - **A live learning signal.** The v3 learned router originally learned from an offline judge that needs an answer key — which production traffic never has. `Router.feedback(request_id, score)` now feeds it user ratings or the cascade's verifier score, with verifier evidence down-weighted (the v2 finding: self-verification is unreliable) so it can never trigger a cheaper route on its own.
-- **Drop-in endpoint.** An OpenAI-compatible server (stdlib only): point any OpenAI SDK's `base_url` at it and pick a policy via the `model` field (`router`, `router:cascade`, `router:learned`, `router:frontier`). Localhost-only by default, optional bearer auth (`AWR_SERVER_TOKEN`), 1 MB body limit; each response includes an `x_router` block showing the routing decision and its cost.
+- **Drop-in endpoint.** An OpenAI-compatible server (stdlib only): point any OpenAI SDK's `base_url` at it and pick a policy via the `model` field (`router`, `router:cascade`, `router:learned`, `router:frontier`). Localhost-only by default. **Bearer auth is on by default**: `serve.py` generates a token and prints it once to stderr (or set `AWR_SERVER_TOKEN`); `--no-auth` disables it with a loud warning. Requests must be `Content-Type: application/json` (else 415), the `Host` header must be loopback (or the explicit `--host`), and any request carrying an `Origin` header is rejected (403), which blocks browser CSRF and DNS rebinding. Spend guards: `--daily-budget USD` (default 1.00, per UTC day, in-process; 429 once reached), `router:frontier` off unless `--allow-frontier`, 30 requests/minute (`--rate-limit`), 256 KB body cap, 30 s socket timeout, 8 concurrent requests (503 beyond). `make_server(token=None)` means no auth (tests/embedding only). each response includes an `x_router` block showing the routing decision and its cost.
 
 ```python
 from router.api import Router, CascadePolicy
@@ -126,6 +126,8 @@ print(r.model, r.total_cost_usd, r.trace)
 python3 serve.py --port 8787                      # then base_url="http://127.0.0.1:8787/v1", model="router"
 python3 serve.py --port 8787 --log-db live.db     # also log requests + enable POST /v1/feedback (stores prompt text)
 ```
+
+**Data at rest.** `.cache/` stores model responses in plaintext, and `--log-db` stores prompts and responses. Both are gitignored and local only; treat them as sensitive.
 
 ## v5: stress-testing the router
 

@@ -36,7 +36,7 @@ def split_prompt(p):
 
 
 def key():
-    for l in open(Path("/Users/caio/Ai Workload/.env")):
+    for l in open(Path(__file__).resolve().parent / ".env"):
         if l.startswith("TYPESAFE_API_KEY="):
             return l.split("=", 1)[1].strip().strip("'\"")
     sys.exit("no TYPESAFE_API_KEY")
