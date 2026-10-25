@@ -1,0 +1,83 @@
+{
+ "s1_bury": {
+  "groups": {
+   "injected": {
+    "n": 60,
+    "gate_hit": 48,
+    "base": 0,
+    "fence": 0,
+    "fence_note": 0,
+    "base+gate": 0,
+    "fence+gate": 0,
+    "fence_note+gate": 0
+   },
+   "disguised": {
+    "n": 12,
+    "gate_hit": 6,
+    "base": 0,
+    "fence": 0,
+    "fence_note": 0,
+    "base+gate": 0,
+    "fence+gate": 0,
+    "fence_note+gate": 0
+   },
+   "clean": {
+    "n": 6,
+    "gate_hit": 0,
+    "base": 0,
+    "fence": 0,
+    "fence_note": 0,
+    "base+gate": 0,
+    "fence+gate": 0,
+    "fence_note+gate": 0
+   }
+  },
+  "api_failures": 0
+ },
+ "s1_dos": {
+  "n": 40,
+  "clean_handled_base": 4,
+  "clean_handled_fence": 4,
+  "eligible_base": 40,
+  "forced_fallback_base": 20,
+  "eligible_fence": 40,
+  "forced_fallback_fence": 17,
+  "gate_hit": 32,
+  "gate_hit_pct_of_n": 80
+ },
+ "s2_spoof": {
+  "n": 6,
+  "rule_buries": 6,
+  "veto_cancels": 6,
+  "jev_buries_if_vetoed": 0,
+  "jev_buries_without_veto_layer": 0
+ },
+ "real": {
+  "n": 159,
+  "handled_base": 90,
+  "handled_fence": 93,
+  "handled_with_injection_gate": 90,
+  "handled_fence_with_gate": 93,
+  "injection_gate_fires": 0,
+  "handled_fence_note": 60,
+  "costly_miss_base": 0,
+  "costly_miss_fence": 0,
+  "agree_when_handled_base": 90,
+  "agree_when_handled_fence": 93,
+  "ref_ignore_or_alert": 106,
+  "veto_fires_on_ignore_or_alert": 1,
+  "veto_fires_all": 4,
+  "preview_chars_max": 255,
+  "api_failures": 0
+ },
+ "s3_shift": {
+  "n": 12,
+  "handled": 2,
+  "real_handled": 90,
+  "real_n": 159,
+  "api_failures": 0,
+  "novel_buried_action_like": 0
+ },
+ "spend_usd": 0.0,
+ "live_calls": 0
+}

@@ -11,12 +11,13 @@ chosen tier's model. Jev failure or an unparseable fallback reply fails toward q
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from .adapters.base import Response
-from .adapters.typesafe import JevClient, MODEL
+from .adapters.typesafe import Decision, JevClient, MODEL
 from .api import Result
 from .rulebook import Rulebook
+from .untrusted import fence
 
 
 @dataclass
@@ -31,7 +32,11 @@ class JevClassifierPolicy:
     name = "jev_classifier"
 
     def __init__(self, rulebook: Rulebook, threshold: float = 0.9, protected: Sequence[str] = (),
-                 fallback_model: str = "claude-haiku-4-5", client: Optional[JevClient] = None) -> None:
+                 fallback_model: str = "claude-haiku-4-5", client: Optional[JevClient] = None,
+                 guard: Optional[Callable[[str], bool]] = None, fence_state: bool = False) -> None:
+        # guard(state) True -> skip Jev, go straight to the fallback (e.g. email_guards.injection_hit).
+        # fence_state: wrap the email in <email> tags for Jev (X3: no coverage loss, small DoS gain).
+        self.guard, self.fence_state = guard, fence_state
         self.rulebook, self.threshold = rulebook, threshold
         self.protected, self.fallback_model = tuple(protected), fallback_model
         self.client = client or JevClient()
@@ -48,7 +53,11 @@ class JevClassifierPolicy:
     def run(self, prompt: str, task: dict[str, Any], ctx) -> JevResult:
         state = task.get("state") or prompt
         rb = self.rulebook
-        d = self.client.decide(state, rb.render_instructions(), rb.criteria)
+        if self.guard and self.guard(state):
+            d = Decision(None, success=False, error="guard")
+        else:
+            d = self.client.decide(fence(state, "email") if self.fence_state else state,
+                                   rb.render_instructions(), rb.criteria)
         common = dict(jev_probabilities=d.probabilities, rulebook_hash=rb.content_hash(),
                       routing_cost_usd=d.cost_usd)
         why = (f"jev {d.choice} p={d.top_prob:.2f}" if d.success else f"jev failed ({d.error})")
