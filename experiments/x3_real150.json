@@ -1,0 +1,10 @@
+{
+ "n": 150,
+ "jev_handled": 69,
+ "injection_gate_fires": 0,
+ "handled_lost_to_injection_gate": 0,
+ "ref_ignore_or_alert": 102,
+ "veto_cancels_on_ignore_or_alert": 1,
+ "veto_fires_all": 4,
+ "handled_lost_to_veto": 2
+}

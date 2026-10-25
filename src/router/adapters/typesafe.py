@@ -88,7 +88,11 @@ class JevClient:
             with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as r:
                 out = json.load(r)
             a = out["answers"]["answer"]
-            return Decision(a["choice"], float(a.get("confidence", 0)), dict(a["probabilities"]),
+            probs = {str(k): float(v) for k, v in dict(a["probabilities"]).items()}
+            # API drift guard: a choice we did not offer, or non-finite probabilities, must read as "unsure".
+            if a["choice"] not in criteria or not all(0.0 <= v <= 1.0 for v in probs.values()):
+                raise ValueError("malformed_decision")
+            return Decision(a["choice"], float(a.get("confidence", 0)), probs,
                             int(out["usage"]["input_tokens"]), (time.perf_counter() - t) * 1000)
         except Exception as exc:  # noqa: BLE001
             return Decision(None, latency_ms=(time.perf_counter() - t) * 1000, success=False,
