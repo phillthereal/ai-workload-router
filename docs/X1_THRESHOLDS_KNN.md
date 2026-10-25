@@ -83,3 +83,25 @@ Mean: dCov +10.1 pp, dAcc -0.92 pp, dWrong +12.3. PASS on 1 of 4 -> **FAIL**.
 - The hypothesis half-holds: with an equal VAL budget the original split now passes (+4.4 pp coverage with wrong 33 = 33, versus +10.3 pp / 41 wrong before), but the cap does not transfer. VAL error counts are 15-28, so "wrong <= baseline" on VAL is noisy and TEST wrong rises by 2-10 on three of four re-partitions.
 - The tight budget picks aggressive settings (tb 0.94-0.99 plus t1 0.45-0.6, m=1) that fit VAL's few errors and overfit: TEST wrong rises to 56-64 on 3 seeds.
 - Caveats: seed 77 passing partly reflects a split already seen in round 1; re-partitioned seeds share items, so passes would not be independent either; fallback accuracy is not modelled.
+
+## Round 2b: robustness of round-1 passes
+Script `experiments/x1_round2b.py`. Same 4-seed protocol as round 2 (77 original; 11/22/33 re-partition the same 1,400 items, so not independent), params chosen on each seed's VAL with the round-1 selectors, same bar, PASS needs seed 77 and >= 3 of 4.
+### 2 kNN
+| seed | (s,m) | TEST cov base->new | dCov [CI] | dAcc [CI] | wrong | skip-Jev | verdict |
+|---|---|---|---|---|---|---|---|
+| 77 | (0.55, 4) | 0.715->0.731 | +1.6pp [+0.8,+2.6] | +0.1pp [-0.3,+0.6] | 33->33 | 12% | PASS |
+| 11 | (0.5, 4) | 0.716->0.745 | +2.9pp [+1.8,+4.0] | -0.9pp [-1.7,-0.1] | 48->55 | 15% | FAIL (accuracy CI < -1pp) |
+| 22 | (0.35, 4) | 0.719->0.745 | +2.6pp [+1.5,+3.8] | -0.9pp [-1.9,-0.2] | 43->50 | 16% | FAIL (accuracy CI < -1pp) |
+| 33 | (0.1, 5) | 0.713->0.719 | +0.6pp [+0.1,+1.2] | -0.1pp [-0.5,+0.1] | 51->52 | 6% | PARTIAL (acc ok, but more wrong-decided items) |
+PASS seeds [77]; OVERALL FAIL
+
+### 1+2
+| seed | (s,m) | TEST cov base->new | dCov [CI] | dAcc [CI] | wrong | skip-Jev | verdict |
+|---|---|---|---|---|---|---|---|
+| 77 | (0.55, 4) | 0.715->0.728 | +1.3pp [+0.2,+2.2] | +0.4pp [-0.2,+1.1] | 33->31 | 12% | PASS |
+| 11 | (0.5, 4) | 0.716->0.744 | +2.7pp [+1.6,+4.0] | -0.7pp [-1.7,+0.2] | 48->54 | 15% | FAIL (accuracy CI < -1pp) |
+| 22 | (0.35, 4) | 0.719->0.741 | +2.2pp [+1.1,+3.5] | -0.4pp [-1.6,+0.6] | 43->47 | 16% | FAIL (accuracy CI < -1pp) |
+| 33 | (0.1, 5) | 0.713->0.719 | +0.6pp [+0.1,+1.2] | -0.1pp [-0.5,+0.1] | 51->52 | 6% | PARTIAL (acc ok, but more wrong-decided items) |
+PASS seeds [77]; OVERALL FAIL
+
+Verdict: both round-1 passes FAIL robustness (1 of 4 seeds). Coverage gains are real on every seed (+0.6 to +2.9 pp, CI > 0) and 6-16% of items skip Jev (cost saving), but wrong-decided rises by 1-7 on seeds 11/22/33 and the accuracy CI lower bound reaches -1.7 pp. The seed-77 pass was favourable; the kNN pre-stage is not a safe default.
