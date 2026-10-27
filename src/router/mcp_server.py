@@ -55,8 +55,15 @@ ESTIMATE_NOTE = (
 )
 
 
-class ToolInputError(ValueError):
-    """A client mistake. The message is safe to show to the client."""
+try:  # with the SDK installed, this message reaches the client; other errors are hidden
+    from mcp.server.mcpserver.exceptions import ToolError as _SdkToolError
+except ImportError:  # core install: plain ValueError
+    class _SdkToolError(Exception):  # type: ignore[no-redef]
+        pass
+
+
+class ToolInputError(_SdkToolError, ValueError):
+    """A client mistake or a refused spend. The message is safe to show to the client."""
 
 
 def _flag(name: str) -> bool:
