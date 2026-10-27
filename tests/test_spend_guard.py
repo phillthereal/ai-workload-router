@@ -1,6 +1,10 @@
+import sys
 import unittest
+from pathlib import Path
 
-from router.spend_guard import SpendGuard
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from router.spend_guard import SpendGuard  # noqa: E402
 
 
 class TestSpendGuard(unittest.TestCase):
