@@ -17,6 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+mcp = ["mcp>=2.3.0,<3"]
 
 [project.scripts]
+ai-router-mcp = "router.mcp_server:main"
 # Entry point: python run_benchmark.py (see README for usage)
