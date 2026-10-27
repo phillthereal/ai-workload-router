@@ -105,13 +105,17 @@ class TestZeroCost(Base):
         raise AssertionError("paid adapter or network touched")
 
     def test_no_adapter_no_network(self):
-        with mock.patch("router.api.get_adapter", self._boom), \
-             mock.patch("router.adapters.get_adapter", self._boom), \
-             mock.patch("router.classifier.classify", self._boom), \
-             mock.patch("urllib.request.urlopen", self._boom), \
-             mock.patch("httpx.Client.send", self._boom), \
-             mock.patch("httpx.AsyncClient.send", self._boom), \
-             mock.patch("socket.socket.connect", self._boom):
+        import contextlib, importlib.util
+        with contextlib.ExitStack() as stack:
+            for target in ("router.api.get_adapter", "router.adapters.get_adapter",
+                           "router.classifier.classify", "urllib.request.urlopen",
+                           "socket.socket.connect"):
+                stack.enter_context(mock.patch(target, self._boom))
+            # httpx is an optional dependency (absent in CI); socket.connect above already
+            # blocks every network path, so patch httpx only where it is installed.
+            if importlib.util.find_spec("httpx"):
+                for target in ("httpx.Client.send", "httpx.AsyncClient.send"):
+                    stack.enter_context(mock.patch(target, self._boom))
             m.classify_task(SHORT)
             m.estimate_cost(SHORT, 200, "kimi_mid")
             m.list_models()
