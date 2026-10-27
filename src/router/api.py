@@ -91,14 +91,19 @@ class Ctx:
         if not self.router.allow_mock_fallback:
             tier = MODEL_TIER.get(model, "budget")
             above = TIER_ORDER[TIER_ORDER.index(tier) + 1:]
-            candidates += [self.roster.model_for_tier(t) for t in above]
+            candidates += [self.roster.model_for_tier(t) for t in above
+                           if TIER_ORDER.index(t) <= TIER_ORDER.index(self.router.max_tier)]
         last_error = "unknown"
         for i, m in enumerate(candidates):
             # Per candidate: a failover hop to Opus must not inherit Kimi's default.
             want = effort if effort is not None else get_model(m).default_effort
             use_effort = want if gates.effort_supported(m, want) else None
             try:
-                response = get_adapter(m, self.router.allow_mock_fallback).complete(
+                # use_cache only passed when off, so 2-arg get_adapter stubs keep working
+                extra = {} if self.router.use_cache else {"use_cache": False}
+                response = get_adapter(
+                    m, self.router.allow_mock_fallback, **extra
+                ).complete(
                     prompt, effort=use_effort, max_tokens=max_tokens
                 )
                 if response.success:
@@ -265,7 +270,13 @@ class Router:
         effort_policy: Optional[dict[str, Optional[str]]] = None,
         allow_mock_fallback: bool = False,
         log_to: Union[None, bool, str, Path] = None,
+        use_cache: bool = True,
+        max_tier: str = "frontier",
     ) -> None:
+        # use_cache=False: no record/replay disk cache. max_tier caps failover
+        # (e.g. "mid" stops a failover climbing to the frontier). Defaults = old behaviour.
+        self.use_cache = use_cache
+        self.max_tier = max_tier
         self.policy = policy
         self.roster = get_roster(roster_name)
         self.effort_policy = effort_policy

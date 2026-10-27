@@ -81,7 +81,8 @@ class MissingProviderError(RuntimeError):
     """A real (non-mock) call was required but the provider is unavailable."""
 
 
-def get_adapter(model_name: str, allow_mock_fallback: bool = True) -> Adapter:
+def get_adapter(model_name: str, allow_mock_fallback: bool = True,
+                use_cache: bool = True) -> Adapter:
     """
     Factory: return an Adapter instance for the given model name.
 
@@ -95,6 +96,8 @@ def get_adapter(model_name: str, allow_mock_fallback: bool = True) -> Adapter:
             MissingProviderError and a failed real call comes back as
             Response(success=False) for the caller to fail over. AWR_FORCE_MOCK
             still returns MockAdapter either way (explicit offline mode).
+        use_cache: False skips the record/replay disk cache, so no prompt or
+            answer is written to .cache/. Default True is the historical behaviour.
 
     Returns:
         A real, cached Adapter (mock-fallback-wrapped when allowed) if the
@@ -113,7 +116,7 @@ def get_adapter(model_name: str, allow_mock_fallback: bool = True) -> Adapter:
         return MockAdapter(model_name)
 
     real = _build_real_adapter(model_name, model.provider, api_key)
-    cached = CachedAdapter(real, model_name)
+    cached = CachedAdapter(real, model_name) if use_cache else real
     return _FallbackToMockAdapter(cached, model_name) if allow_mock_fallback else cached
 
 
