@@ -18,8 +18,6 @@ import sys
 import threading
 import time
 import uuid
-from collections import deque
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
@@ -27,6 +25,7 @@ from .api import (
     CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, ProviderError, Router, RulesPolicy,
 )
 from .config import ROSTERS
+from .spend_guard import SpendGuard
 
 MAX_BODY = 262_144  # 256 KB
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
@@ -59,35 +58,9 @@ def flatten(messages) -> str:
 def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=None,
                  daily_budget_usd: float = 1.0, allow_frontier: bool = False,
                  rate_limit_per_min: int = 30, max_concurrent: int = 8, host: str = "127.0.0.1"):
-    lock = threading.Lock()
     slots = threading.BoundedSemaphore(max_concurrent)
-    hits: deque = deque()          # request times (monotonic) in the last minute
-    spend = {"day": "", "usd": 0.0}  # UTC-day accumulator; in-process, resets on restart
-
-    def today() -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    def rate_ok() -> bool:
-        now = time.monotonic()
-        with lock:
-            while hits and now - hits[0] > 60:
-                hits.popleft()
-            if len(hits) >= rate_limit_per_min:
-                return False
-            hits.append(now)
-            return True
-
-    def over_budget() -> bool:
-        with lock:
-            if spend["day"] != today():
-                spend.update(day=today(), usd=0.0)
-            return spend["usd"] >= daily_budget_usd
-
-    def add_spend(usd: float) -> None:
-        with lock:
-            if spend["day"] != today():
-                spend.update(day=today(), usd=0.0)
-            spend["usd"] += usd
+    guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier)
+    rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 30  # socket timeout: slow/idle clients can't pin a thread
