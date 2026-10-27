@@ -272,7 +272,7 @@ def explain_decision(prompt: str, roster: Optional[str] = None) -> dict[str, Any
             "estimated_cost_usd": _r(_cost(r.model_for_tier(t), in_tokens, out_tokens)),
         } for t in TIER_ORDER],
         "failover_order": [r.model_for_tier(t) for t in TIER_ORDER[chosen_i:]],
-        "failover_note": ("Failover only happens on real calls. Here it stops below the frontier "
+        "failover_note": ("Failover happens only on real calls, and is capped below the frontier "
                           "unless AI_ROUTER_MCP_ALLOW_FRONTIER=1."),
         "cost_usd": 0.0, "note": HEURISTIC_NOTE,
     }

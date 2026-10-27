@@ -170,6 +170,10 @@ First run makes live API calls and caches results to `.cache/`. Every subsequent
 - `AWR_FORCE_MOCK=1 python3 run_benchmark.py` — run fully offline using mock responses (no API keys needed).
 - `python3 -m unittest discover -s tests` — run the test suite.
 
+## MCP server
+
+`ai-router-mcp` exposes the router's decision logic to any MCP client (Claude Code, Cursor, Claude Desktop) over stdio. Five tools (`classify_task`, `estimate_cost`, `list_models`, `route_request`, `explain_decision`), a `router://rosters` resource and a `cost_review` prompt. Everything is free and offline by default; real model calls are off unless the owner sets `AI_ROUTER_MCP_ALLOW_PAID=1`, and then sit behind a $0.50 daily budget, a token cap and a frontier-model gate. Install with `pip install -e ".[mcp]"`, register with `claude mcp add ai-router -- ai-router-mcp`. Details, safety model and limits: [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md); a real session: [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
+
 ## Project Docs
 
 - **[`docs/REAL_TRAFFIC_ASSESSMENT.md`](docs/REAL_TRAFFIC_ASSESSMENT.md) + [`docs/SHADOW_TEST.md`](docs/SHADOW_TEST.md)** — the router tested on real production email traffic: its length-based difficulty shortcut routed 100% to the expensive model (0% saved), while a measured cheap-first cascade saves 76% at 95% agreement — but still misses 1 in 13 action-needed emails.
