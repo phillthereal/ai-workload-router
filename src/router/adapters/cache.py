@@ -128,6 +128,7 @@ class CachedAdapter(Adapter):
         effort: Optional[str] = None,
         max_tokens: Optional[int] = None,
     ) -> Response:
+        """Replay a cached response if there is one; otherwise call and record a success."""
         if not refresh_cache():
             cached = load_cached(self.model_name, prompt, effort, max_tokens)
             if cached is not None:

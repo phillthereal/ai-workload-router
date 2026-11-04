@@ -73,7 +73,6 @@ class TestKimiDefaultEffort(unittest.TestCase):
                 "prompt": "Extract the year: signed in 1648."}
 
     def _run(self, fail_kimi=False, effort_policy=None):
-        from unittest import mock
         from router import api
         from router.adapters.base import Adapter, Response
         seen = []

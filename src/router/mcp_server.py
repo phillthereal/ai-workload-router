@@ -23,17 +23,23 @@ import logging
 import os
 import sys
 from functools import wraps
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional, ParamSpec, TypeVar
 
 from . import gates
 from .adapters import _PROVIDER_ENV_VAR
-from .api import ProviderError, Result, Router
+from .api import Ctx, ProviderError, Result, Router
 from .classifier import heuristic_classify, keyword_signal_groups, strip_meta_claims
 from .config import MODEL_TIER, MODELS, ROSTERS, TIER_ORDER, get_model, get_roster
 from .router import DEFAULT_ROUTING_RULES, route_task
 from .secrets import get_api_key
 from .spend_guard import SpendGuard
 from .untrusted import fence
+
+if TYPE_CHECKING:
+    from mcp.server.mcpserver import MCPServer
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 MAX_PROMPT_CHARS = 32_000
 MAX_OUTPUT_TOKENS = 32_000
@@ -70,7 +76,7 @@ def _flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 
-def _num(name: str, default: float, cast=float):
+def _num(name: str, default: float, cast: Callable[[Any], Any] = float) -> Any:
     try:
         return cast(os.environ.get(name, default))
     except ValueError:
@@ -78,14 +84,17 @@ def _num(name: str, default: float, cast=float):
 
 
 def paid_enabled() -> bool:
+    """True if the server owner allowed real, paid model calls."""
     return _flag("AI_ROUTER_MCP_ALLOW_PAID")
 
 
 def frontier_enabled() -> bool:
+    """True if the server owner allowed the frontier tier."""
     return _flag("AI_ROUTER_MCP_ALLOW_FRONTIER")
 
 
 def max_tokens_cap() -> int:
+    """Highest max_tokens a client may request."""
     return _num("AI_ROUTER_MCP_MAX_TOKENS", DEFAULT_MAX_TOKENS_CAP, int)
 
 
@@ -104,6 +113,7 @@ def configure() -> SpendGuard:
 
 
 def guard() -> SpendGuard:
+    """The process-wide SpendGuard, built on first use."""
     return _guard or configure()
 
 
@@ -133,10 +143,10 @@ def _int(value: Any, name: str, hi: int) -> int:
     return value
 
 
-def _safe(fn):
+def _safe(fn: Callable[P, T]) -> Callable[P, T]:
     """Show clients ToolInputError and spend-cap messages only; hide everything else."""
     @wraps(fn)
-    def wrapper(*a, **kw):
+    def wrapper(*a: P.args, **kw: P.kwargs) -> T:
         try:
             return fn(*a, **kw)
         except ToolInputError:
@@ -292,7 +302,7 @@ class _FreePolicy:
     def before_run_group(self, run_group: str) -> None:
         pass
 
-    def run(self, prompt, task, ctx) -> Result:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
         c = heuristic_classify(prompt)
         d = route_task(task, roster_name=ctx.roster_name, task_type=c.task_type, difficulty=c.difficulty)
         resp = ctx.call(d.chosen_model, prompt, d.effort, max_tokens=self.max_tokens)
@@ -371,6 +381,7 @@ def _paid_call(prompt: str, roster: str, x: dict, in_tokens: int, max_tokens: in
 # --- resource and prompt ------------------------------------------------------
 
 def rosters_json() -> str:
+    """Roster definitions with list prices: the JSON behind router://rosters."""
     return json.dumps({n: {**v, "models": {t: {"name": get_roster(n).model_for_tier(t),
                                                "usd_per_1m_input": get_model(get_roster(n).model_for_tier(t)).cost_per_1m_input_tokens,
                                                "usd_per_1m_output": get_model(get_roster(n).model_for_tier(t)).cost_per_1m_output_tokens}
@@ -406,7 +417,8 @@ def cost_review(prompts: str) -> str:
 
 # --- server -------------------------------------------------------------------
 
-def build_server():
+def build_server() -> MCPServer:
+    """Build the MCP server and register its tools, resource and prompt."""
     from mcp.server.mcpserver import MCPServer
 
     configure()
@@ -422,12 +434,13 @@ def build_server():
 
 
 def main() -> None:
+    """Run the MCP server over stdio."""
     logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
     try:
         srv = build_server()
     except ImportError:
         print('The mcp package is missing. Install it with: pip install -e ".[mcp]"', file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     srv.run(transport="stdio")
 
 

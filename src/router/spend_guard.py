@@ -12,17 +12,20 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
+from typing import Any
 
 
 class SpendGuard:
+    """Per-process limits on daily spend and request rate, plus the frontier switch."""
+
     def __init__(self, daily_budget_usd: float = 1.0, rate_limit_per_min: int = 30,
                  allow_frontier: bool = False) -> None:
         self.daily_budget_usd = daily_budget_usd
         self.rate_limit_per_min = rate_limit_per_min
         self.allow_frontier = allow_frontier
         self._lock = threading.Lock()
-        self._hits: deque = deque()  # request times (monotonic) in the last minute
-        self._spend = {"day": "", "usd": 0.0}
+        self._hits: deque[float] = deque()  # request times (monotonic) in the last minute
+        self._spend: dict[str, Any] = {"day": "", "usd": 0.0}
 
     @staticmethod
     def _today() -> str:
@@ -50,11 +53,13 @@ class SpendGuard:
             return self._spend["usd"] + extra_usd >= self.daily_budget_usd
 
     def add_spend(self, usd: float) -> None:
+        """Add `usd` to today's total."""
         with self._lock:
             self._roll()
             self._spend["usd"] += usd
 
     def spent_today(self) -> float:
+        """Today's spend so far, in USD."""
         with self._lock:
             self._roll()
             return self._spend["usd"]

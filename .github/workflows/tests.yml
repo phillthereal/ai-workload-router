@@ -23,3 +23,18 @@ jobs:
         env:
           AWR_FORCE_MOCK: "1"
         run: python run_benchmark.py
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Unlike the test job, mypy needs the real dependencies to check against.
+      - name: Install project with dev tools
+        run: pip install -e ".[dev,mcp]"
+      - name: Ruff
+        run: ruff check .
+      - name: Mypy
+        run: mypy

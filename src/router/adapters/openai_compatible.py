@@ -37,6 +37,7 @@ class OpenAICompatibleAdapter(Adapter):
     def build_body(
         self, prompt: str, effort: Optional[str], max_tokens: Optional[int]
     ) -> dict:
+        """Build the chat/completions JSON body; only Moonshot gets reasoning_effort."""
         body = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
@@ -76,7 +77,7 @@ class OpenAICompatibleAdapter(Adapter):
 
         last_latency_ms = 0.0
         last_error: Optional[str] = None
-        for attempt in range(_MAX_ATTEMPTS):
+        for _attempt in range(_MAX_ATTEMPTS):
             start = time.perf_counter()
             try:
                 http_response = httpx.post(

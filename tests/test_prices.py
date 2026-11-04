@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import prices  # noqa: E402
-from router.config import MODELS, Roster  # noqa: E402
+from router.config import Roster  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "fixtures" / "openrouter_models_sample.json"
 

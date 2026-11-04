@@ -20,11 +20,15 @@ when escalating, since the frontier answer is then the answer).
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from .config import get_model
 from .scoring import _normalize, exact_match
 from .untrusted import DEFAULT_PROMPT_VERSION, IGNORE_NOTE, check_version, fence
+
+if TYPE_CHECKING:  # api imports this module at runtime
+    from .adapters.base import Response
+    from .api import Ctx, Result
 
 DEFAULT_JURORS = ["gpt-4o-mini", "deepseek-chat", "claude-haiku-4-5"]  # 3 vendors
 SHORT_MAX_CHARS = 40  # normalized chars; ~ a bare number/label, not a sentence
@@ -86,6 +90,8 @@ def _checker(jurors: list[str], i: int, j: int) -> str:
 
 
 class JuryPolicy:
+    """Ask cheap jurors from different vendors; escalate to the frontier if they disagree."""
+
     name = "jury"
 
     def __init__(self, jurors: Optional[list[str]] = None, mode: str = "unanimous",
@@ -97,12 +103,15 @@ class JuryPolicy:
         self.prompt_version = check_version(prompt_version)
 
     def report_tags(self) -> list[str]:
+        """Tag reports with the voting mode."""
         return [f"jury-{self.mode}"]
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
-    def _agree(self, a, b, i, j, prompt, ctx, spent, trace) -> bool:
+    def _agree(self, a: Response, b: Response, i: int, j: int, prompt: str, ctx: Ctx,
+               spent: list[float], trace: list[str]) -> bool:
         na, nb = _normalize(a.text), _normalize(b.text)
         if len(na) <= SHORT_MAX_CHARS and len(nb) <= SHORT_MAX_CHARS:
             ok = bool(na and nb) and (exact_match(a.text, b.text) == 1.0
@@ -115,12 +124,13 @@ class JuryPolicy:
                      max_tokens=_CHECK_MAX_TOKENS)
         spent[0] += ctx.cost(r)
         m = _VOTE_RE.match(r.text or "")
-        ok = bool(m) and m.group(1) == "1"
+        ok = m is not None and m.group(1) == "1"
         trace.append(f"{self.jurors[i]} vs {self.jurors[j]}: checked by {chk} "
                      f"({(r.text or '').strip()[:12]!r}) -> {'agree' if ok else 'differ'}")
         return ok
 
-    def run(self, prompt: str, task: dict[str, Any], ctx):
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Collect juror answers; return the consensus answer or escalate to the frontier."""
         from .api import Result  # local: api imports this module
 
         n = len(self.jurors)
@@ -129,7 +139,7 @@ class JuryPolicy:
         spent, trace = [0.0], [f"jury ({self.mode}): " + ", ".join(self.jurors)]
         memo: dict[tuple[int, int], bool] = {}
 
-        def agree(i, j):
+        def agree(i: int, j: int) -> bool:
             if (i, j) not in memo:
                 memo[(i, j)] = self._agree(resps[i], resps[j], i, j, prompt, ctx, spent, trace)
             return memo[(i, j)]

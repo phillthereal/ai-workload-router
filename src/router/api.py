@@ -30,7 +30,7 @@ from . import db, gates, learned
 from .adapters import get_adapter
 from .adapters.base import Response
 from .cascade import run_cascade
-from .classifier import classify_task
+from .classifier import Classification, classify_task
 from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
 from .governors import BudgetPolicy, ShadowPolicy  # noqa: F401  (re-exported)
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
@@ -44,6 +44,8 @@ class ProviderError(RuntimeError):
 
 @dataclass
 class Result:
+    """What a routed request returns: the answer, who gave it, what it cost and why."""
+
     text: str
     model: str
     answer_cost_usd: float
@@ -65,6 +67,7 @@ class Result:
 
     @property
     def total_cost_usd(self) -> float:
+        """Answer plus routing overhead, in USD."""
         return self.answer_cost_usd + self.routing_cost_usd
 
 
@@ -120,16 +123,21 @@ class Ctx:
         raise ProviderError(f"all tiers failed, last error: {last_error}")
 
     def cost(self, response: Response) -> float:
+        """USD cost of `response`, priced on the model that actually answered."""
         return get_model(response.model).cost_for_tokens(
             response.input_tokens, response.output_tokens
         )
 
 
 class Policy(Protocol):
+    """One routing strategy. Router drives every policy through these three methods."""
+
     name: str
     """Strategy name used for run logging (db `strategy`) and reports."""
 
-    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result: ...
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Answer `prompt` (also in task["prompt"]), calling providers only through `ctx`."""
+        ...
 
     def report_tags(self) -> list[str]:
         """Filename tags this policy's config adds to a report (in order)."""
@@ -140,7 +148,8 @@ class Policy(Protocol):
         ...
 
 
-def _answer(prompt, model, effort, ctx, routing_cost=0.0, trace=None, **extra) -> Result:
+def _answer(prompt: str, model: str, effort: Optional[str], ctx: Ctx, routing_cost: float = 0.0,
+            trace: Optional[list[str]] = None, **extra: Any) -> Result:
     resp = ctx.call(model, prompt, effort)
     return Result(
         text=resp.text, model=resp.model, answer_cost_usd=ctx.cost(resp),
@@ -150,18 +159,23 @@ def _answer(prompt, model, effort, ctx, routing_cost=0.0, trace=None, **extra) -
 
 
 class FrontierOnlyPolicy:
+    """Baseline: always answer on the roster's frontier model."""
+
     name = "frontier_only"
 
     def report_tags(self) -> list[str]:
+        """No tags: this is the baseline."""
         return []
 
-    def run(self, prompt, task, ctx) -> Result:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Answer on the frontier tier."""
         model = ctx.roster.frontier
         effort = (ctx.effort_policy or {}).get("frontier")
         return _answer(prompt, model, effort, ctx,
                        trace=[f"frontier-only baseline -> {model}"])
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
 
@@ -176,12 +190,14 @@ class RulesPolicy:
         self.prompt_version = check_version(prompt_version)
 
     def report_tags(self) -> list[str]:
+        """Tag reports 'classified' when routing on predicted, not hand-written, labels."""
         return [] if self.use_labels else ["classified"]
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
-    def _classify(self, task, ctx):
+    def _classify(self, task: dict[str, Any], ctx: Ctx) -> Classification:
         # Labels only exist for benchmark tasks; a bare prompt must be classified.
         labelled = bool(task.get("task_type") and task.get("difficulty"))
         return classify_task(
@@ -189,7 +205,8 @@ class RulesPolicy:
             prompt_version=self.prompt_version,
         )
 
-    def run(self, prompt, task, ctx) -> Result:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Classify the task, look up its tier in the rules table, answer there."""
         c = self._classify(task, ctx)
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty)
@@ -211,13 +228,15 @@ class LearnedPolicy(RulesPolicy):
         self._cutoff = before_run_group
 
     def report_tags(self) -> list[str]:
+        """RulesPolicy's tags plus 'learned'."""
         return super().report_tags() + ["learned"]
 
     def before_run_group(self, run_group: str) -> None:
         """Chronological cutoff: only evidence from strictly earlier run groups."""
         self._cutoff = run_group
 
-    def run(self, prompt, task, ctx) -> Result:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Classify, let logged outcomes override the tier, then answer."""
         c = self._classify(task, ctx)
         ld = learned.evaluate(task, c.task_type, c.difficulty,
                               roster_name=ctx.roster_name, before_run_group=self._cutoff)
@@ -234,6 +253,8 @@ class LearnedPolicy(RulesPolicy):
 
 
 class CascadePolicy:
+    """Try the cheap model first; a verifier decides whether to climb (see router.cascade)."""
+
     name = "cascade"
 
     def __init__(self, verifier_model: Optional[str] = None, escalate_threshold: float = 0.7,
@@ -243,12 +264,15 @@ class CascadePolicy:
         self.escalate_threshold = escalate_threshold
 
     def report_tags(self) -> list[str]:
+        """Tag reports with the verifier model when it is overridden."""
         return [f"verifier-{self.verifier_model}"] if self.verifier_model else []
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
-    def run(self, prompt, task, ctx) -> Result:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Run the cascade; verifier checks and discarded attempts count as routing cost."""
         r = run_cascade(
             task, roster_name=ctx.roster_name, verifier_model=self.verifier_model,
             escalate_threshold=self.escalate_threshold, complete=ctx.call,
@@ -265,6 +289,8 @@ class CascadePolicy:
 
 
 class Router:
+    """Entry point: runs a Policy on a prompt, with failover, a trace and optional logging."""
+
     def __init__(
         self, policy: Policy, roster_name: Optional[str] = None,
         effort_policy: Optional[dict[str, Optional[str]]] = None,
@@ -293,6 +319,7 @@ class Router:
         self.policy.before_run_group(run_group)
 
     def complete(self, prompt: str, task: Optional[dict[str, Any]] = None) -> Result:
+        """Answer `prompt` through the policy and return the Result, logged if log_to is set."""
         task = {"id": "adhoc", **(task or {}), "prompt": prompt}
         ctx = Ctx(self)
         start = time.monotonic()

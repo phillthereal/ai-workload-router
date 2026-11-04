@@ -19,6 +19,7 @@ IGNORE_NOTE = (
 
 
 def check_version(version: str) -> str:
+    """Return `version` if it is known, else raise ValueError."""
     if version not in PROMPT_VERSIONS:
         raise ValueError(f"prompt_version must be one of {PROMPT_VERSIONS}, got {version!r}")
     return version

@@ -17,11 +17,17 @@ import random
 import sqlite3
 from collections import deque
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional
+from collections.abc import Iterable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union, cast
 
 from . import db, gates
 from .config import MODEL_TIER, TIER_ORDER
 from .untrusted import IGNORE_NOTE, fence
+
+if TYPE_CHECKING:  # api imports this module at runtime
+    from .adapters.base import Response
+    from .api import Ctx, Policy, Result
 
 # --------------------------------------------------------------------- budget
 
@@ -29,6 +35,7 @@ PERIOD_DAYS = 30
 
 
 def cheaper_tier(tier: str) -> str:
+    """One tier below `tier`; the budget tier stays budget."""
     return TIER_ORDER[max(0, TIER_ORDER.index(tier) - 1)]
 
 
@@ -48,8 +55,8 @@ class BudgetPolicy:
     PROTECTED (unknown risk fails toward quality).
     """
 
-    def __init__(self, inner, monthly_budget_usd: float, period_start: datetime,
-                 protected_task_types=("reasoning",), hard_cap_usd: Optional[float] = None,
+    def __init__(self, inner: Policy, monthly_budget_usd: float, period_start: datetime,
+                 protected_task_types: Iterable[str] = ("reasoning",), hard_cap_usd: Optional[float] = None,
                  period_days: int = PERIOD_DAYS, spent_usd: float = 0.0,
                  now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> None:
         if monthly_budget_usd <= 0:
@@ -65,13 +72,15 @@ class BudgetPolicy:
         self._now = now
         self.pressured = {"pace": 0, "cap": 0}
 
-    def report_tags(self):
+    def report_tags(self) -> list[str]:
+        """The wrapped policy's tags plus 'budget'."""
         return self.inner.report_tags() + ["budget"]
 
     def before_run_group(self, run_group: str) -> None:
+        """Forward to the wrapped policy."""
         self.inner.before_run_group(run_group)
 
-    def seed_from_log(self, db_path=None) -> float:
+    def seed_from_log(self, db_path: Optional[Union[str, Path]] = None) -> float:
         """Set spend-to-date from live rows logged since period_start (read-only)."""
         conn = sqlite3.connect(db._resolve_path(db_path))
         try:
@@ -84,6 +93,7 @@ class BudgetPolicy:
         return self.spent
 
     def pace_usd(self, day: Optional[int] = None) -> float:
+        """Spend allowed by `day` (default: today) on a straight line to the budget."""
         if day is None:
             day = max(0, (self._now() - self.period_start).days)
         return self.budget * min(day + 1, self.period_days) / self.period_days
@@ -108,9 +118,10 @@ class BudgetPolicy:
             return "pace", f"budget: over pace ({state}); {task_type} -> one tier cheaper"
         return "ok", f"budget: under pace ({state}); pass-through"
 
-    def run(self, prompt, task, ctx):
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Apply the budget decision, run the wrapped policy, add its cost to spend."""
         level, line = self.decide(task.get("task_type"))
-        res = self.inner.run(prompt, task, _TierShift(ctx, level)) if level != "ok" \
+        res = self.inner.run(prompt, task, cast("Ctx", _TierShift(ctx, level))) if level != "ok" \
             else self.inner.run(prompt, task, ctx)
         res.trace.insert(0, line)
         self.spent += res.total_cost_usd
@@ -120,21 +131,22 @@ class BudgetPolicy:
 class _TierShift:
     """Ctx proxy: remaps each call's model to a cheaper tier of the same roster."""
 
-    def __init__(self, ctx, level: str) -> None:
+    def __init__(self, ctx: Ctx, level: str) -> None:
         self._ctx, self._level = ctx, level
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._ctx, name)
 
     @property
-    def latency_ms(self):
+    def latency_ms(self) -> float:
         return self._ctx.latency_ms
 
     @latency_ms.setter
-    def latency_ms(self, v):
+    def latency_ms(self, v: float) -> None:
         self._ctx.latency_ms = v
 
-    def call(self, model, prompt, effort=None, max_tokens=None):
+    def call(self, model: str, prompt: str, effort: Optional[str] = None,
+             max_tokens: Optional[int] = None) -> Response:
         tier = MODEL_TIER.get(model, "budget")
         new = "budget" if self._level == "cap" else cheaper_tier(tier)
         if new != tier:
@@ -170,15 +182,18 @@ class RegretWindow:
         self.threshold, self.min_samples = threshold, min_samples
 
     def record(self, regret: bool) -> bool:
+        """Add one shadow outcome; return whether the alarm is now on."""
         self.hist.append(1 if regret else 0)
         return self.alarm
 
     @property
     def rate(self) -> float:
+        """Share of regrets in the window."""
         return sum(self.hist) / len(self.hist) if self.hist else 0.0
 
     @property
     def alarm(self) -> bool:
+        """True once there are enough samples and the rate is above threshold."""
         return len(self.hist) >= self.min_samples and self.rate > self.threshold
 
 
@@ -192,7 +207,7 @@ class ShadowPolicy:
     per-instance and not thread-safe.
     """
 
-    def __init__(self, inner, p: float, seed: int = 0, judge_model: Optional[str] = None,
+    def __init__(self, inner: Policy, p: float, seed: int = 0, judge_model: Optional[str] = None,
                  window: int = 50, threshold: float = 0.2, min_samples: int = 10) -> None:
         if not 0.0 <= p <= 1.0:
             raise ValueError("p must be in [0, 1]")
@@ -203,13 +218,16 @@ class ShadowPolicy:
         self.window = RegretWindow(window, threshold, min_samples)
         self.shadows = 0
 
-    def report_tags(self):
+    def report_tags(self) -> list[str]:
+        """The wrapped policy's tags plus 'shadow'."""
         return self.inner.report_tags() + ["shadow"]
 
     def before_run_group(self, run_group: str) -> None:
+        """Forward to the wrapped policy."""
         self.inner.before_run_group(run_group)
 
-    def run(self, prompt, task, ctx):
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> Result:
+        """Return the wrapped policy's answer; on sampled requests, judge it against the frontier."""
         res = self.inner.run(prompt, task, ctx)
         res.latency_ms = res.latency_ms or ctx.latency_ms  # user-visible latency excludes shadow
         if self._rng.random() >= self.p:  # always draw, so p changes don't shift the stream

@@ -166,7 +166,7 @@ def ladder_changes(fprices, rosters=None, models=None):
     res = []
     for r in rosters.values():
         tiers = {"budget": r.budget, "mid": r.mid, "frontier": r.frontier}
-        order = lambda t: sorted(tiers, key=lambda k: t[tiers[k]])  # noqa: E731
+        order = lambda t: sorted(tiers, key=lambda k: t[tiers[k]])  # noqa: B023 - called within this iteration
         a, b = order(cfg), order(live)
         res.append({"roster": r.name, "config": a, "feed": b, "changed": a != b})
     return res

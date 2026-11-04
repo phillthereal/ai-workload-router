@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from router import db, learned  # noqa: E402
-from router.api import CascadePolicy, LearnedPolicy, Router, RulesPolicy  # noqa: E402
+from router.api import CascadePolicy, Router, RulesPolicy  # noqa: E402
 
 NOW = datetime(2026, 7, 17, 12, 0, 0, tzinfo=timezone.utc)
 PROMPT = "Extract the company name from this sentence about a widget maker."

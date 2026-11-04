@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from router.adapters.typesafe import JevClient  # noqa: E402
 from router.classifier import heuristic_classify  # noqa: E402
-from router.config import MODEL_TIER, get_roster  # noqa: E402
+from router.config import MODEL_TIER  # noqa: E402
 from router.jev import TIER_RULEBOOK  # noqa: E402
 from router.router import route_task  # noqa: E402
 

@@ -12,7 +12,7 @@ log) go ONLY to <dir>/loop/. The teacher is called through AnthropicAdapter dire
 """
 from __future__ import annotations
 
-import json, os, re, sys
+import json, re, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
