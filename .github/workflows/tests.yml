@@ -33,8 +33,13 @@ jobs:
           python-version: "3.11"
       # Unlike the test job, mypy needs the real dependencies to check against.
       - name: Install project with dev tools
-        run: pip install -e ".[dev,mcp]"
+        run: pip install -e ".[dev,mcp,web]"
       - name: Ruff
         run: ruff check .
       - name: Mypy
         run: mypy
+      # The test job has no dependencies, so it skips these.
+      - name: Web API tests
+        env:
+          AWR_FORCE_MOCK: "1"
+        run: python -m unittest tests.test_web -v

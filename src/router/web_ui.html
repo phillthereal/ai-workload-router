@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Workload Router</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f5; --panel: #fff; --text: #1c1c1a; --muted: #5f5f5a;
+    --line: #dcdcd6; --accent: #1f5f4a; --accent-text: #fff; --warn-bg: #fbf1d9; --warn: #6b4e00;
+    --error: #a12020;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #20201f; --text: #ecece8; --muted: #a5a59e;
+      --line: #383836; --accent: #6fc7a8; --accent-text: #10201a; --warn-bg: #3a2f12; --warn: #f0d58c;
+      --error: #f09a9a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: .85rem; margin: 24px 0 8px; color: var(--muted); font-weight: 600; }
+  p { margin: 0; }
+  .lead { color: var(--muted); margin-bottom: 24px; }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 140px; padding: 12px; resize: vertical; font: inherit;
+    color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  }
+  button {
+    margin-top: 12px; padding: 10px 20px; font: inherit; font-weight: 600; cursor: pointer;
+    color: var(--accent-text); background: var(--accent); border: 0; border-radius: 8px;
+  }
+  button:disabled { opacity: .6; cursor: wait; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .notice { margin-top: 24px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+  .stat { padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+  .stat span { display: block; font-size: .85rem; color: var(--muted); }
+  .stat strong { display: block; font-size: 1.15rem; overflow-wrap: anywhere; }
+  .answer { padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+  .error { margin-top: 16px; color: var(--error); }
+  [hidden] { display: none; }
+  @media (max-width: 520px) { .stats { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI Workload Router</h1>
+  <p class="lead">Paste a task to see which model it routes to, what it costs and how the answer scored.</p>
+  <form id="form">
+    <label for="prompt">Task</label>
+    <textarea id="prompt" required maxlength="32000" placeholder="Extract the company name: 'Acme Corp. signed the lease.'"></textarea>
+    <button id="go" type="submit">Route task</button>
+  </form>
+  <p id="error" class="error" role="alert" hidden></p>
+  <section id="result" aria-live="polite" hidden>
+    <p id="demo" class="notice" hidden>Demo mode: the answer, cost and quality score are simulated. No model was called.</p>
+    <div class="stats">
+      <div class="stat"><span>Model</span><strong id="model"></strong><span id="tier"></span></div>
+      <div class="stat"><span>Cost</span><strong id="cost"></strong><span id="cost-note"></span></div>
+      <div class="stat"><span>Quality score</span><strong id="quality"></strong><span id="source"></span></div>
+    </div>
+    <h2>Answer</h2>
+    <p id="answer" class="answer"></p>
+    <h2>Why this model</h2>
+    <ol id="trace"></ol>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const SOURCES = {
+    simulated: "Simulated placeholder",
+    verifier: "Model estimate, no answer key",
+    unavailable: "Check failed",
+  };
+
+  function detailText(detail) {
+    if (typeof detail === "string") return detail;
+    return "Check the task is between 1 and 32,000 characters.";
+  }
+
+  function show(r) {
+    $("demo").hidden = !r.simulated;
+    $("model").textContent = r.model;
+    $("tier").textContent = `${r.tier} tier`;
+    $("cost").textContent = `$${r.cost_usd.toFixed(6)}`;
+    $("cost-note").textContent = r.simulated ? "Simulated" : `Includes $${r.routing_cost_usd.toFixed(6)} routing`;
+    $("quality").textContent = r.quality_score === null ? "n/a" : r.quality_score.toFixed(2);
+    $("source").textContent = SOURCES[r.quality_source] || r.quality_source;
+    $("answer").textContent = r.answer;
+    $("trace").replaceChildren(...r.trace.map((line) => {
+      const li = document.createElement("li");
+      li.textContent = line;
+      return li;
+    }));
+    $("result").hidden = false;
+  }
+
+  $("form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    $("go").disabled = true;
+    $("error").hidden = true;
+    try {
+      const res = await fetch("/route", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({prompt: $("prompt").value}),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(detailText(body.detail));
+      show(body);
+    } catch (err) {
+      $("result").hidden = true;
+      $("error").textContent = err.message;
+      $("error").hidden = false;
+    } finally {
+      $("go").disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
