@@ -1,0 +1,6 @@
+# Allowlist: nothing enters the build, including .env, unless it is named here.
+*
+!pyproject.toml
+!src
+**/__pycache__
+**/*.egg-info
