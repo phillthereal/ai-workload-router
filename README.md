@@ -2,119 +2,242 @@
 
 ![tests](https://github.com/phillthereal/ai-workload-router/actions/workflows/tests.yml/badge.svg)
 
-**[Read the full product case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (visual writeup with the benchmark data) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (interactive ROI calculator, calibrated on these live results — it will tell you when the answer is no) · License: MIT
+**[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-Teams building on LLMs default to sending every request to one expensive frontier model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well — across three vendors (OpenAI, DeepSeek, Anthropic) — logging cost, latency, and quality on every call. On a live 25-task benchmark, routing cut cost 53.6% and mean latency 46% with no quality loss, validated by two independent LLM judges from rival vendors.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On a 25-task benchmark with real API calls it cut cost by 53.6% with hand-written task labels and 65.6% with a real classifier, at about the same quality as sending everything to the top model. On a set of hard tasks it saved nothing. It is a personal project and has not served any customer or company traffic.
 
-## Results
+## The problem
 
-<!-- RESULTS:BEGIN -->
-Live three-vendor benchmark (25 tasks, real API calls, real LLM judge — run `20260717T082024`):
+Teams building on LLMs tend to send every request to one expensive frontier model, to be safe. Much of that work is simple: labelling a ticket or pulling a date out of a sentence does not need the most capable model available.
 
-| Strategy | Total cost | Mean quality | Mean latency |
-|---|---|---|---|
-| Frontier-only (baseline: every task → Claude Opus 4.8) | $0.1260 | 0.992 | 4,155 ms |
-| **Router** (cheapest capable model per task) | **$0.0585** | **0.996** | **2,237 ms** |
+Choosing a cheaper model per task raises three questions:
 
-- **Cost reduction: 53.6%** (95% CI 30–83%) · **Quality retention: 100%** (95% CI 99–102%) · **Latency: 46.2% faster**
-- With 25 tasks the interval is wide, but it sits well clear of zero: routing reliably pays on this kind of workload. Bootstrap method, every result's interval, and SQL analysis in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
-- Hypothesis (≥40% cost reduction at ≥95% quality): **PASSED**
-- Judge validation: an independent second judge (GPT-4o-mini) agreed with the primary judge (Claude Opus 4.8) on **96.7%** of 30 scored answers (mean |diff| 0.010).
-- At-scale projection (directional): ~**$2,700/month saved per 1M requests** at this task mix.
-- Reasoning tasks route to the frontier model under *both* strategies — that share of the bill is quality-locked, which is why savings cap out where they do. The ceiling is set by workload composition, not router cleverness.
-<!-- RESULTS:END -->
+- **What is it worth?** That depends on how much of the work is easy, and on the price gap between models.
+- **How do you know quality held?** You need a score, not a feeling.
+- **What does the deciding cost?** A router that pays a model to choose has to charge that against its savings.
+
+This repo tests those questions with measurements, and publishes the cases where routing loses.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Task["Task"]
-    Router["Rules Router<br/>(task_type × difficulty)"]
-    Budget["Budget Tier<br/>(GPT-4o mini · OpenAI)"]
-    Mid["Mid Tier<br/>(DeepSeek Chat)"]
-    Frontier["Frontier Tier<br/>(Claude Opus 4.8)"]
-    Adapter["Provider Adapter"]
-    Cache["Record & Replay<br/>Cache"]
-    Judge["LLM Judge<br/>(Opus)"]
-    Log["SQLite Log"]
-    Report["Benchmark Report"]
-    
-    Task --> Router
-    Router --> Budget
-    Router --> Mid
-    Router --> Frontier
-    Budget --> Adapter
-    Mid --> Adapter
-    Frontier --> Adapter
-    Adapter --> Cache
-    Cache --> Judge
-    Judge --> Log
-    Log --> Report
+    subgraph entry["Ways in"]
+        WEB["Web UI + POST /route<br/>demo mode by default"]
+        OAI["OpenAI-compatible server"]
+        MCP["MCP server"]
+        RAG["RAG demo"]
+        BENCH["Benchmark"]
+    end
+
+    ROUTER["Router +<br/>policy picks a model<br/>rules · learned ·<br/>cascade · jury"]
+
+    subgraph tiers["Tiers (default roster)"]
+        BUDGET["Budget<br/>GPT-4o mini"]
+        MID["Mid<br/>DeepSeek Chat"]
+        FRONTIER["Frontier<br/>Claude Opus 4.8"]
+    end
+
+    ADAPTER["Provider adapters<br/>failover up the ladder<br/>disk cache"]
+    RESULT["Result<br/>answer, model,<br/>cost, reasons"]
+    MEASURE["Benchmark only:<br/>scoring, SQLite log,<br/>reports in data/"]
+
+    WEB --> ROUTER
+    OAI --> ROUTER
+    MCP --> ROUTER
+    RAG --> ROUTER
+    BENCH --> ROUTER
+    ROUTER --> BUDGET
+    ROUTER --> MID
+    ROUTER --> FRONTIER
+    BUDGET --> ADAPTER
+    MID --> ADAPTER
+    FRONTIER --> ADAPTER
+    ADAPTER --> RESULT
+    RESULT --> MEASURE
 ```
 
-## How It Works
+- **Policies** decide the model, and all share one interface. *Rules* classify the task and look up a tier. *Learned* checks logged outcomes for similar tasks first. *Cascade* tries the cheap model, has a verifier check the answer, and escalates if it fails. *Jury* escalates when cheap models from different vendors disagree.
+- **Adapters** give Anthropic and the OpenAI-style providers one interface, so a model is a config change. If a provider errors, the router tries the next model up and records that in the trace.
+- **Rosters** are the sets of models the router can pick from. The default spans three vendors, with about a 42× gap in output price between budget and frontier. `claude_tiers` stays inside one vendor, with a 5× gap.
+- **Scoring** only happens in the benchmark, because it needs an answer key. Of the 25 tasks, 10 are graded by exact match and 15 by a Claude Opus 4.8 judge against a rubric.
 
-- **Adapter layer** — one internal interface normalizes calls across multiple LLM providers (Anthropic, OpenAI, DeepSeek), so any model is swappable by config.
-- **Rules router** — classifies each task by type and difficulty, then picks a model tier: easy tasks → budget, medium → mid, hard reasoning → frontier.
-- **Quality floor** — a configurable quality threshold (default 95% of frontier baseline) ensures cost savings never compromise critical tasks.
-- **LLM-as-judge, cross-validated** — a strong model scores every output 0–1 against a rubric; a second judge from a rival vendor re-scores everything (`validate_judge.py`) to catch same-family bias, plus an exportable human-label sheet.
-- **Record & replay cache** — every real API response is cached to disk, so the full benchmark re-runs for free and is fully reproducible by anyone.
-- **Performance log** — every run (task, model, tokens, cost, latency, quality) is persisted to SQLite, the data layer that powers future adaptive routing.
-- **Mock fallback** — runs completely offline with zero API keys using a quality profile, so you can verify the system end-to-end before adding credentials.
+## Run it in 2 commands
 
-## v2: Four follow-up experiments
-
-v1 (above) routes across three vendors using *hand-labeled* task difficulty — a clean proof of the idea, but it leans on two things a real deployment lacks: labels it didn't generate, and a free choice of vendors. v2 removes both crutches and adds a second routing strategy. Everything here is additive: the default configuration still reproduces the v1 run byte-for-byte, and all figures below are live (real API calls, real Opus judge).
-
-**1. A real classifier replaces the hand labels.** A production router gets a prompt, not a difficulty label. v2 predicts `(task_type, difficulty)` from the prompt with the roster's cheapest model, and reports savings *net of that prediction's cost*. Live, classifier routing came out **cheaper than the hand labels — 65.6% vs 53.6%** cross-vendor at equal quality: on 7 of 25 tasks it found cheaper models than the labels dictated, all judged 0.85–1.00. The labels were conservative; a cheap classifier found the slack, for a routing cost of ~1% of savings.
-
-**2. Staying inside one vendor.** Enterprises often can't add vendors but can always add tiers. Routing across Claude Haiku / Sonnet / Opus (a ~5× price range vs ~41× cross-vendor) nets **42.5%** — right where the price arithmetic predicts. Narrower price range means a lower ceiling *and* worse overhead (11% of savings vs 1%), because the cheapest available classifier (Haiku) isn't as cheap as GPT-4o mini.
-
-**3. A cascade — react instead of predict.** Try the cheapest model, have a cheap reference-free verifier check the answer, and escalate only on a failed check. Live within-vendor, the cascade **beat the classifier on net savings (53.1% vs 42.5%)** — it tries Haiku on everything and discovers what works, rather than pre-routing reasoning to Opus — at triple the overhead (31% of savings) and higher latency. The verifier model is configurable, defaulting to the independent mid tier (Sonnet); opting into the cheapest tier (Haiku) is a clean win on the easy set — **53.1% net at 31% overhead becomes 85.0% net at 6.2% overhead**, quality unchanged — but a false economy on the hard set below (overhead falls to 14.7% but quality drops to 70%: Haiku scores its own wrong answers 0.95–1.0, a self-verification blind spot). The default stays with the independent verifier because the router's core guarantee — never trade quality away — has to hold on workloads it hasn't seen. Full numbers and root cause in [docs/V2_FINDINGS.md](docs/V2_FINDINGS.md#verifier-economics-does-a-cheaper-verifier-still-gate-correctly).
-
-**4. A hard task set, because the easy one saturates.** The published 25 tasks score ~0.99 across every tier, so they can't show whether routing holds quality when tasks are genuinely hard. A 10-task probe set (`data/tasks_hard.json`, mostly objective `exact_match`) *does* separate them: Haiku 0.70, Sonnet 0.90, Opus 1.00. Run the strategies on it and the punchline lands: **on hard tasks both strategies hold 100% quality but go cost-negative** (classifier −6%, cascade −20%). Every hard task needs the frontier, so routing only adds overhead — but it never sacrifices quality to try.
-
-**The through-line:** routing's savings scale with how much genuinely-easy work a workload contains, and collapse to zero (or below) on all-hard workloads — the demonstrated form of v1's "ceiling = workload composition × price range." Quality, on both strategies, was never the thing that gave.
+You need Git and Docker. No API keys, and it costs nothing.
 
 ```bash
-python3 run_benchmark.py --roster claude_tiers --classify          # within-vendor, real classifier
-python3 run_benchmark.py --roster claude_tiers --strategy cascade   # escalate-on-failure
-python3 run_benchmark.py --roster claude_tiers --strategy cascade --verifier claude-haiku-4-5  # cheap verifier
-python3 run_benchmark.py --classify --tasks data/tasks_hard.json    # stress quality on hard tasks
-python3 run_effort_grid.py                                          # (model × effort) frontier
+git clone https://github.com/phillthereal/ai-workload-router.git && cd ai-workload-router
 ```
 
-*Caveats: n is 25 (10 for the hard set), so these are directional, not statistically certified. The Opus judge scores generously on the easy set (the same instrument cross-validated in v1). The effort dial and Sonnet 5's introductory pricing carry their own footnotes in the code.*
+```bash
+docker compose up --build
+```
 
-## Where this goes next: v3, the learned router
+Then open http://localhost:8000, paste a task, and see which model it would go to and why. This is demo mode: **the routing decision is real, but the answer, cost and quality score are simulated**, and the page says so. Real calls need keys and an explicit opt-in, covered in [`docs/DOCKER.md`](docs/DOCKER.md).
 
-Everything above still predicts difficulty *cold* — from the prompt alone,
-every time. But every run already gets logged to `data/runs.db` (task type,
-model, cost, quality). v3 proposes closing that loop: consult outcome
-history for tasks like this one before routing, and let the router get
-cheaper as it learns your workload — never trading away the quality floor to
-do it. Full design, including the cold-start rule and the safety asymmetry
-borrowed from the v2 verifier finding, in [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md).
+The same thing from the command line, while the app is running:
 
-**Built and evaluated (live):** the prototype (`src/router/learned.py`,
-`run_benchmark.py --learned`) routed a 14-task held-out set **22.7% cheaper
-than the static router at identical quality** (26.1% vs 4.4% net savings
-against frontier-only), for **zero routing overhead** — its lookup is SQL,
-not an LLM call. It downgraded 9 tasks on n≥5 logged successes, refused 3
-downgrades where history showed the cheap tier failing that shape, and fell
-back to the classifier on 2 cold starts. The saving is conditional on the
-workload repeating task shapes; a no-repeat workload gets exactly the static
-router. Numbers, evidence records, and caveats in
-[`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md).
+```bash
+curl -s -H "Content-Type: application/json" -d '{"prompt":"Classify this review as positive or negative: great phone"}' http://localhost:8000/route
+```
 
-## v4: from benchmark to usable router
+### Without Docker
 
-v1–v3 proved the routing works; v4 makes it something an app can actually call.
+Needs Python 3.11 or newer. All the commands below assume this environment is active.
 
-- **One API.** `Router(policy).complete(prompt)` returns the answer, the model chosen, answer + routing cost, and a human-readable trace of *why*. Every strategy — rules, classifier, learned, cascade, frontier-only — is a pluggable policy behind the same interface, and the benchmark is now just a loop over policies.
-- **Real failover.** If a provider errors, the router retries the next model up the ladder and records it in the trace, rather than silently substituting a fake answer.
-- **A live learning signal.** The v3 learned router originally learned from an offline judge that needs an answer key — which production traffic never has. `Router.feedback(request_id, score)` now feeds it user ratings or the cascade's verifier score, with verifier evidence down-weighted (the v2 finding: self-verification is unreliable) so it can never trigger a cheaper route on its own.
-- **Drop-in endpoint.** An OpenAI-compatible server (stdlib only): point any OpenAI SDK's `base_url` at it and pick a policy via the `model` field (`router`, `router:cascade`, `router:learned`, `router:frontier`). Localhost-only by default. **Bearer auth is on by default**: `serve.py` generates a token and prints it once to stderr (or set `AWR_SERVER_TOKEN`); `--no-auth` disables it with a loud warning. Requests must be `Content-Type: application/json` (else 415), the `Host` header must be loopback (or the explicit `--host`), and any request carrying an `Origin` header is rejected (403), which blocks browser CSRF and DNS rebinding. Spend guards: `--daily-budget USD` (default 1.00, per UTC day, in-process; 429 once reached), `router:frontier` off unless `--allow-frontier`, 30 requests/minute (`--rate-limit`), 256 KB body cap, 30 s socket timeout, 8 concurrent requests (503 beyond). `make_server(token=None)` means no auth (tests/embedding only). each response includes an `x_router` block showing the routing decision and its cost.
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+```
+
+```bash
+pip install -e ".[web]"
+```
+
+```bash
+ai-router-web
+```
+
+### Ask questions over documents (RAG demo)
+
+A small retrieval demo over three UK government construction and cost documents, which routes its answer through the router. It is command line only, and not in the web UI or Docker image. Retrieval is real and free. Without `--paid` no model is called, so you get the passages and a routing decision but no answer. Details in [`examples/rag/README.md`](examples/rag/README.md).
+
+```bash
+pip install -e ".[rag]"
+```
+
+```bash
+python examples/rag/rag.py ask "How should unknown uncertainties in an estimate be corrected?"
+```
+
+```bash
+python examples/rag/rag.py eval
+```
+
+### Check it offline
+
+These run with no keys and no spend. The benchmark numbers they print are made up by a mock, which is the point: they prove the pipeline works, not that routing does. Remove `AWR_FORCE_MOCK=1` and add keys to `.env` for a live, billed run.
+
+```bash
+AWR_FORCE_MOCK=1 python -m unittest discover -s tests
+```
+
+```bash
+AWR_FORCE_MOCK=1 python run_benchmark.py --classify
+```
+
+```bash
+AWR_FORCE_MOCK=1 python run_benchmark.py --roster claude_tiers --strategy cascade
+```
+
+```bash
+python redteam.py heuristic
+```
+
+## Measured results
+
+The benchmark rows below came from real API calls, and each links to its committed report. Row-level data for them is in [`data/bi/fact_runs.csv`](data/bi/fact_runs.csv). The confidence intervals are explained in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
+
+**The two headline runs** use the same 25 tasks and the three-vendor roster, and are compared with sending every task to Claude Opus 4.8.
+
+| | Frontier only | Hand labels ([report](data/benchmark_report.md)) | Real classifier ([report](data/benchmark_report_cross_vendor_classified.md)) |
+|---|---|---|---|
+| Run | | `20260717T082024-098a7982` | `20260717T164636-ee1ddc99` |
+| Total cost, including routing | $0.125980 | $0.058506 | $0.043299 |
+| **Cost cut** [95% CI] | | **53.6%** [29.9, 82.6] | **65.6%** [40.3, 97.7] |
+| Mean quality | 0.992 | 0.996 | 0.990 |
+| **Quality vs frontier only** [95% CI] | | **100.4%** [99.0, 102.0] | **99.8%** [97.8, 101.6] |
+| Mean latency | 4,155 ms | 2,237 ms | 1,989 ms |
+
+How to read them:
+
+- **They are two different claims.** Hand labels are a clean test of the idea, but a real system only gets a prompt. The classifier is what a real system would use, and its result includes the $0.000822 it cost to run. It agreed with my hand labels on 68% of tasks.
+- **Saving more was not free.** Quality on short writing tasks fell from 0.975 to 0.958 in the classifier run, which the overall mean hides.
+- **The sample is small.** This is 25 short tasks and about 13 cents of spend at frontier prices, so the intervals are wide. Treat the percentages as directional.
+- **Reasoning tasks do not get cheaper.** They go to the frontier model either way. They are 16% of the tasks and 33% of the baseline bill, which limits what routing can save here.
+- **The target was set first:** at least 40% cheaper while keeping at least 95% of quality. Both runs passed.
+
+**Other runs.** The easy set scores about 0.99 on every tier, so it cannot show whether routing protects quality. The 10-task hard set can: on it, Haiku scored 0.70, Sonnet 0.90 and Opus 1.00. The classifier was never run on the hard set with the three-vendor roster, so the hard rows do not compare directly with the headline runs.
+
+| Models | Method | Task set | Cost cut | Quality vs frontier only | Report |
+|---|---|---|---|---|---|
+| Claude tiers | Classifier | Easy, 25 | 42.5% [23.4, 66.8] | 100.3% | [report](data/benchmark_report_claude_tiers_classified.md) |
+| Claude tiers | Cascade | Easy, 25 | 53.1% [25.1, 72.1] | 99.6% | [report](data/benchmark_report_claude_tiers_cascade.md) |
+| Claude tiers | Classifier | Hard, 10 | **−6.3%** [−21.6, 6.7] | 100% | [report](data/benchmark_report_claude_tiers_classified_hard.md) |
+| Claude tiers | Cascade | Hard, 10 | **−19.9%** [−63.4, 7.1] | 100% | [report](data/benchmark_report_claude_tiers_cascade_hard.md) |
+| Claude tiers | Cascade, Haiku as verifier | Easy, 25 | 85.0% | 99.6% | [report](data/benchmark_report_claude_tiers_cascade_verifier-claude-haiku-4-5.md) |
+| Claude tiers | Cascade, Haiku as verifier | Hard, 10 | 73.8% | **70.0%** | [report](data/benchmark_report_claude_tiers_cascade_verifier-claude-haiku-4-5_hard.md) |
+| Three cheap models, then Opus | Jury, unanimous | Easy, 25 | 66.1% | 99.8% | [report](data/benchmark_report_claude_tiers_jury_unanimous.md) |
+| Three cheap models, then Opus | Jury, unanimous | Hard, 10 | 22.4% | **86.0%** | [report](data/benchmark_report_claude_tiers_jury_unanimous_hard.md) |
+
+The lesson across these runs: **savings depend on how much of the work is genuinely easy, and on the price gap between models.** On all-hard work, routing costs more than it saves. The cheap shortcuts that looked best on the easy set, a Haiku verifier and a jury of cheap models, lost quality on the hard set: Haiku scored its own wrong answers highly, and all three jury vendors agreed on the same wrong answer in one task.
+
+**Experiments on specific risks.** These vary in method, and each row says so where it matters.
+
+| Question | Finding | Write-up |
+|---|---|---|
+| Can a router learn from its own history? | On a 14-task held-out set it saved 26.1%, against 4.4% for the static router, at equal quality. Only works if task shapes repeat. | [V3_FINDINGS](docs/V3_FINDINGS.md) |
+| Can words in a prompt steer the routing? | Attacks that inflate cost fell from 7/10 to 0/10 on the keyword classifier after hardening, and 3/10 to 0/10 on the LLM classifier. Making a hard task look easy still works 2/9 times. | [V5_REDTEAM](docs/V5_REDTEAM.md) |
+| Does the result survive price changes? | Re-priced at OpenRouter's list prices, the 53.6% run came out at 53.58%. | [V5_PRICES](docs/V5_PRICES.md) |
+| Can a spend cap and a background check run unattended? | In simulation only: checking 5% of traffic caught a quality drop in 83.3% of runs, for 6.1% extra cost. | [V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md) |
+| Is Kimi K3 a cheaper mid tier? | No. It has Sonnet's list price plus billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
+| Does it work on real text? | On 150 of my own emails, from a personal setup, the keyword classifier sent everything to the top tier. A cheap-first cascade saved 76.4% at 95.3% agreement with Haiku, but missed 1 of 13 emails that needed action. | [REAL_TRAFFIC_ASSESSMENT](docs/REAL_TRAFFIC_ASSESSMENT.md), [SHADOW_TEST](docs/SHADOW_TEST.md) |
+| Is the judge reliable? | A second judge from another vendor, GPT-4o mini, re-scored the 30 rubric-judged answers from the hand-label run: 96.7% within 0.15, mean difference 0.010. No human has scored them yet. | [CASE_STUDY](CASE_STUDY.md#validating-the-judge) |
+
+**RAG retrieval**, on 13 questions I wrote myself. `rag.py eval` prints the hybrid row:
+
+| Retrieval | Right page first | Right page in top 4 |
+|---|---|---|
+| Embeddings only | 6/13 | 11/13 |
+| Keywords only | 9/13 | 12/13 |
+| **Hybrid (used)** | **10/13** | **12/13** |
+
+### Simulated output (not results)
+
+None of the following is evidence of anything. It exists so the project runs for free.
+
+- **Web UI and Docker demo mode:** answers, tokens, costs and quality scores are simulated, and the response says `simulated: true` and `quality_source: simulated`. Routing here uses the free keyword classifier, not the LLM classifier measured above.
+- **`AWR_FORCE_MOCK=1` benchmark runs:** the numbers come from a fixed table and go to gitignored `data/benchmark_report_simulated_*.md` files. They can never overwrite a published report.
+- **RAG demo without `--paid`:** the retrieved passages are real, the cost is simulated, and there is no answer.
+
+## Limitations
+
+**The newest parts are untested with real models.**
+
+- The web app and RAG demo have only been run in free demo mode. **No real paid call has gone through either of them.** Paid mode is covered by stubbed tests only.
+- Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
+- RAG retrieval is 10/13 first place and 12/13 in the top 4, on a small set I wrote after reading the pages, so its wording matches the documents.
+- **RAG answer quality has not been measured.**
+
+**Known bug, documented and not fixed.** In real mode, the classifier silently falls back to the free keyword heuristic if it has no key or its call fails, and `Result.simulated` stays `False`. Only a detail in the trace shows it happened, and that heuristic sent 100% of the email above to the top tier. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
+
+**The benchmark is small.**
+
+- 25 tasks is a starting eval, not proof for any real workload. The hard set is 10 tasks, and the intervals on its two cost results include zero.
+- Tasks are single-turn. Conversations and tool use are not covered.
+- The judge is an LLM. Two judges agreeing does not rule out a shared blind spot, and [`data/human_label_sheet.csv`](data/human_label_sheet.csv) has not been scored against them. A hostile task could also try to inject instructions into the judge.
+- The results cannot be replayed from a fresh clone. `.cache/` and `data/runs.db` are not committed, so a live re-run needs your own keys and your own spend. A few scripts, such as `analyze.py` and `simulate_v5.py`, need `data/runs.db` and will not run without it.
+
+**It is not ready to serve real users.**
+
+- The web app has no login, so it only accepts localhost.
+- Spend limits are held in memory and reset on restart.
+- Docker uses an editable install, as a workaround for paths that depend on the source tree.
+- `.cache/` and `--log-db` store prompts and responses in plain text. Both are gitignored, but treat them as sensitive.
+
+## What I'd do next
+
+1. **Run one small, capped real call** through the web app and the RAG `--paid` path, so the paid paths have been proven once. It would cost cents, and it was deliberately left out of this round.
+2. **Fix the silent classifier fallback** so a downgrade shows up in the result.
+3. **Measure RAG answer quality** with answers written in advance, and add a "not found" threshold.
+4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
+5. **Grow the eval:** more tasks from one real workload, human scores against the judges, and the hard set on the three-vendor roster.
+6. **Fix the source-relative paths,** so a normal install works and Docker can drop the workaround.
+7. **For real users:** add authentication, per-client limits, and a shared store for spend, so limits survive restarts and work across instances.
+
+## Other ways to use it
+
+**Python.** With keys in `.env`, or `AWR_FORCE_MOCK=1` set for a free simulated answer:
 
 ```python
 from router.api import Router, CascadePolicy
@@ -122,73 +245,28 @@ r = Router(CascadePolicy(), roster_name="claude_tiers").complete("Summarize: ...
 print(r.model, r.total_cost_usd, r.trace)
 ```
 
-```bash
-python3 serve.py --port 8787                      # then base_url="http://127.0.0.1:8787/v1", model="router"
-python3 serve.py --port 8787 --log-db live.db     # also log requests + enable POST /v1/feedback (stores prompt text)
-```
-
-**Data at rest.** `.cache/` stores model responses in plaintext, and `--log-db` stores prompts and responses. Both are gitignored and local only; treat them as sensitive.
-
-## v5: stress-testing the router
-
-Five experiments that each attack a different assumption — results reported as measured, including the ones that didn't work.
-
-| Experiment | Question | Finding |
-|---|---|---|
-| **Jury of cheap models** ([V5_JURY](docs/V5_JURY.md)) | Is agreement between cheap models from 3 vendors a better escalation signal than a verifier? | Best cost/quality balance on easy work (66.1% net, q 0.99), but **not safe on hard work** (q 0.86): cheap models share blind spots — on one task all three vendors agreed on the same wrong answer. |
-| **Fool the router** ([V5_REDTEAM](docs/V5_REDTEAM.md)) | Can a user steer routing with words in the prompt? | Cost-inflation attacks worked 7/10 → **0/10** after hardening. Making a hard task look easy still works 2/9 — the documented residual risk. |
-| **Live price tracking** ([V5_PRICES](docs/V5_PRICES.md)) | Do the numbers survive the market moving? | v1's 53.6% holds at today's prices (53.58%). Caught Sonnet 5 at −33% and an aggregator Kimi price that's 12× below first-party. |
-| **Budget governor + shadow sampling** ([V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md)) | Can a spend cap and a background safety check run the router unattended? | Shadowing 5% of traffic catches a quality drop in 83% of simulated months (~870 requests), for ~6% overhead. Protected task types were never downgraded. |
-| **Kimi K3** ([V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md)) | Is Moonshot's model a cheaper mid-tier rival to Sonnet? | Same per-token price as Sonnet **plus** mandatory billed reasoning, so on short mid-tier tasks it can only win on quality, never price (offline projection from real token counts). Router now defaults Kimi to `low` effort — Moonshot's own default is its most expensive. Live quality run pending account credit; a live outage test confirmed failover to Opus. |
+**OpenAI-compatible endpoint** (standard library only). Point any OpenAI SDK at `http://127.0.0.1:8787/v1` and choose a policy with the `model` field: `router`, `router:cascade`, `router:learned` or `router:frontier`. Each response has an `x_router` block showing the decision and its cost. Without the mock flag this makes real calls.
 
 ```bash
-python3 run_benchmark.py --roster claude_tiers --strategy jury --tasks data/tasks_hard.json
-python3 redteam.py          # attack success rates, before/after hardening
-python3 prices.py           # drift vs the live OpenRouter price list (no key needed)
-python3 simulate_v5.py      # budget + shadow simulations, offline
+AWR_FORCE_MOCK=1 python serve.py --port 8787
 ```
 
-## Run It Yourself
+- **Auth:** bearer auth is on by default. `serve.py` prints a generated token once to stderr, or set `AWR_SERVER_TOKEN`.
+- **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
+- **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
+- **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy.
 
-**Setup:**
+**MCP server.** `ai-router-mcp` gives any MCP client (Claude Code, Cursor, Claude Desktop) five tools to classify a task, estimate cost and explain a decision. It is free and offline by default. See [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md) and a real session in [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
 
-```bash
-cp .env.example .env
-# Add your ANTHROPIC_API_KEY (required) and optional OpenAI, Google, or DeepSeek keys
-```
+## Project docs
 
-**Run the benchmark:**
-
-```bash
-python3 run_benchmark.py
-```
-
-First run makes live API calls and caches results to `.cache/`. Every subsequent run re-uses cached data and is free. The benchmark report prints cost/quality comparison and confirms the hypothesis (≥40% cost reduction, ≥95% quality retention).
-
-**Options:**
-
-- `AWR_FORCE_MOCK=1 python3 run_benchmark.py` — run fully offline using mock responses (no API keys needed).
-- `python3 -m unittest discover -s tests` — run the test suite.
-
-## MCP server
-
-`ai-router-mcp` exposes the router's decision logic to any MCP client (Claude Code, Cursor, Claude Desktop) over stdio. Five tools (`classify_task`, `estimate_cost`, `list_models`, `route_request`, `explain_decision`), a `router://rosters` resource and a `cost_review` prompt. Everything is free and offline by default; real model calls are off unless the owner sets `AI_ROUTER_MCP_ALLOW_PAID=1`, and then sit behind a $0.50 daily budget, a token cap and a frontier-model gate. Install with `pip install -e ".[mcp]"`, register with `claude mcp add ai-router -- ai-router-mcp`. Details, safety model and limits: [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md); a real session: [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
-
-## Project Docs
-
-- **[`docs/REAL_TRAFFIC_ASSESSMENT.md`](docs/REAL_TRAFFIC_ASSESSMENT.md) + [`docs/SHADOW_TEST.md`](docs/SHADOW_TEST.md)** — the router tested on real production email traffic: its length-based difficulty shortcut routed 100% to the expensive model (0% saved), while a measured cheap-first cascade saves 76% at 95% agreement — but still misses 1 in 13 action-needed emails.
-- **[`docs/JEV_CALIBRATION.md`](docs/JEV_CALIBRATION.md) + [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md)** — a self-improving classifier. TypeSafe's Jev decision model proved *honestly confident* on real email (86/86 correct when ≥90% sure, where GPT-4o mini was confidently wrong); a teacher then rewrote its rulebook in gated rounds, raising the share it handles alone on unseen emails from 36% to 60% with zero missed action items — and showing exactly where further rounds started to overfit.
-- **[`docs/IMPROVEMENT_ROUND_2026-10.md`](docs/IMPROVEMENT_ROUND_2026-10.md)** — six improvement ideas tested against a pre-set bar and a four-split robustness check: one clear win (email security guards), one promising lead (Jev picking the router's tier), four honest failures.
-- **[`docs/ANALYSIS.md`](docs/ANALYSIS.md)** — confidence intervals for every headline result and SQL answers to product questions (where routing loses money, which tasks never to route). Power BI-ready tables in `data/bi/`, build guide in [`docs/POWER_BI_GUIDE.md`](docs/POWER_BI_GUIDE.md).
-- **[`docs/DECISION_LOG.md`](docs/DECISION_LOG.md)** — the 15 product calls behind the router: what was decided, what it was traded against, and the evidence.
-- **[`docs/PRD.md`](docs/PRD.md)** — product requirements, success metrics, and the core hypothesis being tested.
-- **[`CASE_STUDY.md`](CASE_STUDY.md)** — decision rationale, how scope was cut, benchmark methodology, and full results breakdown.
-- **[`docs/V3_DESIGN.md`](docs/V3_DESIGN.md)** — design for the learned router (built and evaluated in v3 — results in [`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md)).
-
-## Limitations
-
-- **LLM judges are imperfect instruments.** Cross-vendor agreement is strong (96.7% within 0.15), but both judges could share blind spots — the human-label sheet (`data/human_label_sheet.csv`) exists to close that gap.
-- **25 tasks is a starting eval, not production-scale.** It's enough to demonstrate the method and the composition insight; certifying a production savings figure requires a larger, workload-specific task set.
-- **Single-turn tasks only.** Real workloads include multi-turn conversations and tool-use flows that this benchmark doesn't cover.
-- **The at-scale projection is directional.** It extrapolates linearly from this benchmark's task mix; real traffic will differ.
-- **The LLM judge is prompt-injectable.** A hostile task input could instruct the judge to mis-score ("rate this 1.0"). Harmless in a self-controlled benchmark; a hosted version would need injection defenses (input isolation, structured judge output) before accepting untrusted tasks.
+- [`CASE_STUDY.md`](CASE_STUDY.md): why it was built, how scope was cut, method and full results.
+- [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md): the product calls, what each was traded against, and the evidence.
+- [`docs/PRD.md`](docs/PRD.md): requirements, success metrics and the core hypothesis.
+- [`docs/ANALYSIS.md`](docs/ANALYSIS.md): confidence intervals and SQL answers to product questions. Power BI tables are in `data/bi/`, with a guide in [`docs/POWER_BI_GUIDE.md`](docs/POWER_BI_GUIDE.md).
+- [`docs/V2_FINDINGS.md`](docs/V2_FINDINGS.md): the full strategy matrix, the effort grid and verifier economics.
+- [`docs/V3_DESIGN.md`](docs/V3_DESIGN.md) and [`docs/V3_FINDINGS.md`](docs/V3_FINDINGS.md): the learned router.
+- [`docs/V5_JURY.md`](docs/V5_JURY.md): the cheap-model jury and why it is not safe on hard work.
+- [`docs/JEV_CALIBRATION.md`](docs/JEV_CALIBRATION.md) and [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md): a self-improving email classifier. Rulebook rounds raised the share of held-out emails it handled alone from 36% to 60%, and showed where more rounds started to overfit.
+- [`docs/IMPROVEMENT_ROUND_2026-10.md`](docs/IMPROVEMENT_ROUND_2026-10.md): six ideas tested against a bar set in advance, most of which failed.
+- [`docs/DOCKER.md`](docs/DOCKER.md): every environment variable and the Docker limits.
