@@ -35,9 +35,9 @@ WORKERS = 4
 
 def ask(task, model):
     r = get_adapter(model, False).complete(task["prompt"], EFFORT.get(model))
-    if not r.success or r.simulated:
-        raise RuntimeError(f"{model} failed on {task['id']}")
-    return {"text": r.text, "in": r.input_tokens, "out": r.output_tokens, "cut_off": r.truncated,
+    if r.simulated:
+        raise RuntimeError(f"{model} was simulated on {task['id']}")
+    return {"text": r.text, "answered": r.success, "in": r.input_tokens, "out": r.output_tokens, "cut_off": r.truncated,
             "usd": get_model(model).cost_for_tokens(r.input_tokens, r.output_tokens),
             "score": final_answer(r.text, task["reference"])}
 
@@ -54,6 +54,9 @@ def collect(max_spend):
                     print(f"Stopped at the ${max_spend:.2f} cap", file=sys.stderr)
                     return rows
                 answers = dict(zip(MODELS, pool.map(lambda m: ask(task, m), MODELS)))
+                if not answers[OPUS]["answered"]:  # no baseline to compare with, so the task is left out
+                    print(f"Skipped {task['id']}: Opus gave no answer", file=sys.stderr)
+                    continue
                 rows.append({"set": name, "id": task["id"], "type": task["task_type"], "answers": answers})
     return rows
 
@@ -108,7 +111,9 @@ def main():
             if sub and name == "new tasks":
                 table(sub, f"{name}, {kind}")
     cut = {m: sum(r["answers"][m]["cut_off"] for r in rows) for m in MODELS}
-    print(f"\nCut off at the length limit: {cut}\nReal spend ${SpendMeter.usd:.4f}")
+    none = {m: sum(not r["answers"][m]["answered"] for r in rows) for m in MODELS}
+    print(f"\nNo answer given (scored 0): {none}")
+    print(f"Cut off at the length limit: {cut}\nReal spend ${SpendMeter.usd:.4f}")
 
 
 if __name__ == "__main__":
