@@ -18,9 +18,14 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest", "ruff==0.17.3", "mypy==2.4.1"]
 mcp = ["mcp>=2.3.0,<3"]
+web = ["fastapi>=0.162,<1", "uvicorn>=0.54,<1"]
 
 [project.scripts]
 ai-router-mcp = "router.mcp_server:main"
+ai-router-web = "router.web:main"
+
+[tool.setuptools.package-data]
+router = ["*.html"]
 # Entry point: python run_benchmark.py (see README for usage)
 
 [tool.ruff]
