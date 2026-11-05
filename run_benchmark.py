@@ -52,6 +52,7 @@ from router.api import (  # noqa: E402
     Router, RulesPolicy,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
+from router.lookup import public_lookup  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
 from router.report import build_report, format_report_markdown, print_report  # noqa: E402
 from router.scoring import JudgeError, score  # noqa: E402
@@ -108,6 +109,8 @@ def _report_path(
     jury_mode: Optional[str] = None,
     agree: bool = False,
     pinned: bool = False,
+    consensus: bool = False,
+    lookup: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -158,6 +161,8 @@ def _report_path(
         and not learned_flag
         and not agree
         and not pinned
+        and not consensus
+        and not lookup
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -173,6 +178,10 @@ def _report_path(
         parts.append("agree")
     if pinned:
         parts.append("pinned")
+    if consensus:
+        parts.append("consensus")
+    if lookup:
+        parts.append("lookup")
     if effort_policy:
         parts.append("effort")
     if verifier:
@@ -250,8 +259,8 @@ def _preflight(roster_name: str) -> None:
             raise RunStopped(f"preflight failed on {model}")
 
 
-def _build_policy(args: argparse.Namespace):
-    """Map CLI flags to the experimental Policy."""
+def _build_policy(args: argparse.Namespace, tasks: list[dict]):
+    """Map CLI flags to the experimental Policy. The lookup never sees the tasks under test."""
     if args.strategy == "cascade":
         return CascadePolicy(args.verifier, args.escalate_threshold, prompt_version=_PV)
     if args.strategy == "jury":
@@ -259,7 +268,9 @@ def _build_policy(args: argparse.Namespace):
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
     return RulesPolicy(use_labels=not args.classify, prompt_version=_PV,
-                       agree_on=tuple(args.agree_on), frontier_on=tuple(args.frontier_on))
+                       agree_on=tuple(args.agree_on), frontier_on=tuple(args.frontier_on),
+                       consensus_on=tuple(args.consensus_on),
+                       lookup=public_lookup(t["prompt"] for t in tasks) if args.lookup else None)
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
@@ -272,6 +283,8 @@ def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
         next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
         "agree" in tags,
         "pinned" in tags,
+        "consensus" in tags,
+        "lookup" in tags,
     )
 
 
@@ -304,6 +317,23 @@ def _build_parser() -> argparse.ArgumentParser:
             "if they agree; if not, ask the frontier model. Repeatable. "
             "(--strategy router, not with --learned.)"
         ),
+    )
+    parser.add_argument(
+        "--consensus-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help=(
+            "For this task type, ask Haiku 5.5 and the mid model and keep the mid answer "
+            "if they agree. If not, reasoning gets a vote from the budget model, then "
+            "Sonnet 5.5 decides. Repeatable. (As --agree-on.)"
+        ),
+    )
+    parser.add_argument(
+        "--lookup",
+        action="store_true",
+        help="Predict type and difficulty free from the most similar public tasks, "
+             "leaving out the tasks under test. (As --agree-on, replaces --classify.)",
     )
     parser.add_argument(
         "--workers",
@@ -439,7 +469,7 @@ def _run(argv: Optional[list[str]] = None) -> None:
     # the report's net-savings accounting is identical for either. The benchmark
     # opts into the offline mock fallback (allow_mock_fallback=True) so a run
     # always completes; real callers use router.api.Router's strict default.
-    policy = _build_policy(args)
+    policy = _build_policy(args, tasks)
     capped = args.max_spend is not None
     if capped:
         _preflight(args.roster)
