@@ -148,7 +148,7 @@ The benchmark rows below came from real API calls, and each links to its committ
 - **Quality fell most where the cheap model did the work.** Classification kept 80.3% of quality and extraction 91.8%. Reasoning kept 97.8% and short writing 101.1%.
 - **The classifier missed hard tasks.** Only 27 of the 40 hard tasks went to Opus.
 - **One rule changed after the first attempt.** That attempt stopped at task 190 because the judge wrote out its working before its score, so the check now also reads a score alone on the last line. The [plan](docs/BENCHMARK_PLAN.md) records this.
-- **No person has checked the judge on these runs yet.** Short writing, the softest score, depends on it.
+- **The judge was only partly confirmed.** A blind hand check of 29 answers agreed with it on 22, but the scores barely moved together. A [code check](check_ifeval_rules.py) of the countable rules agreed on 115 of 138 answers and showed the judge is generous, so short writing is nearer 98.2% than 101.1%. Using code instead of the judge, the mixed run would keep 90.8% of quality, so the target is still missed. The [plan](docs/BENCHMARK_PLAN.md#review) has the details.
 
 **The July runs, kept as history.** These two runs use the same 25 tasks and the three-vendor roster, and are compared with sending every task to Claude Opus 4.8.
 
@@ -231,7 +231,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - 300 public tasks are still a fixed mix, not a real workload, and the mix drives the answer. These models have probably seen public benchmarks in training.
 - The July set is 25 tasks and its hard set is 10, and the intervals on the two hard cost results include zero.
 - Tasks are single-turn. Conversations and tool use are not covered.
-- The judge is an LLM. Two judges agreeing does not rule out a shared blind spot, and [`data/human_label_sheet.csv`](data/human_label_sheet.csv) has not been scored against them. A hostile task could also try to inject instructions into the judge.
+- The judge is an LLM. Two judges agreeing does not rule out a shared blind spot, and [`data/human_label_sheet.csv`](data/human_label_sheet.csv) has not been scored against them. The public run had a separate 29-answer hand check, which did not confirm the judge. A hostile task could also try to inject instructions into the judge.
 - The results cannot be replayed from a fresh clone. `.cache/` and `data/runs.db` are not committed, so a live re-run needs your own keys and your own spend. A few scripts, such as `analyze.py` and `simulate_v5.py`, need `data/runs.db` and will not run without it.
 
 **It is not ready to serve real users.**
