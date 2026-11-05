@@ -182,15 +182,18 @@ The lesson across these runs: **savings depend on how much of the work is genuin
 | Can a spend cap and a background check run unattended? | In simulation only: checking 5% of traffic caught a quality drop in 83.3% of runs, for 6.1% extra cost. | [V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md) |
 | Is Kimi K3 a cheaper mid tier? | No. It has Sonnet's list price plus billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
 | Does it work on real text? | On 150 of my own emails, from a personal setup, the keyword classifier sent everything to the top tier. A cheap-first cascade saved 76.4% at 95.3% agreement with Haiku, but missed 1 of 13 emails that needed action. | [REAL_TRAFFIC_ASSESSMENT](docs/REAL_TRAFFIC_ASSESSMENT.md), [SHADOW_TEST](docs/SHADOW_TEST.md) |
+| Can a model's stated confidence be trusted? | On 800 public banking queries with true labels, the Jev model was 94.2% right when at least 90% sure, covering 71.5% of queries. GPT-4o mini was 83.7% right at the same bar, on 300 of them. A self-improving rulebook loop did not help here: all three proposed edits were rejected. This tests confidence, not routing savings. | [PUBLIC_DATASET](docs/PUBLIC_DATASET.md) |
 | Is the judge reliable? | A second judge from another vendor, GPT-4o mini, re-scored the 30 rubric-judged answers from the hand-label run: 96.7% within 0.15, mean difference 0.010. No human has scored them yet. | [CASE_STUDY](CASE_STUDY.md#validating-the-judge) |
 
-**RAG retrieval**, on 13 questions I wrote myself. `rag.py eval` prints the hybrid row:
+**RAG retrieval**, from `rag.py eval`. The first set is 13 questions I wrote after reading the pages. The second is harder on purpose: 66 questions on randomly drawn pages, reworded to avoid the documents' own terms and fixed before any retriever ran on them. Trust the second set more.
 
-| Retrieval | Right page first | Right page in top 4 |
-|---|---|---|
-| Embeddings only | 6/13 | 11/13 |
-| Keywords only | 9/13 | 12/13 |
-| **Hybrid (used)** | **10/13** | **12/13** |
+| Retrieval | First set: right page first | First set: top 4 | Second set: right page first | Second set: top 4 |
+|---|---|---|---|---|
+| Embeddings only | 6/13 | 11/13 | 20/66 | 34/66 |
+| Keywords only | 9/13 | 12/13 | 19/66 | 36/66 |
+| **Hybrid (used)** | **10/13** | **12/13** | **27/66** | **44/66** |
+
+Hybrid search is the best option on both sets, but on reworded questions it misses the right page in the top 4 about a third of the time.
 
 ### Simulated output (not results)
 
@@ -206,7 +209,7 @@ None of the following is evidence of anything. It exists so the project runs for
 
 - The web app and RAG demo have only been run in free demo mode. **No real paid call has gone through either of them.** Paid mode is covered by stubbed tests only.
 - Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
-- RAG retrieval is 10/13 first place and 12/13 in the top 4, on a small set I wrote after reading the pages, so its wording matches the documents.
+- RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
 
 **Known bug, documented and not fixed.** In real mode, the classifier silently falls back to the free keyword heuristic if it has no key or its call fails, and `Result.simulated` stays `False`. Only a detail in the trace shows it happened, and that heuristic sent 100% of the email above to the top tier. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
@@ -229,7 +232,7 @@ None of the following is evidence of anything. It exists so the project runs for
 
 1. **Run one small, capped real call** through the web app and the RAG `--paid` path, so the paid paths have been proven once. It would cost cents, and it was deliberately left out of this round.
 2. **Fix the silent classifier fallback** so a downgrade shows up in the result.
-3. **Measure RAG answer quality** with answers written in advance, and add a "not found" threshold.
+3. **Improve RAG retrieval and measure answer quality:** look at why reworded questions miss, write answers in advance, and add a "not found" threshold.
 4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
 5. **Grow the eval:** more tasks from one real workload, human scores against the judges, and the hard set on the three-vendor roster.
 6. **Fix the source-relative paths,** so a normal install works and Docker can drop the workaround.

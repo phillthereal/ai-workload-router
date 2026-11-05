@@ -30,22 +30,26 @@ PDF text is fenced as untrusted data in the prompt, so instructions inside a doc
 python examples/rag/rag.py eval
 ```
 
-`eval_questions.json` holds 13 questions. Each one's answer page was found by reading the PDF text, not by using the retriever. The set was frozen before the three options below were compared.
+It runs two question sets. Each expected page was found by reading the PDF text, not by using the retriever, and each set was frozen before its results were seen.
 
-| Retrieval | Right page ranked first | Right page in top 4 |
-|---|---|---|
-| Embeddings only | 6/13 | 11/13 |
-| Keywords only (BM25) | 9/13 | 12/13 |
-| **Hybrid (used here)** | **10/13** | **12/13** |
+- **`eval_questions.json`, 13 questions:** written after reading the pages, so they share wording with the documents.
+- **`eval_questions_sampled.json`, 66 questions:** harder on purpose. 70 pages with at least 800 characters of text were drawn at random with a fixed seed (2026), leaving out pages the first set uses. One question was written per page, and 4 pages without an answerable fact were dropped. Questions avoid the documents' own terms, for example "forecast" for "cost estimate".
 
-Embeddings alone struggled with exact jargon such as "Should Cost Model", which is why keyword search was added.
+| Retrieval | First set: right page first | First set: top 4 | Second set: right page first | Second set: top 4 |
+|---|---|---|---|---|
+| Embeddings only | 6/13 | 11/13 | 20/66 | 34/66 |
+| Keywords only (BM25) | 9/13 | 12/13 | 19/66 | 36/66 |
+| **Hybrid (used here)** | **10/13** | **12/13** | **27/66** | **44/66** |
+
+Embeddings alone struggled with exact jargon such as "Should Cost Model", which is why keyword search was added. On the second set, neither method does well alone and combining them helps most, but about a third of reworded questions still miss the top 4.
 
 Read these numbers with care:
 
-- 13 questions is a small sample, and one question changes a result by about 8 points.
-- I wrote the questions after reading the pages, so they share wording with the documents. That flatters keyword search, and real users would phrase things differently.
+- The 95% range on the second set is about 30–53% for first place and 55–77% for the top 4. On the first set, one question changes a result by about 8 points.
+- I wrote both sets, and rewording on purpose may be harsher than how real users ask. The first set is too kind and the second may be too hard.
 - This measures retrieval only. **Answer quality has not been measured.**
-- A hit means the expected page came back. Another page that also answers the question counts as a miss.
+- A hit means an expected page came back. Another page that also answers the question counts as a miss.
+- Nothing was tuned after seeing the second set, so these are not fitted to it.
 
 ## Limitations
 

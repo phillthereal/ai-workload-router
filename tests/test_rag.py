@@ -19,6 +19,13 @@ def chunk(text, vector=(1.0, 0.0), doc="a.pdf", page=1):
     return {"doc": doc, "page": page, "text": text, "vector": list(vector)}
 
 
+class Scoring(unittest.TestCase):
+    def test_hit_rank_counts_any_expected_page_on_the_right_document(self):
+        found = [chunk("x", doc="b.pdf", page=2), chunk("x", doc="a.pdf", page=1), chunk("x", doc="a.pdf", page=2)]
+        self.assertEqual(rag.hit_rank(found, {"doc": "a.pdf", "pages": [2, 9]}), 3)
+        self.assertIsNone(rag.hit_rank(found, {"doc": "c.pdf", "pages": [2]}))
+
+
 class Chunking(unittest.TestCase):
     def test_pieces_are_bounded_overlap_and_lose_nothing(self):
         text = " ".join(f"word{i}" for i in range(500))
