@@ -10,13 +10,43 @@
 
 Teams building on LLMs overpay by sending every request to one premium model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well, logging cost and quality on every call so routing improves over time.
 
-**On 300 public tasks, routing cut cost 84.1% but kept only 91.8% of quality, so it missed the 95% quality target.** The 40% cost target was met. An earlier 25-task benchmark that I wrote myself had passed both targets: 53.6% cheaper with my hand labels, 65.6% with the classifier, and quality about level. The public test is the bigger and fairer one, so it leads here. Every number is from live API calls. A hand check and a code check only partly confirmed the judge on the public run, and the target is still missed when code replaces the judge wherever it can.
+**On 300 public tasks, the router's default rule cut cost 86.4% and kept 98.7% of quality, so it met both targets.** With 99% certainty it saves at least 80.8% and keeps at least 95.1%. The first version missed the quality target on public tasks, at 84.1% cheaper and 91.8% of quality, and that miss drove the changes described below. An earlier 25-task benchmark that I wrote myself had looked good too, at 53.6% cheaper with my hand labels, but those tasks were too easy to show the problem. Quality on hard tasks alone is still not proven. Every number is from live API calls. A hand check and a code check only partly confirmed the judge on the public run, and the target is still missed when code replaces the judge wherever it can.
 
 The most useful finding wasn't the headline number — it was *why* the savings stopped where they did. That's the part a good PM cares about, and it's below.
 
 ---
 
-## The public test: the quality target was missed
+## The current result: both targets met
+
+The first public test missed on quality, so I changed how the router decides and retested it on fresh public tasks. The targets stayed the same: at least 40% cheaper than sending everything to Opus, and at least 95% of its quality.
+
+| Version | Tasks | Cheaper | Quality kept | Targets |
+|---|---|---|---|---|
+| First version | First 300 | 84.1% | 91.8% | Not met |
+| Cheap models must agree on classification | New 300 | 75.4% | 92.5% | Not met |
+| Extraction also sent to Opus | Another new 300 | 65.7% | 99.5% | Met |
+| **Current default** | Same 300 as the row above | **86.4%** | **98.7%** | **Met** |
+
+Only the last two rows use the same tasks, and I updated model prices before the last row, so read this as a trend, not an exact comparison.
+
+| Current default | Tasks | Cheaper | 99% range | Quality kept | 99% range |
+|---|---|---|---|---|---|
+| All | 300 | **86.4%** | 80.8% to 90.7% | **98.7%** | 95.1% to 102.4% |
+| Reasoning | 48 | 84.1% | 67.7% to 92.4% | 97.8% | 90.9% to 100.0% |
+| Extraction | 84 | 87.5% | 82.8% to 91.4% | 98.7% | 89.9% to 108.3% |
+| Classification | 96 | 71.0% | 59.2% to 81.9% | 98.7% | 90.9% to 106.8% |
+| Short writing | 72 | 94.8% | 87.8% to 97.3% | 99.3% | 94.3% to 104.2% |
+| Hard | 24 | 80.0% | 56.7% to 92.9% | 95.2% | 80.0% to 100.0% |
+
+**How the default works.** A free lookup compares each prompt with similar labelled tasks to pick its type, so the paid classifier is gone. On reasoning and extraction, Haiku 5.5 and DeepSeek both answer, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to Opus when the two cheap models differ. The cost of every discarded answer is included.
+
+**What moved.** Against the first version, classification quality rose from 80.3% to 98.7%, and extraction from 91.8% to 98.7%. Reasoning went mostly to Opus and saved only 29.9%. It now saves 84.1% at the same 97.8% quality. Classification and extraction gave up some saving to get there.
+
+**An idea I left out.** Chain of Draft asks models to keep their working very short. On 96 reasoning tasks it saved more, 92.0% against 80.4%, but quality fell from 98.9% to 95.6%, and to 90.5% on 48 hard tasks.
+
+**What is not proven.** Reasoning, extraction and hard tasks each fall below 95% at the worst end of their ranges, because the groups are small. Hard tasks are the real gap, at 80.0% on 24 tasks. These 300 tasks had already been used to confirm the rule, though not to pick it.
+
+## The first public test: the quality target was missed
 
 I reran the router on public tasks, with real API calls and the classifier choosing each route. The targets were unchanged: at least 40% cheaper than sending everything to Opus, and at least 95% of its quality. The runs cost $2.7228 in total, including one attempt that stopped early.
 
@@ -239,6 +269,8 @@ Test the one assumption first, then build, then measure honestly. v5's shadow te
 ## Honest limitations
 
 - **The judge is only partly confirmed.** On the 25-task run a second judge from a different vendor agreed (96.7% within 0.15, 0.010 mean difference), but both are LLMs. On the public run my hand check agreed on pass or fail for 22 of 29 answers, with a correlation of only about 0.03, and a code check found 15 answers the judge scored too generously and 4 too harshly. The second judge has not been run there.
+- **The default rule depends on a final `Answer:` line.** Agreement is checked on that line, and every benchmark prompt asks for one. A prompt without one skips the rule for reasoning and extraction and follows the rules table, so everyday prompts save less than the benchmark shows.
+- **The lookup has only seen benchmark tasks.** It knows four task types and rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. No real paid request has gone through the server or web app with the new rule.
 - **The public test is still a fixed mix.** It is not a real workload, the mix drives the answer, and the models have probably seen public benchmarks in training. Answers are capped at 1,024 tokens, and the mixed run printed 11 cut-offs while the database shows 14 answers at the limit. That gap isn't explained.
 - **25 tasks is a starting eval.** It was enough to demonstrate the method, not to certify a savings figure, and its quality result did not carry over to the public test.
 - **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
