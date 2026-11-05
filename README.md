@@ -4,7 +4,7 @@
 
 **[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On a 25-task benchmark with real API calls it cut cost by 53.6% with hand-written task labels and 65.6% with a real classifier, at about the same quality as sending everything to the top model. On a set of hard tasks it saved nothing. It is a personal project and has not served any customer or company traffic.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls and a real classifier it cut cost by 84.1% but kept only 91.8% of quality, so it **missed the 95% quality target**. An earlier 25-task benchmark that I wrote myself had looked better, at 65.6% cheaper with about the same quality. It is a personal project and has not served any customer or company traffic.
 
 ## The problem
 
@@ -138,7 +138,19 @@ python redteam.py heuristic
 
 The benchmark rows below came from real API calls, and each links to its committed report. Row-level data for them is in [`data/bi/fact_runs.csv`](data/bi/fact_runs.csv). The confidence intervals are explained in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 
-**The two headline runs** use the same 25 tasks and the three-vendor roster, and are compared with sending every task to Claude Opus 4.8.
+**The headline result: 300 public tasks, target missed.** The tasks, the plan and the target were [fixed before any paid call](docs/BENCHMARK_PLAN.md). Both runs use the three-vendor roster and a real classifier, and are compared with sending every task to Claude Opus 4.8.
+
+| Run | Cost cut [95% CI] | Quality vs frontier only [95% CI] | Target |
+|---|---|---|---|
+| Mixed, 300 tasks ([report](data/benchmark_report_cross_vendor_classified_public.md)) | **84.1%** [79.0, 88.7] | **91.8%** [86.9, 96.6] | **Missed** |
+| Hard, 40 tasks ([report](data/benchmark_report_cross_vendor_classified_public_hard.md)) | 22.2% [9.0, 40.3] | 96.1% [89.5, 100.0] | Applies to the mixed run only |
+
+- **Quality fell most where the cheap model did the work.** Classification kept 80.3% of quality and extraction 91.8%. Reasoning kept 97.8% and short writing 101.1%.
+- **The classifier missed hard tasks.** Only 27 of the 40 hard tasks went to Opus.
+- **One rule changed after the first attempt.** That attempt stopped at task 190 because the judge wrote out its working before its score, so the check now also reads a score alone on the last line. The [plan](docs/BENCHMARK_PLAN.md) records this.
+- **No person has checked the judge on these runs yet.** Short writing, the softest score, depends on it.
+
+**The July runs, kept as history.** These two runs use the same 25 tasks and the three-vendor roster, and are compared with sending every task to Claude Opus 4.8.
 
 | | Frontier only | Hand labels ([report](data/benchmark_report.md)) | Real classifier ([report](data/benchmark_report_cross_vendor_classified.md)) |
 |---|---|---|---|
@@ -157,7 +169,7 @@ How to read them:
 - **Reasoning tasks do not get cheaper.** They go to the frontier model either way. They are 16% of the tasks and 33% of the baseline bill, which limits what routing can save here.
 - **The target was set first:** at least 40% cheaper while keeping at least 95% of quality. Both runs passed.
 
-**Other runs.** The easy set scores about 0.99 on every tier, so it cannot show whether routing protects quality. The 10-task hard set can: on it, Haiku scored 0.70, Sonnet 0.90 and Opus 1.00. The classifier was never run on the hard set with the three-vendor roster, so the hard rows do not compare directly with the headline runs.
+**Other runs.** The easy set scores about 0.99 on every tier, so it cannot show whether routing protects quality. The 10-task hard set can: on it, Haiku scored 0.70, Sonnet 0.90 and Opus 1.00. The classifier was never run on this 10-task hard set with the three-vendor roster, so the hard rows do not compare directly with the July runs.
 
 | Models | Method | Task set | Cost cut | Quality vs frontier only | Report |
 |---|---|---|---|---|---|
@@ -216,7 +228,8 @@ None of the following is evidence of anything. It exists so the project runs for
 
 **The benchmark is small.**
 
-- 25 tasks is a starting eval, not proof for any real workload. The hard set is 10 tasks, and the intervals on its two cost results include zero.
+- 300 public tasks are still a fixed mix, not a real workload, and the mix drives the answer. These models have probably seen public benchmarks in training.
+- The July set is 25 tasks and its hard set is 10, and the intervals on the two hard cost results include zero.
 - Tasks are single-turn. Conversations and tool use are not covered.
 - The judge is an LLM. Two judges agreeing does not rule out a shared blind spot, and [`data/human_label_sheet.csv`](data/human_label_sheet.csv) has not been scored against them. A hostile task could also try to inject instructions into the judge.
 - The results cannot be replayed from a fresh clone. `.cache/` and `data/runs.db` are not committed, so a live re-run needs your own keys and your own spend. A few scripts, such as `analyze.py` and `simulate_v5.py`, need `data/runs.db` and will not run without it.
