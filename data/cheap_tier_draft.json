@@ -1,0 +1,2010 @@
+[
+ {
+  "id": "gsm-365",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Girls: 6. Boys: twice that, 12. Total: 18.\n\nAnswer: 18",
+   "in": 105,
+   "out": 33,
+   "answered": true,
+   "usd": 2.7000000000000002e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "6 girls.  \nBoys twice: 12.  \nTotal kids: 18.  \nAnswer: 18",
+   "in": 81,
+   "out": 23,
+   "answered": true,
+   "usd": 5.19e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-475",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "240 minutes total, 4 days/week, 3 weeks = 12 days.\n\nPer day: 240 / 12 = 20.\n\n20\n\nAnswer: 20",
+   "in": 146,
+   "out": 53,
+   "answered": true,
+   "usd": 4.11e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "240 minutes total needed.  \n3 weeks × 4 days/week = 12 days.  \n240 ÷ 12 = 20.  \nAnswer: 20",
+   "in": 108,
+   "out": 32,
+   "answered": true,
+   "usd": 7.079999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-468",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "200 shoes initially.\nMonday: 5 pairs = 10 shoes → 210.\nWednesday: 15 pairs = 30 shoes → 240.\nFriday: 30 pairs = 60 shoes → 300.\nSaturday: remove 180 → 120.\nSunday: no change → 120.\n\n120\nAnswer: 120",
+   "in": 164,
+   "out": 114,
+   "answered": true,
+   "usd": 7.340000000000001e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "200 shoes initially  \n5 pairs = 10 shoes  \n15 pairs = 30 shoes  \n30 pairs = 60 shoes  \nTotal additions = 100  \nNew total = 300  \nMinus 180 = 120  \nAnswer: 120",
+   "in": 104,
+   "out": 49,
+   "answered": true,
+   "usd": 8.999999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-803",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "2 weeks at half hour daily: 14 × 0.5 = 7 hours.\n1 week at 2 hours daily: 7 × 2 = 14 hours.\nTotal played: 7 + 14 = 21 hours.\nRemaining: 30 − 21 = 9 hours.\n\n9\n\nAnswer: 9",
+   "in": 151,
+   "out": 105,
+   "answered": true,
+   "usd": 6.76e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "½ hour × 14 days = 7h  \n2 hours × 7 days = 14h  \nTotal played = 21h  \n30 − 21 = 9h  \nAnswer: 9",
+   "in": 110,
+   "out": 42,
+   "answered": true,
+   "usd": 8.34e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1006",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Volume: 14 × 25 × 4 = 1400 cubic feet.\nGallons: 1400 × 5.9 = 8260 gallons.\nCost: 8260 × 0.10 = 826.\n\n826\n\nAnswer: 826",
+   "in": 224,
+   "out": 81,
+   "answered": true,
+   "usd": 6.290000000000001e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "14×25×4 = 1400 cubic feet  \n1400×5.9 = 8260 gallons  \n8260×0.10 = 826 dollars  \nAnswer: 826",
+   "in": 158,
+   "out": 39,
+   "answered": true,
+   "usd": 9.419999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-622",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Start: 20 pieces.\nSchool: 8 hours / 2 = 4 pieces. 20 - 4 = 16.\nWay home: 1 piece. 16 - 1 = 15.\nAfter dinner: 1 piece. 15 - 1 = 14.\nGive half to sister: 14 / 2 = 7 given. 14 - 7 = 7.\n\n7\n\nAnswer: 7",
+   "in": 199,
+   "out": 129,
+   "answered": true,
+   "usd": 8.439999999999999e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Chews 4 at school  \n1 on way home  \n1 after dinner  \nTotal used 6  \nRemaining 14  \nHalf to sister  \nKeeps 7  \nAnswer: 7",
+   "in": 148,
+   "out": 39,
+   "answered": true,
+   "usd": 9.12e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1118",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Females: 7+5+1+3 = 16\nMales: 4+3+2+2 = 11\nDifference: 16-11 = 5\n\nAnswer: 5",
+   "in": 181,
+   "out": 53,
+   "answered": true,
+   "usd": 4.46e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Initial male guppies 4  \nInitial female guppies 7  \nInitial male goldfish 3  \nInitial female goldfish 5  \nBought male guppies 2  \nBought female guppies 1  \nBought male goldfish 2  \nBought female goldfish 3  \nTotal males: 4+3+2+2=11  \nTotal females: 7+5+1+3=16  \nDifference: 16-11=5  \nAnswer: 5",
+   "in": 134,
+   "out": 105,
+   "answered": true,
+   "usd": 0.0001662,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-304",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Assume April has 4 weeks (20 working days).\n\nHours: 10 × 5 × 4 = 200 hours → 200 × $10 = $2000\nBonuses: 4 × $300 = $1200\nTotal: $2000 + $1200 = $3200\n\n3200\n\nAnswer: 3200",
+   "in": 142,
+   "out": 99,
+   "answered": true,
+   "usd": 6.37e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "10 hours × 5 days = 50 hours/week  \n50 × $10 = $500/week  \n$500 + $300 = $800/week  \nApril has about 4.33 weeks  \n4 weeks = $3200  \nExtra days: 30 - 28 = 2 days  \n2 days × 10 hours = 20 hours  \n20 × $10 = $200  \nPartial week bonus? likely $300 prorated unclear  \nAssume full weeks only: $3200  \nAnswer: 3200",
+   "in": 107,
+   "out": 105,
+   "answered": true,
+   "usd": 0.0001581,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-90",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Adults: 20 × 10 = 200\nChild: 10 ÷ 2 = 5\nChildren: 5 × 5 = 25\nTotal: 200 + 25 = 225\n\n225\nAnswer: 225",
+   "in": 203,
+   "out": 70,
+   "answered": true,
+   "usd": 5.53e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Adult eats 10 lbs.  \nChild eats 5 lbs.  \nAdults total: 20×10=200 lbs.  \nChildren total: 5×5=25 lbs.  \nTotal: 200+25=225 lbs.  \nAnswer: 225",
+   "in": 136,
+   "out": 54,
+   "answered": true,
+   "usd": 0.00010559999999999999,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-524",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Red rows: 36/6 = 6 rows.\nBlue rows: 24/8 = 3 rows.\nTotal: 9 rows.\n\n9\n\nAnswer: 9",
+   "in": 146,
+   "out": 57,
+   "answered": true,
+   "usd": 4.3100000000000004e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "36 red / 6 = 6 rows  \n24 blue / 8 = 3 rows  \n6 + 3 = 9  \nAnswer: 9",
+   "in": 103,
+   "out": 32,
+   "answered": true,
+   "usd": 6.93e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-710",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Croissants: 5×3.00=15.00\nCinnamon rolls: 4×2.50=10.00\nMini quiches: 3×4.00=12.00\nMuffins: 13×1.00=13.00\nSubtotal: 15+10+12+13=50.00\n10% off: 50×0.9=45.00\n\nAnswer: 45",
+   "in": 195,
+   "out": 113,
+   "answered": true,
+   "usd": 7.6e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "5 croissants cost 15  \n4 cinnamon rolls cost 10  \n3 mini quiches cost 12  \n13 muffins cost 13  \nSubtotal is 50  \n10% off means 45  \nAnswer: 45",
+   "in": 134,
+   "out": 46,
+   "answered": true,
+   "usd": 9.54e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1222",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Total width: 5 × 35 = 175 inches\nFabric: 2 × 175 = 350\n\n350\n\nAnswer: 350",
+   "in": 140,
+   "out": 44,
+   "answered": true,
+   "usd": 3.6e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "5 windows × 35 inches  \n= 175 total width  \n× 2 requirement  \n= 350  \nAnswer: 350",
+   "in": 97,
+   "out": 26,
+   "answered": true,
+   "usd": 6.03e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-208",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Monday: 4\nTuesday: 3×4=12\nWednesday: 5×12=60\nTotal: 4+12+60=76\n\nAnswer: 76",
+   "in": 162,
+   "out": 53,
+   "answered": true,
+   "usd": 4.27e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Monday: 4 cakes  \nTuesday: 3 × 4 = 12  \nWednesday: 5 × 12 = 60  \nTotal: 4 + 12 + 60 = 76  \nAnswer: 76",
+   "in": 113,
+   "out": 46,
+   "answered": true,
+   "usd": 8.91e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-399",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Erica is 30. Beth is 5 older: 35. Alice is 7 older than Beth: 42. Difference: 42 - 30 = 12.\n\n12\n\nAnswer: 12",
+   "in": 126,
+   "out": 61,
+   "answered": true,
+   "usd": 4.3100000000000004e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Erica is 30.  \nBeth is 35.  \nAlice is 42.  \nDifference is 12.  \nAnswer: 12",
+   "in": 90,
+   "out": 29,
+   "answered": true,
+   "usd": 6.18e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1158",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Each bottle covers 20% of one person's needs, so 5 bottles per person.\nNeeds for 2300 people: 2300 × 5 = 11500 bottles.\nCurrent production: 4200 bottles.\nAdditional needed: 11500 − 4200 = 7300.\n\n7300\n\nAnswer: 7300",
+   "in": 176,
+   "out": 102,
+   "answered": true,
+   "usd": 6.86e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "1 juice covers 20%\n5 juices per person\n2300 people need 11500\nCurrent production 4200 bottles\nMore needed 7300 bottles\nAnswer: 7300",
+   "in": 122,
+   "out": 38,
+   "answered": true,
+   "usd": 8.219999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-847",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Interest per year: 3/4 × 300 = 225.\nOver 3 years: 225 × 3 = 675.\nTotal: 300 + 675 = 975.\n\nAnswer: 975\n\nAnswer: 975",
+   "in": 125,
+   "out": 69,
+   "answered": true,
+   "usd": 4.7e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Principal $300, rate = 3/4 principal yearly.  \nInterest per year = 0.75 × 300 = 225.  \n3 years interest = 225 × 3 = 675.  \nTotal = 300 + 675 = 975.  \nAnswer: 975",
+   "in": 90,
+   "out": 60,
+   "answered": true,
+   "usd": 9.900000000000001e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-651",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Red sales month 1: $400. Green sales month 1: $800 (red is half of green? Let's read: red sales $400 is half the total from green, so green = $800).\n\nMonth 1 total: $400 + $800 = $1200.\n\nMonth 2 total: 3/4 × $1200 = $900.\n\nTwo-month total: $1200 + $900 = $2100.\n\nAnswer: 2100",
+   "in": 164,
+   "out": 125,
+   "answered": true,
+   "usd": 7.890000000000001e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Red hats: $400  \nGreen: 2×400=$800  \nFirst month total: $1200  \nSecond: 3/4×1200=$900  \nTwo months: 1200+900=$2100  \nAnswer: 2100",
+   "in": 123,
+   "out": 52,
+   "answered": true,
+   "usd": 9.93e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-188",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Profit per bag: 30 - 20 - 2 = 8.\nBags: 400 / 8 = 50.\n\n50\n\nAnswer: 50",
+   "in": 163,
+   "out": 49,
+   "answered": true,
+   "usd": 4.08e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Cost price per bag: 20  \nTransport cost: 2  \nTotal cost per bag: 22  \nSelling price: 30  \nProfit per bag: 8  \nTotal profit: 400  \nBags sold: 400 ÷ 8 = 50  \nAnswer: 50",
+   "in": 117,
+   "out": 59,
+   "answered": true,
+   "usd": 0.0001059,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-932",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Maria plus 4 friends = 5 people.\nInitially: friends 4×2 = 8; Maria 1.\nTotal initially: 9.\nMom gives 3 each to 5 people: 15.\nTotal: 9 + 15 = 24.\n\nAnswer: 24",
+   "in": 168,
+   "out": 90,
+   "answered": true,
+   "usd": 6.18e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Maria plus 4 friends = 5  \nFriends got 2 each = 8  \nMaria had 1 = 1  \nTotal before mom = 9  \nMom gave 3 each = 15  \nTotal balloons = 24  \nAnswer: 24",
+   "in": 120,
+   "out": 52,
+   "answered": true,
+   "usd": 9.84e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-913",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "20 red balloons use 40 pieces. Remaining 18 pieces at 3 each gives 6 yellow balloons.\n\nAnswer: 6",
+   "in": 183,
+   "out": 50,
+   "answered": true,
+   "usd": 4.33e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "2 pieces per red balloon  \n20 red means 40 pieces  \n58 total minus 40 = 18  \n3 pieces per yellow balloon  \n18 ÷ 3 = 6  \nAnswer: 6",
+   "in": 127,
+   "out": 40,
+   "answered": true,
+   "usd": 8.61e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-561",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Mark: 150\nSusan: 150 - 20 = 130\nBob: 2 × 130 = 260\nTotal: 150 + 130 + 260 = 540\nAverage: 540 / 3 = 180\n\n180\n\nAnswer: 180",
+   "in": 138,
+   "out": 79,
+   "answered": true,
+   "usd": 5.3299999999999995e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Mark: 150  \nSusan: 130  \nBob: 260  \nSum: 540  \nAverage: 180  \nAnswer: 180",
+   "in": 92,
+   "out": 29,
+   "answered": true,
+   "usd": 6.24e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-969",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "People: John, wife, 2 kids = 4 phones.\nFirst 2 full price: 600 + 600 = 1200.\nRemaining 2 at half: 300 + 300 = 600.\nTotal: 1800.\n\nAnswer: 1800\n\nAnswer: 1800",
+   "in": 130,
+   "out": 87,
+   "answered": true,
+   "usd": 5.65e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "1. Total phones: 4\n2. First two full price: $1200\n3. Remaining two half price: $600\n4. Total cost: $1800\nAnswer: 1800",
+   "in": 99,
+   "out": 44,
+   "answered": true,
+   "usd": 8.25e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-25",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Chicken: 12\nMilk: 5×3 = 15\nApples: 4×1.50 = 6\nSubtotal: 12+15+6 = 33\nRemaining: 50−33 = 17\nPizza boxes: 17/8.50 = 2\n\n2\n\nAnswer: 2",
+   "in": 165,
+   "out": 96,
+   "answered": true,
+   "usd": 6.45e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Chicken meal: $12  \nMilk: 5×$3=$15  \nApples: 4×$1.50=$6  \nKnown total: 12+15+6=$33  \nRemaining: 50−33=$17  \nPizzas: 17÷8.50=2  \nAnswer: 2",
+   "in": 115,
+   "out": 70,
+   "answered": true,
+   "usd": 0.0001185,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-479",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Tickets: 2 × 5000 = 10000\nHotel rate: 1500 × 1.2 = 1800/day\nHotel total: 1800 × 3 = 5400\nTotal: 10000 + 5400 = 15400\n\n15400\n\nAnswer: 15400",
+   "in": 163,
+   "out": 90,
+   "answered": true,
+   "usd": 6.13e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Plane tickets: 2 × $5000 = $10000  \nHotel normal: $1500/day  \nBusy weekend: 20% more  \nHotel daily: $1500 × 1.2 = $1800  \n3 days hotel: $1800 × 3 = $5400  \nTotal: $10000 + $5400 = $15400  \nAnswer: 15400",
+   "in": 117,
+   "out": 82,
+   "answered": true,
+   "usd": 0.0001335,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-11531",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Compute a = (u²v, u + eᵛ, u + v²).\n\n∂a/∂u = (2uv, 1, 1).\n∂a/∂v = (u², eᵛ, 2v).\n∂²a/∂u∂v = ∂/∂v(2uv, 1, 1) = (2u, 0, 0).\n\nThis matches option H.\n\nAnswer: H",
+   "in": 530,
+   "out": 122,
+   "answered": true,
+   "usd": 0.000114,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Given \\( \\mathbf{a}(u,v) = (u^2 v,\\ u + e^v,\\ u + v^2) \\).  \n\nStep 1: \\(\\partial \\mathbf{a}/\\partial u\\)  \nDifferentiate each: \\( (2uv,\\ 1,\\ 1) \\).  \n\nStep 2: \\(\\partial \\mathbf{a}/\\partial v\\)  \nDifferentiate each: \\( (u^2,\\ e^v,\\ 2v) \\).  \n\nStep 3: Mixed derivative \\(\\partial^2 \\mathbf{a}/\\partial u \\partial v\\)  \nFrom Step 1, differentiate w.r.t \\(v\\): \\( (2u,\\ 0,\\ 0) \\).  \n\nMatch with option H.  \n\nAnswer: H",
+   "in": 464,
+   "out": 155,
+   "answered": true,
+   "usd": 0.0003252,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-7680",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Expansionary monetary policy lowers interest rates, capital outflows depreciate the currency, and net exports rise. This amplifies the output effect, so policy is more effective in the open economy.\n\n1. Lower interest rates.\n2. Currency depreciates.\n3. Net exports increase.\n4. Output effect amplified.\n\nAnswer: A",
+   "in": 190,
+   "out": 112,
+   "answered": true,
+   "usd": 7.500000000000001e-05,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Step 1: X open, flexible exchange rates.  \nStep 2: Expansionary monetary policy lowers interest rates.  \nStep 3: Lower rates cause currency depreciation in X.  \nStep 4: Depreciation increases net exports in X.  \nStep 5: Aggregate demand rises more in X.  \nStep 6: Y closed, no exchange-rate channel.  \nStep 7: Policy more effective in X.  \nAnswer: A",
+   "in": 131,
+   "out": 90,
+   "answered": true,
+   "usd": 0.0001473,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-2556",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Catharsis theory holds that releasing aggressive energy through indirect outlets reduces aggression.\n\nOption A matches this: release of aggressive energy, controlled by channeling into productive or neutral outlets.\n\nAnswer: A",
+   "in": 432,
+   "out": 76,
+   "answered": true,
+   "usd": 8.12e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Catharsis means releasing aggressive energy.  \nTheorists say channel it elsewhere.  \nOption A matches both claims.  \n\nAnswer: A",
+   "in": 265,
+   "out": 29,
+   "answered": true,
+   "usd": 0.00011429999999999999,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-3517",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Kinesis: speed/rate of movement changes with stimulus intensity, not directed. Taxis: directed orientation toward or away from stimulus.\n\nOption C matches this.\n\nAnswer: C",
+   "in": 504,
+   "out": 65,
+   "answered": true,
+   "usd": 8.290000000000001e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Kinesis: non-directional movement response.  \nTaxis: directional movement toward/away.  \nOption C matches definitions.  \nAnswer: C",
+   "in": 338,
+   "out": 30,
+   "answered": true,
+   "usd": 0.00013739999999999998,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-1215",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Consent defense analysis:\n\n- Graduate student consented to a fist fight.\n- Classmate used brass knuckles, a weapon, beyond that consent.\n- Harm was the same, but the nature of the force exceeded what was consented to.\n- Best argument: the classmate's use of brass knuckles exceeded consent.\n\nOption E says damage was more severe, but the stem says damage was exactly the same, so E is wrong. Option J captures that the conduct exceeded the scope of consent.\n\nAnswer: J",
+   "in": 653,
+   "out": 166,
+   "answered": true,
+   "usd": 0.0001483,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Consent limited to ordinary fistfight.  \nBrass knuckles exceeded scope of consent.  \nDamage equivalence irrelevant to consent scope.  \nOption D directly states this limit.  \nOption J also but D more precise.  \n\nAnswer: D",
+   "in": 447,
+   "out": 47,
+   "answered": true,
+   "usd": 0.0001905,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "1. Assess consent legality in violence.\n2. Consider nature of fist fight.\n3. Weapons change consent's validity.\n4. Brass knuckles imply excess force.\n5. Focus on differences in engagement.\n\nThe best argument for rejecting the defense of consent is that:\n\nD. the graduate student consented to a fist fight, not a fight involving weapons.\n\nAnswer: D",
+   "in": 448,
+   "out": 74,
+   "answered": true,
+   "usd": 0.00011159999999999999,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-2838",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Classic Y^l/Y^L lethal allele: Y^lY^l dies? Let's check: F1 ratio 1/4 Y^lY^l (dies), 1/2 Y^lY^L yellow, 1/4 Y^LY^L nonyellow.\n\nWait, the given diagram says F1 (1/4)Y^lY^l, (1/2)Y^ly^L, (1/4)y^Ly^L. Parent genotypes Y^ly^L × Y^ly^L: gametes Y^l and y^L. Offspring: Y^lY^l (1/4, dies), Y^ly^L (1/2, yellow survives), y^Ly^L (1/4, nonyellow).\n\nSo surviving yellow = Y^ly^L, nonyellow = y^Ly^L.\n\nOption A matches.\n\nAnswer: A",
+   "in": 744,
+   "out": 279,
+   "answered": true,
+   "usd": 0.0002139,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Yellow is dominant allele Y^l.  \nLethal allele is y^L.  \nY^l y^L is yellow viable.  \ny^L y^L dies.  \nY^l Y^l is nonyellow.  \nSo surviving yellow = Y^l y^L.  \nNonyellow = Y^l Y^l.  \nCheck options: none exactly?  \nWait, given F1 has 2 yellow survive + 1 nonyellow; so yellow survivors genotype Y^l y^L; nonyellow Y^l Y^l.  \nOption B has yellow as Y^lY^l — wrong.  \nLook for yellow = Y^l y^L, nonyellow = Y^lY^l. No such option listed?  \nRe-read: “nonyellow” is y^L y^L? No, that dies. They say nonyellow in F1 is (1/4)y^Ly^L dies — oh mislabel: Actually they wrote (1/4)Y^lY^l dies? Let’s parse:  \nThey show F1: (1/4)Y^lY^l (1/2)Y^ly^L (1/4)y^Ly^L  \nLabel: dies yellow nonyellow under them? Possibly they mean Y^lY^l dies, Y^ly^L yellow, y^Ly^L nonyellow. Wait but earlier statement: 2 yellow:1 nonyellow:1 yellow(dies) is weird.  \nGiven ratios: 2 yellow, 1 nonyellow, 1 yellow dies = 3 yellow total but only 2 survive? Might mean 2 surviving yellow, 1 nonyellow, 1 dead. So surviving yellow = Y^ly^L, nonyellow = y^Ly^L, dies = Y^lY^l.  \nThat matches option A.  \n\nAnswer: A",
+   "in": 509,
+   "out": 400,
+   "answered": true,
+   "usd": 0.0006327,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-6018",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Step: remarriage rates vary by sex.\nStep: men remarry more often than women.\nStep: men remarry at higher rates overall.\n\nAnswer: A",
+   "in": 194,
+   "out": 52,
+   "answered": true,
+   "usd": 4.54e-05,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Men remarry more often; women less.  \nRemarriage often follows prior marriages.  \nOption A fits statistics.  \n\nAnswer: A",
+   "in": 142,
+   "out": 27,
+   "answered": true,
+   "usd": 7.5e-05,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-8829",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Implicit differentiation: F(x,y) = x^3 + xy - y^2 - 10.\nF_x = 3x^2 + y, F_y = x - 2y.\nVertical tangent where F_y = 0 (and F_x ≠ 0): x = 2y, so y = x/2.\n\nSubstitute into curve: x^3 + x(x/2) - (x/2)^2 = 10\nx^3 + x^2/2 - x^2/4 = 10\nx^3 + x^2/4 = 10\nMultiply by 4: 4x^3 + x^2 - 40 = 0.\n\nSolve numerically: try x = 2: 32 + 4 - 40 = -4. x = 2.1: 4(9.261)=37.044, +4.41 = 41.454, -40 = 1.454. x = 2.07: x^3 = 8.8698, ×4 = 35.479; x^2 = 4.2849; total 35.479+4.285-40 = -0.236. x = 2.074: x^3 ≈ 8.9187, ×4 = 35.675; x^2 ≈ 4.3014; total 35.675+4.301-40 ≈ -0.024. x = 2.075: close to zero, so x ≈ 2.074–2.075.\n\nCheck F_x ≠ 0 there: 3x^2 + y = 3(4.30) + 1.037 ≈ 13.9 ≠ 0, so valid vertical tangent.\n\nThus x ≈ 2.074.\n\nAnswer: A",
+   "in": 178,
+   "out": 497,
+   "answered": true,
+   "usd": 0.0002663,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Differentiate implicitly: \\(3x^2 + y + xy' - 2yy'=0\\).  \nVertical tangent means \\(y'\\) undefined: coefficient of \\(y'\\) is 0.  \nSo \\(x - 2y = 0\\), hence \\(y = x/2\\).  \nSubstitute into original: \\(x^3 + x(x/2) - (x/2)^2 = 10\\).  \nSimplify: \\(x^3 + x^2/2 - x^2/4 = 10\\).  \n\\(x^3 + x^2/4 = 10\\).  \nMultiply 4: \\(4x^3 + x^2 - 40 = 0\\).  \nSolve numerically: \\(x \\approx 2.074\\).  \nAnswer: A",
+   "in": 147,
+   "out": 165,
+   "answered": true,
+   "usd": 0.00024209999999999998,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-1468",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Step: wife heard gunshot, saw neighbor.\nStep: personal knowledge requirement applies.\nStep: she perceived events firsthand.\nStep: interest goes to weight, not competence.\n\nAnswer: E",
+   "in": 646,
+   "out": 73,
+   "answered": true,
+   "usd": 0.00010109999999999999,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Step 1: Wife testifies to what she heard/saw.  \nStep 2: Personal knowledge, not eyewitness needed.  \nStep 3: Dead man's statute may bar?  \nStep 4: She is party, interested, but suing insurer.  \nStep 5: Dead man's statute usually applies against estate, not here.  \nStep 6: Competent if personal knowledge.  \nStep 7: Best match: personal knowledge.  \n\nAnswer: E",
+   "in": 435,
+   "out": 98,
+   "answered": true,
+   "usd": 0.0002481,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-8278",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Three-digit integers: 100 to 999 inclusive. Count = 999 − 100 + 1 = 900.\n\nAnswer: A",
+   "in": 133,
+   "out": 46,
+   "answered": true,
+   "usd": 3.63e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Three-digit integers: 100 to 999.  \nCount: 999 - 100 + 1 = 900.  \nAnswer: A",
+   "in": 109,
+   "out": 29,
+   "answered": true,
+   "usd": 6.75e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-5153",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Howard Becker's \"Outsiders\" (1963) studied marijuana users and described deviance as learned through a sequence of social experiences, a \"career\" of deviant behavior.\n\nOption G matches this: use is learned gradually through social processes.\n\nAnswer: G",
+   "in": 287,
+   "out": 84,
+   "answered": true,
+   "usd": 7.07e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Becker studied marijuana users.  \nHe found use is learned socially.  \nBecoming a user is a deviant career.  \nThus option G matches.  \nAnswer: G",
+   "in": 193,
+   "out": 35,
+   "answered": true,
+   "usd": 9.989999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-2529",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Reward after every 10 purchases: fixed count, so fixed-ratio.\n\n- Fixed ratio\n- Reward every 10th purchase\n- Answer E\n\nAnswer: E",
+   "in": 276,
+   "out": 61,
+   "answered": true,
+   "usd": 5.81e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Step 1: Identify reward after 10 purchases — fixed number.\nStep 2: This is ratio schedule, fixed count.\nStep 3: Match to fixed-ratio option E.\nAnswer: E",
+   "in": 169,
+   "out": 41,
+   "answered": true,
+   "usd": 9.989999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-2719",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Trauma-triggered memory loss for the event: dissociative amnesia.\n\nAnswer: D",
+   "in": 249,
+   "out": 33,
+   "answered": true,
+   "usd": 4.1400000000000003e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Traumatic event forgotten; memory loss.  \nDissociative amnesia involves forgetting stressful events.  \nAnswer: D",
+   "in": 160,
+   "out": 22,
+   "answered": true,
+   "usd": 7.439999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-10603",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "PCA is unsupervised (dimensionality reduction, no labels).\n\nAnswer: A",
+   "in": 171,
+   "out": 31,
+   "answered": true,
+   "usd": 3.2600000000000006e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "PCA is unsupervised dimensionality reduction.  \nOthers are supervised methods.  \nAnswer: A",
+   "in": 108,
+   "out": 16,
+   "answered": true,
+   "usd": 5.1599999999999994e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-5744",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Weber's four types: instrumentally rational, value rational, traditional, affectual.\n\nAffectual is the fourth type.\n\nAnswer: I",
+   "in": 184,
+   "out": 47,
+   "answered": true,
+   "usd": 4.19e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Max Weber’s four types:  \n1. Instrumentally-rational  \n2. Value-rational  \n3. Traditional  \n4. Affectual (emotional)  \n\nCorrect option matches “affectual.”  \nLetter: I  \n\nAnswer: I",
+   "in": 130,
+   "out": 49,
+   "answered": true,
+   "usd": 9.779999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-655",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Flat fee: 8% of $190 = $15.20 per year. Total for 1 year... with 6 payments over 6 months, service charge for half year? Let's test.\n\nAssume total charge = $190 + interest. Standard flat-rate: interest = 0.08 × 190 × (6/12) = $7.60. Total = $197.60. Monthly = 197.60/6 = $32.93.\n\nTrue interest rate (APR approximation): amount financed 190, average balance ≈ 190/2 = 95 over half year, interest 7.60 → annual rate 7.60/95 = 8% ... actual rate via amortization: monthly payment 32.93 on 190 over 6 months gives monthly rate ≈ 1.2%? Let's estimate: 190 with 6 payments of 32.93 → total 197.60. Solve r: PV = 32.93 × annuity factor. Try r=0.0225 (2.25%/month): factor = (1-1.0225^-6)/0.0225 ≈ (1-0.8731)/0.0225 ≈ 5.64; 32.93×5.64≈185.7, too low. Try r=0.0175: 1.0175^-6 ≈ 0.9042; (0.0958)/0.0175≈5.47; 32.93×5.47≈180.2. Try r=0.0125: 1.0125^-6≈0.9298; 0.0702/0.0125≈5.62... recheck: 1-0.9298=0.0702, /0.0125=5.616; 32.93×5.616≈184.9. Try r=0.0075 gives ~ 1-0.9566=0.0434/0.0075=5.79; 32.93×5.79≈190.6. So r≈0.008 monthly → about 13.7% APR... 0.0085×12≈10.2%; with r≈0.0114 (1.14%) annual ≈13.7%. That matches option F.\n\nAnswer: F",
+   "in": 288,
+   "out": 632,
+   "answered": true,
+   "usd": 0.0003448,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "8% of $190 = $15.20  \nTotal = 190 + 15.20 = 205.20  \nMonthly = 205.20 ÷ 6 = 34.20 (≈34.17)  \nService fee over 6 months = 15.20  \nAverage balance ≈ 190/2 = 95 (approx)  \nRate ≈ (15.20/95) × (12/6) × 100% ≈ 32%? Unsure. Need fit options.  \nOption A: $34.17 and 14.5%  \nCheck: 14.5% of 190 for half year ≈ 13.78 (close to 15.20).  \nAnswer: A",
+   "in": 215,
+   "out": 149,
+   "answered": true,
+   "usd": 0.00024329999999999998,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "1. Calculate service charge: 8% of $190  \n2. Service charge amount: $15.20  \n3. Total amount owed: $190 + $15.20  \n4. Total payment: $205.20  \n5. Monthly payment: $205.20 / 6  \n6. Monthly payment: $34.17  \n7. Calculate true interest rate:  \n8. Annual interest: ($15.20 / $190) * 12  \n9. True interest rate: 14.5%  \n\nAnswer: A",
+   "in": 216,
+   "out": 111,
+   "answered": true,
+   "usd": 9.9e-05,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-2061",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Step 1: Need three emotion indicators.\nStep 2: Personal reports, behaviors, physiology fit.\nStep 3: Option G matches best.\n\nAnswer: G",
+   "in": 259,
+   "out": 59,
+   "answered": true,
+   "usd": 5.5400000000000005e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Emotion indicators must directly reflect emotional state.  \nSpeech patterns, tone, cadence are expressive indicators.  \nPersonal reports, behaviors, physiology are standard measures.  \nCompare options: D and G both plausible, but G is broader and standard.  \nQuestion asks for three indicators; G lists classic categories.  \nAnswer: G",
+   "in": 166,
+   "out": 65,
+   "answered": true,
+   "usd": 0.0001278,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-9892",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Resistance proportional to length: R_total/R_piece = L_total/200.\n5.18/0.35 = 14.8571... ×200 = 2971 cm ≈ 2960 cm.\n\nCheck: 0.35 × 14.8 = 5.18, so ratio ≈ 14.8 → L ≈ 2960 cm.\n\nAnswer: J",
+   "in": 264,
+   "out": 118,
+   "answered": true,
+   "usd": 8.54e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Resistance proportional to length.  \n200 cm gives 0.35 Ω.  \nTotal length = (5.18 / 0.35) × 200.  \n5.18 / 0.35 = 14.8.  \n14.8 × 200 = 2960 cm.  \nAnswer: J",
+   "in": 196,
+   "out": 66,
+   "answered": true,
+   "usd": 0.000138,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-4324",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Concentration cell with transference: E = (2t₊ RT/F) ln(a₂/a₁) for HCl with same electrode... Standard formula for H2/HCl concentration cell without liquid junction: E = (2t₋ RT/F) ln(a₂/a₁)? Let's compute.\n\nCell: Pt/H2/HCl(0.2M)//HCl(0.8M)/H2/Pt, with transference, typically E = 2t₋(RT/F) ln(c₂/c₁) where t₋ is anion transference (Cl⁻ migrates to anode). With t₊ = 0.83, t₋ = 0.17.\n\nRT/F at 25°C = 0.02569 V; ln(0.8/0.2) = ln4 = 1.386.\n\nE = 2(0.17)(0.02569)(1.386) = 0.34 × 0.03561 = 0.0121 V ≈ 0.012 V.\n\nCheck using t₊ instead: 2(0.83)(0.0356) = 0.059 ≈ 0.06 V. The common textbook formula for such cells (Hydrogen electrode concentration cell with transference) uses t₊ with E = 2t₊(RT/F)ln(a₂/a₁)... Ambiguity: the standard result for cell Pt/H2/HCl(c1)//HCl(c2)/H2/Pt is E = −2t₊(RT/F)ln(c2/c1) (for the reversed arrangement), giving magnitude 2(0.83)(0.0257)(1.386) ≈ 0.059 V ≈ 0.06 V.\n\nGiven the options, 0.06 V matches the t₊-based formula, which is the standard textbook form for this problem.\n\nAnswer: D",
+   "in": 235,
+   "out": 578,
+   "answered": true,
+   "usd": 0.00031249999999999995,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Concentration cell with transference.  \nBoth electrodes hydrogen, same gas pressure.  \nEMF from HCl activity difference.  \nFormula: E = -t_+ (RT/F) ln(a1/a2).  \nApprox activities by concentration.  \nt_+ = 0.83, T = 298 K.  \nRT/F = 0.0257 V.  \nln(0.2/0.8) = ln(0.25) = -1.386.  \nE = -0.83 × 0.0257 × (-1.386).  \n0.83 × 0.0257 ≈ 0.02133.  \n0.02133 × 1.386 ≈ 0.02956 V.  \nBut cation transport means potential relates anion?  \nRecheck: E = (t_- - t_+) (RT/F) ln ratio?  \nFor HCl, 1:1, E = (2t_+ -1)(RT/F) ln(c1/c2).  \n2(0.83)-1 = 0.66.  \nE = 0.66 × 0.0257 × (-1.386) → negative magnitude.  \n0.66 × 0.0257 ≈ 0.01696.  \n× 1.386 ≈ 0.0235 V.  \nClosest option 0.02 V.  \n\nAnswer: E",
+   "in": 181,
+   "out": 294,
+   "answered": true,
+   "usd": 0.0004071,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "1. Identify cell components.  \n2. Use Nernst equation.  \n3. Standard electrode potential known.  \n4. Calculate concentrations.  \n5. Apply equation for voltage.  \n6. Insert values for calculation.  \n7. Solve for E_cell.  \n\nAfter calculations, the voltage is determined to be approximately 0.06 volts.  \n\nAnswer: D",
+   "in": 184,
+   "out": 74,
+   "answered": true,
+   "usd": 7.199999999999999e-05,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-3777",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Density = 9.80 g/cm³, depth 1.5 cm → mass thickness = 14.7 g/cm².\nHalf thickness 12 g/cm² → μ = ln2/12 ≈ 0.05776 cm²/g.\nμx = 0.05776 × 14.7 ≈ 0.849.\nI/I₀ = e^(-0.849) ≈ 0.428.\nPercent decrease ≈ 57.2%.\n\nMatches option G (57.15%).\n\nAnswer: G",
+   "in": 228,
+   "out": 167,
+   "answered": true,
+   "usd": 0.0001063,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Mass absorption coefficient given via half thickness  \nHalf thickness = 12 g/cm²  \nConvert to mass thickness for 1.5 cm depth  \nDensity = 9.80 g/cm³ (since 9.80×10³ kg/m³)  \nMass thickness = 9.80 × 1.5 = 14.7 g/cm²  \nNumber of half thicknesses = 14.7 / 12 = 1.225  \nIntensity ratio = (1/2)^1.225 ≈ 0.4285  \nPercent decrease = 1 - 0.4285 = 0.5715 → 57.15%  \nAnswer: G",
+   "in": 164,
+   "out": 139,
+   "answered": true,
+   "usd": 0.000216,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-3548",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Photon energy: E = hc/λ = 1240 eV·nm / 58.4 nm ≈ 21.23 eV.\n\nKinetic energy: KE = ½ m v² = 0.5 × 9.109×10⁻³¹ × (1.59×10⁶)² = 0.5 × 9.109×10⁻³¹ × 2.528×10¹² ≈ 1.151×10⁻¹⁸ J ≈ 7.18 eV.\n\nIonization energy = 21.23 − 7.18 ≈ 14.05 eV ≈ 14 eV.\n\nAnswer: C",
+   "in": 358,
+   "out": 203,
+   "answered": true,
+   "usd": 0.0001373,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Photon energy: \\(E = hc/\\lambda\\)  \n\\(E = (6.626e-34)(3e8)/(58.4e-9)\\)  \n\\(E \\approx 3.40e-18 J\\)  \nConvert: \\(3.40e-18 / 1.602e-19 \\approx 21.2 eV\\)  \nKinetic energy: \\(K = \\frac12 mv^2\\)  \n\\(K = 0.5(9.109e-31)(1.59e6)^2\\)  \n\\(K \\approx 1.15e-18 J \\approx 7.2 eV\\)  \nIonization energy = photon energy – KE  \n\\(21.2 - 7.2 \\approx 14.0 eV\\)  \n\nAnswer: C",
+   "in": 209,
+   "out": 167,
+   "answered": true,
+   "usd": 0.0002631,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-11258",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Let Ax: x is an artifact, Px: x is a person.\n\"No artifacts are people\" = for all x, if x is an artifact then x is not a person: (∀x)(Ax ⊃ ~Px).\n\nOption F matches.\n\nAnswer: F",
+   "in": 254,
+   "out": 84,
+   "answered": true,
+   "usd": 6.74e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "No artifacts are people.  \nAll artifacts are not people.  \nA = artifact, P = person.  \n(∀x)(Ax ⊃ ~Px).  \n\nAnswer: F",
+   "in": 166,
+   "out": 37,
+   "answered": true,
+   "usd": 9.419999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-6684",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Rheumatic history, opening snap, low-pitched diastolic murmur, left atrial enlargement, straight left heart border, AF, pulmonary congestion.\n\nAnswer: D\n\nAnswer: D",
+   "in": 375,
+   "out": 68,
+   "answered": true,
+   "usd": 7.15e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "History: rheumatic fever, murmur → valve disease.  \nOpening snap + diastolic murmur → mitral stenosis.  \nIrregularly irregular pulse → atrial fibrillation.  \nHemoptysis + pulmonary congestion → mitral stenosis complications.  \nAnswer: D",
+   "in": 241,
+   "out": 47,
+   "answered": true,
+   "usd": 0.00012869999999999998,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-11796",
+  "group": "fresh 2",
+  "haiku": {
+   "text": "Standard result: with 1/7 power law and C_f = 0.045(ν/(UV))^{1/4}, momentum integral gives δ = 0.37x/Re_x^{1/5}.\n\nCheck: δ = 0.37x (ν/(Vx))^{1/5}... Re_x = Vx/ν, so δ = 0.37x/Re_x^{1/5}, matching option G.\n\nAnswer: G",
+   "in": 626,
+   "out": 138,
+   "answered": true,
+   "usd": 0.0001316,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Momentum integral equation: dθ/dx = Cf/2  \nVelocity profile: u/V = (y/δ)^1/7  \nShape factor from profile: θ = 7δ/72  \nSubstitute θ and Cf into equation  \n7/72 dδ/dx = 0.0225 (ν/Vδ)^1/4  \nSeparate and integrate: δ^(5/4) ∝ x  \nResult: δ = 0.37x / Re_x^(1/5)  \nAnswer: G",
+   "in": 414,
+   "out": 109,
+   "answered": true,
+   "usd": 0.000255,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-151",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "- Bicycles: 5 people × 2 tires = 10 tires\n- Tricycles: 3 people × 3 tires = 9 tires\n- Unicycle: 1 person × 1 tire = 1 tire\n- Total tires: 10 + 9 + 1 = 20\n- Earnings: 20 × $0.25 = $5.00\n\n5\n\nAnswer: 5",
+   "in": 202,
+   "out": 124,
+   "answered": true,
+   "usd": 8.22e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "5 people × 2 tires = 10 tires  \n3 people × 3 tires = 9 tires  \n1 unicycle = 1 tire  \nTotal tires = 20 tires  \n20 × $0.25 = $5  \nAnswer: 5",
+   "in": 143,
+   "out": 51,
+   "answered": true,
+   "usd": 0.0001041,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-118",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Day 1: 2 containers × 5 = 10 vehicles.\nTotal after day 2: 30 vehicles.\nDay 2 vehicles: 30 − 10 = 20.\nContainers on day 2: 20 ÷ 5 = 4.\n\n4\nAnswer: 4",
+   "in": 179,
+   "out": 95,
+   "answered": true,
+   "usd": 6.54e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "2 containers × 5 = 10  \n30 − 10 = 20  \n20 ÷ 5 = 4  \nAnswer: 4",
+   "in": 124,
+   "out": 29,
+   "answered": true,
+   "usd": 7.2e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-369",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Frame cost with etching: $20 × 1.20 = $24 each.\nFrames for 44 seniors: 44 × 24 = $1056.\nPins: 2 × $5 = $10.\nOfficers: 44 ÷ 4 = 11 seniors.\nCords: 11 × $12 = $132.\nTotal: 1056 + 10 + 132 = $1198.\n\nAnswer: 1198",
+   "in": 194,
+   "out": 134,
+   "answered": true,
+   "usd": 8.64e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "44 seniors, frames cost $20  \n20% etching adds $4 per frame  \nTotal per frame: $24  \n44 × $24 = $1056  \n2 pins × $5 = $10  \n1/4 of 44 = 11 officers  \n11 cords × $12 = $132  \nTotal: $1056 + $10 + $132 = $1198  \nAnswer: 1198",
+   "in": 139,
+   "out": 83,
+   "answered": true,
+   "usd": 0.0001413,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-569",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Mitchell: 21 × $4 = $84.\nLiam: $63.\nDifference: $84 − $63 = $21.\n\n21\nAnswer: 21",
+   "in": 180,
+   "out": 52,
+   "answered": true,
+   "usd": 4.4e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Mitchell sold 21 at $4  \n21 × 4 = 84  \n84 − 63 = 21  \nAnswer: 21",
+   "in": 117,
+   "out": 29,
+   "answered": true,
+   "usd": 6.989999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-900",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Denise today: Daniel yesterday read 13, so Denise read 13+5=18 today.\nTotals: Denise 10+18=28; Daniel 13+0=13.\nDifference: 28-13=15.\n\nAnswer: 15",
+   "in": 173,
+   "out": 78,
+   "answered": true,
+   "usd": 5.63e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Denise yesterday: 10  \nDaniel yesterday: 13  \nDenise today: 13+5=18  \nDenise total: 10+18=28  \nDaniel total: 13  \nDifference: 28−13=15  \nAnswer: 15",
+   "in": 115,
+   "out": 54,
+   "answered": true,
+   "usd": 9.929999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-252",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Last night: 10 wolves, 15 cougars.\nToday cougars: 15 - 3 = 12.\nToday wolves: 3 × 12 = 36.\nToday total: 36 + 12 = 48.\nLast night total: 10 + 15 = 25.\nOverall: 25 + 48 = 73.\n\n73\nAnswer: 73",
+   "in": 139,
+   "out": 114,
+   "answered": true,
+   "usd": 7.09e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Last night wolves: 10\nLast night cougars: 15\nToday wolves = 3×cougars\nToday cougars = 15−3=12\nToday wolves = 3×12=36\nToday total = 36+12=48\nLast night total = 10+15=25\nOverall total = 48+25=73\nAnswer: 73",
+   "in": 94,
+   "out": 80,
+   "answered": true,
+   "usd": 0.0001242,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-860",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "12 oranges minus 3 daughters × 2 = 6 given, so 6 left; minus 3 for son leaves 3.\n\n3\n\nAnswer: 3",
+   "in": 128,
+   "out": 53,
+   "answered": true,
+   "usd": 3.93e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Bought 12 oranges.  \nGave daughters 6 oranges.  \nGave boy 3 oranges.  \nTotal given 9 oranges.  \nRemaining 3 oranges.  \nAnswer: 3",
+   "in": 88,
+   "out": 41,
+   "answered": true,
+   "usd": 7.56e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-780",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Let Emma's values be E enemies, B berries, T seconds left. Ava: E+8, B+3, T-4.\n\nDifference (Ava - Emma):\n- Enemies: 8×10 = 80\n- Berries: 3×5 = 15\n- Time: -4×30 = -120\n\nTotal: 80 + 15 - 120 = -25\n\nSo Emma scores 25 points more than Ava. The difference is 25.\n\nAnswer: 25",
+   "in": 223,
+   "out": 145,
+   "answered": true,
+   "usd": 9.48e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Ava advantage: 8 enemies → 80  \nAva advantage: 3 berries → 15  \nAva disadvantage: 4 seconds → 120  \nNet: 80 + 15 - 120 = -25  \nDifference: 25  \nAnswer: 25",
+   "in": 162,
+   "out": 56,
+   "answered": true,
+   "usd": 0.0001158,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-659",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Almonds: $10/lb, walnuts: $15/lb.\n\nMixture 1: 1/2 lb almonds = $5; 1/3 lb walnuts = $5. Total $10.\nMixture 2: 1/5 lb almonds = $2; 1/3 lb walnuts = $5. Total $7.\nDifference: $10 − $7 = $3.\n\n3\n\nAnswer: 3",
+   "in": 161,
+   "out": 133,
+   "answered": true,
+   "usd": 8.26e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Almonds cost $10/lb  \nWalnuts cost $15/lb  \nFirst mix: 1/2 lb almonds  \nFirst mix almonds cost $5  \nFirst mix walnuts: 1/3 lb  \nFirst mix walnuts cost $5  \nFirst mix total $10  \nSecond mix: 1/5 lb almonds  \nSecond mix almonds cost $2  \nSecond mix walnuts: 1/3 lb  \nSecond mix walnuts cost $5  \nSecond mix total $7  \nDifference: $10 - $7 = $3  \nAnswer: 3",
+   "in": 109,
+   "out": 112,
+   "answered": true,
+   "usd": 0.0001671,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-991",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Father saw comet at 30. Comet period 75 years. Bill saw it second time at 3×30=90? Wait: Bill saw it second time when he was three times father's age at first sighting: 90 years old.\n\nBill's second sighting is 75 years after his first. So first sighting age = 90 − 75 = 15.\n\nAnswer: 15\n\nAnswer: 15",
+   "in": 159,
+   "out": 119,
+   "answered": true,
+   "usd": 7.54e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Dad saw at 30  \nBill second time: 90  \n75 years between sightings  \nBill first time: 15  \nAnswer: 15",
+   "in": 118,
+   "out": 29,
+   "answered": true,
+   "usd": 7.02e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1217",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Visits per year: 3.\nFirst 5 years at $2: 5 × 3 × 2 = 30.\nPrice increases 150%: new price = 2 + 3 = $5.\nNext 3 years at $5: 3 × 3 × 5 = 45.\nTotal: 30 + 45 = 75.\n\nAnswer: 75",
+   "in": 169,
+   "out": 107,
+   "answered": true,
+   "usd": 7.04e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "First 5 years: 15 visits.  \nCost per visit: $2.  \nSpent first 5 years: $30.  \nCost increases by 150%: new $5.  \nNext 3 years: 9 visits.  \nSpent next 3 years: $45.  \nTotal spent: $75.  \nAnswer: 75",
+   "in": 123,
+   "out": 73,
+   "answered": true,
+   "usd": 0.0001245,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-873",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "16 bolts × $0.03 = $0.48. $12.48 − $0.48 = $12.00.\n\n12.00\nAnswer: 12.00",
+   "in": 129,
+   "out": 49,
+   "answered": true,
+   "usd": 3.74e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "16 bolts cost $0.48  \n$12.48 − $0.48 = $12.00  \nAnswer: 12.00",
+   "in": 94,
+   "out": 29,
+   "answered": true,
+   "usd": 6.3e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-728",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Blue spools: 15 + 45 = 60. Total: 15 + 45 + 40 + 50 = 150. Percent: 60/150 = 40%.\n\n40\n\nAnswer: 40",
+   "in": 135,
+   "out": 64,
+   "answered": true,
+   "usd": 4.55e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "15+45=60 blue spools  \n15+45+40+50=150 total  \n60/150=0.4  \n0.4×100=40  \nAnswer: 40",
+   "in": 101,
+   "out": 40,
+   "answered": true,
+   "usd": 7.83e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-865",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Red: 12\nGreen: 12 − 2 = 10\nBlue: 3 × 10 = 30\nRed + Green + Blue = 52\nYellow: 75 − 52 = 23\n\nAnswer: 23",
+   "in": 159,
+   "out": 72,
+   "answered": true,
+   "usd": 5.19e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "12 red cars  \nGreen: 12 - 2 = 10  \nBlue: 3 × 10 = 30  \nRed + green + blue = 52  \nYellow: 75 - 52 = 23  \nAnswer: 23",
+   "in": 119,
+   "out": 50,
+   "answered": true,
+   "usd": 9.57e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-668",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "50 × 20% = 10 management employees.\n10 × 30% = 3.\n\nAnswer: 3",
+   "in": 123,
+   "out": 34,
+   "answered": true,
+   "usd": 2.93e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "50 employees, 20% management  \n10 management employees  \n30% of 10 oversee  \n3 employees oversee  \nAnswer: 3",
+   "in": 93,
+   "out": 27,
+   "answered": true,
+   "usd": 6.029999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-207",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Chocolate bar: 40g each, 25 bars = 1000g.\nCandied apple: 20g each (half of 40g), 80 apples = 1600g.\nTotal = 2600g.\n\nAnswer: 2600\n\nAnswer: 2600",
+   "in": 160,
+   "out": 80,
+   "answered": true,
+   "usd": 5.6000000000000006e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "25 bars, 40g each  \n80 apples, half weight  \nTotal chocolate: 1000g  \nApple weight: 20g each  \nApples total: 1600g  \nSum: 2600g  \nAnswer: 2600",
+   "in": 105,
+   "out": 51,
+   "answered": true,
+   "usd": 9.27e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-672",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Total days: 30. Good days: 12. Bad: 8. Neutral: 10.\n\nFirst 24 days cover 8 good, 8 bad, 8 neutral... wait, need to check consistency.\n\nFirst 8 days good: 8 good.\nSecond 8 days bad: 8 bad.\nThird 8 days neutral: 8 neutral.\nThat's 24 days, leaving 6 days.\n\nTotal good so far: 8, so 4 good remain among the last 6 days (12 − 8 = 4).\nBad: all 8 used. Neutral: 8 used, 2 remain (10 − 8 = 2).\nRemaining days: 6 = 4 good + 2 neutral. Consistent.\n\nNext three days: good, neutral, good uses 2 good and 1 neutral.\nGood days left: 4 − 2 = 2.\n\nAnswer: 2\n\nAnswer: 2",
+   "in": 174,
+   "out": 288,
+   "answered": true,
+   "usd": 0.0001614,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "30 days total.  \n12 good, 8 bad, rest neutral = 10.  \nFirst 8 good, next 8 bad, next 8 neutral.  \nThat covers 24 days.  \nNext 3: good, neutral, good.  \nGood so far: 8 + 2 = 10.  \nTotal good days = 12.  \nGood left = 12 - 10 = 2.  \nAnswer: 2",
+   "in": 131,
+   "out": 92,
+   "answered": true,
+   "usd": 0.0001497,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1201",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Red: 66/3 = 22.\nRemaining: 44.\nBlue: 5/11 × 44 = 20.\nTotal: 22 + 20 = 42.\n\n42\n\nAnswer: 42",
+   "in": 139,
+   "out": 65,
+   "answered": true,
+   "usd": 4.6399999999999996e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "66 fish total.  \nRed: 1/3 of 66 = 22.  \nRemaining: 44 fish.  \nBlue: 5/11 of 44 = 20.  \nTotal red + blue: 22 + 20 = 42.  \nAnswer: 42",
+   "in": 97,
+   "out": 60,
+   "answered": true,
+   "usd": 0.0001011,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-221",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Start: 120 L. Used 90 L. Left: 30 L. Rainwater collected: twice 30 = 60 L. Total: 30 + 60 = 90.\n\n90\n\nAnswer: 90",
+   "in": 144,
+   "out": 67,
+   "answered": true,
+   "usd": 4.79e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "120 minus 90 = 30  \nTwice 30 = 60  \n30 plus 60 = 90  \nAnswer: 90",
+   "in": 109,
+   "out": 28,
+   "answered": true,
+   "usd": 6.63e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-230",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "- Car price: $20,000\n- Tax 10%: $2,000\n- Registration: $1,000\n- Per car total: $23,000\n- Times 12 cars: $276,000\n\n276000\nAnswer: 276000",
+   "in": 141,
+   "out": 70,
+   "answered": true,
+   "usd": 4.91e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "12 cars × $20,000 = $240,000  \n10% tax = $24,000  \nRegistration: 12 × $1,000 = $12,000  \nTotal: $240,000 + $24,000 + $12,000 = $276,000  \nAnswer: 276000",
+   "in": 106,
+   "out": 64,
+   "answered": true,
+   "usd": 0.0001086,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1207",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Total weight: 56 + 46 + 26 = 128 kg\nEarnings: 128 × 0.50 = 64\n\n64\nAnswer: 64",
+   "in": 181,
+   "out": 51,
+   "answered": true,
+   "usd": 4.36e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "56+46+26=128 kg  \n128×0.50=64  \nAnswer: 64",
+   "in": 119,
+   "out": 21,
+   "answered": true,
+   "usd": 6.09e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-82",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Grace: 125 lbs.\nAlex: 4×125 = 500, minus 2 = 498.\nCombined: 125 + 498 = 623.\n\n623\n\nAnswer: 623",
+   "in": 122,
+   "out": 61,
+   "answered": true,
+   "usd": 4.27e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Grace: 125 pounds.  \n4 times Grace: 500.  \nAlex: 498.  \nCombined: 623.  \nAnswer: 623",
+   "in": 80,
+   "out": 32,
+   "answered": true,
+   "usd": 6.24e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1005",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Females: 3/5 × 50 = 30.\nBabies per month: 30 × 4 = 120.\nAssume no deaths, population grows by 120 each month... but females stay 30 (babies not counted as females, assumed).\n\nMonthly babies: 120 per month for 12 months = 1440.\nTotal: 50 + 1440 = 1490.\n\nAnswer: 1490",
+   "in": 139,
+   "out": 123,
+   "answered": true,
+   "usd": 7.54e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Total porcupines 50  \nFemales 3/5 of 50  \n3/5 × 50 = 30  \nEach female 4 babies monthly  \nMonthly babies 30 × 4  \nMonthly babies = 120  \nYearly babies 120 × 12  \nYearly babies = 1440  \nOriginal plus babies 50 + 1440  \nTotal after year 1490  \nAnswer: 1490",
+   "in": 111,
+   "out": 88,
+   "answered": true,
+   "usd": 0.0001389,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "gsm-1199",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "24 - 4 = 20 gallons\n20 - 7 = 13 gallons\n13 - 5 = 8 gallons\n8 shared among 4 people (Fred + 3 guests)? The problem says \"Fred and the others\" — 3 people showed up, plus Fred = 4.\n8 / 4 = 2\n\n2\n\nAnswer: 2",
+   "in": 305,
+   "out": 114,
+   "answered": true,
+   "usd": 8.75e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "24 - 4 = 20  \n20 - 7 = 13  \n13 - 5 = 8  \n8 / (Fred + 3)  \n8 / 4 = 2  \nAnswer: 2",
+   "in": 208,
+   "out": 45,
+   "answered": true,
+   "usd": 0.00011640000000000001,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-5107",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Sandstone is clastic sedimentary rock formed from sand grains that lithify; a sandstone layer above shale implies deposition of sand after shale formed, in a sedimentary sequence.\n\nCheck options:\n- A: shells forming sandstone — biogenic limestone, not sandstone.\n- B: impact pulverizing rock — sand formed, but not sequence-consistent with simple layering over shale.\n- C: organic material to sandstone — impossible.\n- D: lake lowering, beach forms over lake bottom — beach sand deposited over lakebed mud, consistent.\n- E: contact metamorphism shale to sandstone — shale cannot become sandstone.\n- F: lava becoming sandstone — lava forms igneous rock.\n- G: river deposits silt/clay over shale, compacts to sandstone — silt/clay become shale/mudstone, not sandstone.\n- H: tectonic push — doesn't explain sandstone formation.\n\nD best fits: sand deposited on top of previously deposited shale in a shoreline environment, later lithified.\n\nAnswer: D",
+   "in": 443,
+   "out": 355,
+   "answered": true,
+   "usd": 0.0002218,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Sandstone above shale means:  \n1. Shale formed first (mud).  \n2. Sand deposited later on top.  \n3. Beach over lake bottom fits.  \n4. Other options misassign origins.  \nAnswer: D",
+   "in": 283,
+   "out": 48,
+   "answered": true,
+   "usd": 0.0001425,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-6169",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Key muscle actions on mandible fragments:\n- Anterior fragment: pulled medially by medial pterygoid (and digastric anterior belly pulls it down/back).\n- Posterior fragment (with condyle, ramus): pulled upward by masseter and temporalis, and medially by medial pterygoid.\n\nOption E: anterior fragment medially by medial pterygoid is a classic textbook option, but the medial pterygoid acts on the posterior (ramus) fragment, pulling it medially and upward, while the anterior fragment is pulled down and back by digastric and displaced medially is less direct.\n\nOption J: posterior fragment medially by medial pterygoid fits the classic description: the ramus/angle fragment is displaced medially, upward and forward by medial pterygoid and masseter.\n\nOption F: posterior fragment upward by masseter is also true but incomplete.\n\nBest match: J.\n\nAnswer: J",
+   "in": 420,
+   "out": 301,
+   "answered": true,
+   "usd": 0.00019250000000000002,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Fracture body mandible displaces fragments.  \nAnterior fragment: pulled down by digastric, medially by medial pterygoid.  \nPosterior fragment: pulled up by masseter, medially by medial pterygoid, anteriorly by lateral pterygoid.  \nUnfavourable fracture means muscles pull fragments apart, not together.  \nPosterior fragment displaced medially by medial pterygoid is correct.  \n\nAnswer: J",
+   "in": 265,
+   "out": 93,
+   "answered": true,
+   "usd": 0.00019109999999999998,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-6120",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Vitamin E is the lipid-soluble antioxidant in membranes.\n\nAnswer: H",
+   "in": 196,
+   "out": 33,
+   "answered": true,
+   "usd": 3.61e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Vitamin E is lipid-soluble antioxidant.  \nAnswer: H",
+   "in": 119,
+   "out": 11,
+   "answered": true,
+   "usd": 4.8899999999999996e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-11608",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "The matrix notation is garbled, so I'll interpret: A = [[1, -1, 2],[... ]] is unclear. Let me parse the rows as written.\n\nA appears as rows: \"1- 12\" → likely row1: 1, -1, 2? Compare B rows: \"283\", \"323\", \"151\" → B = [[2,8,3],[3,2,3],[1,5,1]] (three rows of three).\n\nThen A likely = [[1,-1,2],[... ]] with row entries from \"1- 12\" meaning 1, -1, 2.\n\nAssuming A = [[1,-1,2],[1,... ]] is ambiguous, test option consistency: A+B first row = A row1 + (2,8,3). Option A first row 4,7,3 means A row1 first entry 2... Let's test option H: A+B first row 3,7,5 → A row1 = (1,-1,2): 2+1=3, 8-1=7, 3+2=5. ✓.\nSecond row of A+B in H: 4,7,4 → wait H says |375| |474|: row2 = (4,7,4)? Row2 of B = (3,2,3), so A row2 = (1,5,1). Check: 3+1=4, 2+5=7, 3+1=4. ✓ (B row3 = (1,5,1) consistent with A row2 = (1,5,1)? That gives A row2 = (1,5,1).)\n\nCheck A-B in H: row1: (1-2, -1-8, 2-3) = (-1,-9,-1) ✓. Row2: (1-3, 5-2, 1-3) = (-2,3,-2); H says |2 -32| — mismatch in parsing, but H's first row matches exactly, and the A+B row1 matches. Among options, H is the only one whose A+B row 1 (3,7,5) and row 2 start (4,7,4) fit, and its A-B row1 (-1,-9,-1) matches.\n\nAnswer: H",
+   "in": 458,
+   "out": 633,
+   "answered": true,
+   "usd": 0.00036229999999999997,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Let A = |1 -12|  \nand B = |2 8 3| |3 2 3| |1 5 1|.  \n\nThis formatting is ambiguous. Likely A is 1×2? B is 3×3? Impossible to add.  \n\nCheck possible transcription: A = |1 -12| means 1×2? B maybe 2×3? The options show results as 2×3?  \n\nOptions A+B all look like two rows of three numbers — so both A and B must be 2×3.  \n\nThus A is probably |1 -1 2|? There's a missing row? Or A could be two rows? Possibly typo in problem: A = |1 -1 2| |3 2 3|? No that’s five numbers.  \n\nTry interpreting “A = |1 - 12|” as two rows: row1 = |1 -1 2| actually not matching. Could be A = |1 -1 2| and second row |3 2 3|? That merges with B?  \n\nGiven multiple choices, test option matching.  \n\nLet’s guess A = |1 -1 2| and |3 2 3|? Then B maybe |1 5 1| ... but then too few?  \n\nBetter: Look at correct A+B from choices: all have first row like 375, 473, 474, etc. Reverse: A+B ~ |3 7 5| |4 7 5| common.  \n\nFrom hint patterns, A-B also matches one.  \n\nCheck Option B: A+B=375/475; A-B=-2 -9 -1 / 2 -32.  \n\nTest: If A+B row1=3 7 5, row2=4 7 5; A-B row1= -2 -9 -1, row2= 2 -3 2? That’s 4 values row2? Option B says |2 -32| maybe means 2 -3 2.  \n\nSolve: A=((sum+diff)/2): row1: (3+(-2))/2=0.5 no. So not clean unless integers? Maybe misformat.  \n\nGiven complexity, the most plausible by symmetry is option H: A+B=375/474, A-B=-1 -9 -1 / 2 -32 — matches typical matrix sums in such MCQs.  \n\nAnswer: H",
+   "in": 379,
+   "out": 525,
+   "answered": true,
+   "usd": 0.0007436999999999999,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-7186",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "We need the VAR model structure from equation 16, which isn't shown. Typical setup: y_t = α + a·y_{t-1} + b·x_{t-1} + ε, x_t = β + c·y_{t-1} + d·x_{t-1} + u. Bi-directional feedback (Granger causality both ways) requires x Granger-causes y (b significant) and y Granger-causes x (c significant).\n\nOption I: b, c, d significant includes both causal coefficients b and c, plus d. Option J has b and c significant with a and d insignificant, which is a clean statement of bi-directional feedback with no own-lag effects needed. Standard textbook definition: feedback means both cross-lag coefficients significant; own-lag terms are irrelevant to the definition.\n\nOption B (a and c) would be unidirectional from y's own lag plus y→x, not x→y. Option J matches the common exam answer for bi-directional causality among the choices that specify both cross terms.\n\nAnswer: J",
+   "in": 309,
+   "out": 323,
+   "answered": true,
+   "usd": 0.0001924,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "VAR equations: y depends on own lags (a) and other lags (b); x depends on own lags (d) and other lags (c).  \nBi-directional feedback means each variable is significantly affected by lags of the other.  \nSo b and c must be significant.  \nAnswer: J",
+   "in": 212,
+   "out": 66,
+   "answered": true,
+   "usd": 0.0001428,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-10049",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Gauss's law: net flux through any closed surface equals enclosed charge divided by ε₀, regardless of external charges or geometry.\n\nAnswer: I",
+   "in": 250,
+   "out": 52,
+   "answered": true,
+   "usd": 5.1e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Gauss's law applies universally.  \nFlux depends only on enclosed charge.  \nSurface shape, motion, symmetry irrelevant.  \n\nAnswer: I",
+   "in": 173,
+   "out": 29,
+   "answered": true,
+   "usd": 8.669999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-12171",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Step: local heat flux q_x = h_x(T_s - T).\nStep: total heat over length L: Q = ∫ h_x(T_s - T) P dx.\nStep: average definition: Q = h_av·A·(T_s - T)_av, with A = PL.\nStep: solve: h_av = ∫ h_x(T_s - T)dx / [L(T_s - T)_av].\nStep: (T_s - T)_av is the defined average temperature difference, which in the given option form is T_s - T_av.\n\nMatching the options, the expression with denominator (T_s - T_av) and the integral over h_x(T_s - T) with normalization by L corresponds to option B's structure, where the integral is divided by the average temperature difference and the length factor is absorbed in the integral's bounds. Option B matches the derived form h_av = ∫h_x(T_s - T)dx / (T_s - T_av) with the length normalization implicit in the defined average.\n\nAnswer: B",
+   "in": 663,
+   "out": 316,
+   "answered": true,
+   "usd": 0.00022429999999999998,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Total heat transfer equals integral local.  \nQ = ∫ h_x (T_s−T) dA.  \nAverage: Q = h_av A (T_s−T)_av.  \nCancel area A both sides.  \nSo h_av = ∫h_x(T_s−T)dx / (T_s−T)_av.  \nMatches option B.  \n\nAnswer: B",
+   "in": 465,
+   "out": 78,
+   "answered": true,
+   "usd": 0.0002331,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-5066",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "We need the option that is NOT a reason business/investor groups are successful.\n\nOptions A, B, D, E, F, H, I all describe advantages (resources, influence, contributions, economic impact, organization, media, longevity).\nC claims businesspeople are more educated about legislative processes, which is not a standard reason cited.\nG claims these groups' constituents make up the majority of voters in many districts, which is false: businesspeople and investors are a small share of voters.\n\nSo G is the exception, since it's a factual claim about voter majorities rather than a mechanism of lobbying success.\n\nAnswer: G",
+   "in": 397,
+   "out": 189,
+   "answered": true,
+   "usd": 0.0001342,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Financial resources enable sustained lobbying campaigns.  \nFinancial status can boost political influence.  \nEducation on legislative processes not universal trait.  \nCampaign contributions increase access to legislators.  \nEconomic impact draws legislator attention.  \nOrganization and efficiency aid lobbying success.  \nConstituents majority of voters? Not typical.  \nResources influence public opinion via media.  \nLongevity builds ties and expertise.  \nOutlier: claim about majority voters is false.  \n\nAnswer: G",
+   "in": 256,
+   "out": 91,
+   "answered": true,
+   "usd": 0.000186,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-12241",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Compute Reynolds number: Re = V L / ν = 20×100/1.08e-5 = 1.85e8 (turbulent).\n\nUse turbulent friction coefficient (1/7 power law): Cf = 0.074 Re^-0.2.\n\nRe^0.2: ln(1.85e8)=19.036; ×0.2=3.807; e^3.807≈45.0. Cf=0.074/45.0=0.001644.\n\nArea = 10×100 = 1000 ft² (wetted, both sides? Take one side).\nDynamic pressure: ½ρV²/g = 0.5×62.4×400/32.2 = 387.6 lb/ft².\nDrag = Cf × A × ½ρV²/g = 0.001644×1000×387.6 ≈ 637 lb.\n\nThat is near 640 lb, matching option F's whole-plate value.\n\nFirst 10 ft: Re = 20×10/1.08e-5 = 1.85e7. Re^0.2: ln=16.733; ×0.2=3.347; e^3.347≈28.4. Cf=0.074/28.4=0.002606.\nArea = 10×10=100 ft². Drag = 0.002606×100×387.6 ≈ 101 lb ≈ 100 lb.\n\nOption G gives 700 and 100; option F gives 640 and 90. The whole-plate value of 637 matches F best, while the first-10-ft value of ~101 matches G best. Using the 1/7 power law instead (Cf = 0.074/Re^0.2 with the laminar-turbulent mixed correction, Cf = 0.455/(log Re)^2.58 − 1700/Re): for the whole plate, log Re = 8.267, (8.267)^2.58 ≈ 1.07e2, Cf ≈ 0.455/107 ≈ 0.00425 − 0.0000092 ≈ 0.00424 → Drag ≈ 0.00424×1000×387.6 ≈ 1644 lb, which is not an option, so the intended formula is the simple turbulent one, giving ~640 lb overall, matching option F; the first-10-ft value using the same formula is ~100 lb, and option F's 90 lb is the closest consistent pair.\n\nAnswer: F",
+   "in": 499,
+   "out": 745,
+   "answered": true,
+   "usd": 0.0004224,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Reynolds number whole plate  \nRe = UL/ν  \n20×100 / 1.08e-5 = 1.85e8  \nTurbulent, use flat plate drag  \n\nWhole plate formula  \nC_D = 0.031/Re^(1/7)  \nCompute Re^(1/7) ≈ 11.49  \nC_D ≈ 0.00270  \n\nDrag whole plate  \nF = ½ρU²A C_D  \nA = 10×100 = 1000 ft²  \nF ≈ 0.5×62.4×400×1000×0.00270  \nF ≈ 842 lb_f  \n\nFirst 10 ft Reynolds  \nRe = 20×10 / 1.08e-5 = 1.85e7  \nTurbulent  \n\nShort plate drag coef  \nC_D = 0.031/Re^(1/7)  \nRe^(1/7) ≈ 8.98  \nC_D ≈ 0.00345  \n\nDrag first 10 ft  \nA = 10×10 = 100 ft²  \nF ≈ 0.5×62.4×400×100×0.00345  \nF ≈ 431 lb_f  \n\nStill mismatch options  \nTry laminar-turbulent transition  \n\nUse Prandtl-Schlichting  \nC_D = 0.455/(log Re)^2.58  \nWhole Re 1.85e8  \nlog Re ≈ 8.267  \nC_D ≈ 0.00189  \nF ≈ 0.5×62.4×400×1000×0.00189  \nF ≈ 589 lb_f  \n\nNo option matches  \nTry 1/7 power with A=10×100 maybe width only?  \n\nMaybe use friction coefficient  \nC_f = 0.072/Re^0.2  \nWhole: Re^0.2 ≈ 42.2  \nC_f ≈ 0.00171  \nF ≈ 533 lb_f  \n\nCheck first 10 ft  \nRe^0.2 ≈ 33.9  \nC_f ≈ 0.00212  \nF ≈ 265 lb_f  \n\nNo match  \n\nMaybe laminar for first 10 ft:  \nC_D = 1.328/sqrt(Re)  \nRe = 1.85e7  \nsqrt ≈ 4300  \nC_D ≈ 0.000309  \nF ≈ 0.5×62.4×400×100×0.000309  \nF ≈ 3.9 lb_f  \n\nNo  \n\nLook at choices: whole 640–880, first 90–124  \nFirst 10 ft drag much larger than laminar, so turbulent.  \n\nTry whole plate using 0.074/Re^0.2  \nC_D = 0.074 / 42.2 ≈ 0.001754  \nF ≈ 0.5×62.4×400×1000×0.001754  \nF ≈ 547 lb_f  \n\nNo  \n\nMaybe area is width×length but width 10, length 100, yes.  \n\nCould be using wetted area both sides:  \nF = 2× above? Then whole ≈ 1094, first ≈ 530, no.  \n\nTry smooth flat plate average skin friction  \nC_f = 0.074/Re^0.2  \nFirst 10: Re=1.85e7, Re^0.2≈33.9, C_f=0.00218  \nF=0.5×62.4×400×100×0.00218 ≈ 272 lb_f  \n\nNo  \n\nMaybe use kinematic viscosity different? Given 1.08e-5.  \n\nTry 0.455/(log Re)^2.58 with both sides:  \nWhole ≈ 1178, no.  \n\nMaybe answer choices come from C_D = 0.072/Re^0.2  \nWhole: Re^0.2 for 1.85e8 = 42.2, C_D=0.001706  \nF≈0.5×62.4×400×1000×0.001706=532, no.  \n\nTry formula C_D = 0.031/Re^(1/7) with area 10×100 maybe F=842, closest 850 and 120 first? First 10 using same formula gave 431, no.  \n\nWait first 10 ft drag options ~100-124. That suggests C_D≈0.001.  \nFor first 10, Re=1.85e7, C_D=1.328/sqrt(Re)=0.000309 gives 3.8 lb_f, no.  \n\nMaybe use local shear at trailing edge? No.  \n\nTry Blasius turbulent: C_f=0.072/Re^0.2  \nFirst 10: 0.072/33.9=0.00212, F",
+   "in": 355,
+   "out": 1024,
+   "answered": true,
+   "usd": 0.0013353,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "1. Calculate Reynolds number.  \n2. Determine drag coefficient.  \n3. Apply drag force formula.  \n4. Calculate for whole plate.  \n5. Calculate for first 10 ft.  \n\n1. **Reynolds Number:**  \n   \\( Re = \\frac{\\rho V L}{\\mu} \\)  \n   \\( \\rho = 62.4 \\, lb/ft^3 \\)  \n   \\( V = 20 \\, ft/s \\)  \n   \\( L = 100 \\, ft \\) (for whole plate)  \n   \\( \\mu = 1.08 \\times 10^{-5} \\, ft^2/s \\)  \n\n   \\( Re = \\frac{62.4 \\times 20 \\times 100}{1.08 \\times 10^{-5}} \\)  \n   \\( Re = \\frac{124800}{1.08 \\times 10^{-5}} \\)   \n   \\( Re \\approx 11555555556.52 \\)  \n\n2. **Drag Coefficient (Cd):**   \n   For flat plate, typically \\(Cd \\approx 1.28\\) for turbulent flow.  \n\n3. **Drag Force Formula:**  \n   \\( F_d = \\frac{1}{2} \\rho V^2 A C_d \\)  \n\n   - For whole plate:  \n   \\( A = width \\times length = 10 \\, ft \\times 100 \\, ft = 1000 \\, ft^2 \\)  \n   \\( F_d = \\frac{1}{2} \\times 62.4 \\, lb/ft^3 \\times (20 \\, ft/s)^2 \\times 1000 \\, ft^2 \\times 1.28 \\)  \n   \\( F_d = 0.5 \\times 62.4 \\times 400 \\times 1000 \\times 1.28 \\)  \n   \\( F_d = 0.5 \\times 62.4 \\times 400 \\times 1280 \\approx 800\\, lb_f \\)  \n\n4. **For first 10 ft:**  \n   \\( A = 10 \\, ft \\times 10 \\, ft = 100 \\, ft^2 \\)  \n   \\( F_{d,\\text{10 ft}} = 0.5 \\times 62.4 \\times 400 \\times 100 \\times 1.28 \\)  \n   \\( F_{d,\\text{10 ft}} \\approx 112\\, lb_f \\)    \n\nSo the overall results are 800 lb_f for the whole plate and 112 lb_f for the first 10 ft.\n\nFinal answer options considered:  \n**D**. 800lb_f for the whole plate and 112lb_f for the first 10 ft.\n\nAnswer: D",
+   "in": 359,
+   "out": 589,
+   "answered": true,
+   "usd": 0.00040724999999999995,
+   "score": 0.0
+  },
+  "sonnet": {
+   "text": "Reynolds number, full plate: Re_L = 20×100/1.08e-5 = 1.85e8.\n\nUse turbulent: Cf = 0.455/(log Re)^2.58 (Schlichting).\nlog10(1.85e8) = 8.2672; 8.2672^2.58: ln(8.2672)=2.1122; ×2.58=5.4495; exp=232.7. Cf = 0.455/232.7=0.001955.\n\nDynamic pressure: ρ = 62.4 lb/ft³ is the weight density, so mass density = 62.4/32.2 = 1.938 slug/ft³.\nq = 0.5×1.938×400 = 387.6 lbf/ft².\nArea = 1000 ft².\nF = 0.001955×387.6×1000 = 758 lbf. This matches J at 760.\n\nFirst 10 ft: Re = 20×10/1.08e-5 = 1.85e7; log = 7.2672; ^2.58: ln=1.9833×2.58=5.1169; exp=166.9; Cf = 0.002726.\nF = 0.002726×387.6×100 = 105.7 lbf, about 106.\n\nAnswer J matches (760, 106).\n\nAnswer: J",
+   "in": 499,
+   "out": 405,
+   "answered": true,
+   "usd": 0.0050479999999999995,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-7561",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Reserve ratio: 250/1000 = 25%. Excess reserves: 1000 − 250 = 750 (assuming all deposits are held as reserves... actually reserves held unknown, but excess reserves = total reserves − required; with reserves = required, excess is 0). The options pair excess $750 with multiplier computed as 1/0.25 = 4, which matches option G.\n\nReserve ratio: 25%.\nExcess reserves: $750.\nMultiplier: 1/0.25 = 4.\n\nAnswer: G",
+   "in": 276,
+   "out": 174,
+   "answered": true,
+   "usd": 0.0001146,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Reserve ratio: 250/1000 = 25%.  \nExcess reserves: 1000 − 250 = $750.  \nMoney multiplier: 1/0.25 = 4.  \nAnswer: G",
+   "in": 224,
+   "out": 46,
+   "answered": true,
+   "usd": 0.0001224,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-10553",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Recurrence: T(n+1) - T(n) = 3n, T(1)=7.\nSo T(n) = 7 + sum_{k=1}^{n-1} 3k = 7 + 3(n-1)n/2 ~ (3/2)n^2.\nThus Θ(n^2).\n\nAnswer: J",
+   "in": 267,
+   "out": 105,
+   "answered": true,
+   "usd": 7.92e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "T(1)=7  \nT(n+1)=3n+T(n)  \nUnroll recurrence  \nT(n)=7+3(1+...+(n-1))  \nSum = 3*(n-1)n/2  \nQuadratic leading term  \nΘ(n^2)  \nAnswer: J",
+   "in": 184,
+   "out": 63,
+   "answered": true,
+   "usd": 0.00013079999999999998,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-2516",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Developmental research on memory strategies (e.g., Flavell's work) shows that deliberate use of rehearsal, elaboration, and organization emerges around ages 7 to 8, with rehearsal appearing first (around 7), then elaboration and organization later.\n\nAnswer: G",
+   "in": 204,
+   "out": 92,
+   "answered": true,
+   "usd": 6.64e-05,
+   "score": 0.0
+  },
+  "deepseek": {
+   "text": "Rehearsal develops around 5-7.  \nElaboration later, around 10-12.  \nOrganization also middle childhood.  \nDeliberate regular use by 10-12.  \nAnswer: D",
+   "in": 154,
+   "out": 45,
+   "answered": true,
+   "usd": 0.0001002,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "Memory strategies development age?  \nRehearsal, elaboration, organization usage.  \nChildren start between 5 and 7.  \nOptions analyzed, B matches.  \n\nAnswer: B",
+   "in": 158,
+   "out": 38,
+   "answered": true,
+   "usd": 4.65e-05,
+   "score": 0.0
+  },
+  "sonnet": {
+   "text": "",
+   "in": 204,
+   "out": 47,
+   "answered": false,
+   "usd": 0.000878,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-4863",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Chinese bone divination with fired animal bones (scapulimancy/plastromancy) is called scapulimancy.\n\nAnswer: B\n\nAnswer: B",
+   "in": 169,
+   "out": 52,
+   "answered": true,
+   "usd": 4.29e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Animal bones heated, cracks read.  \nThat practice is scapulimancy.  \nAnswer: B",
+   "in": 119,
+   "out": 20,
+   "answered": true,
+   "usd": 5.97e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-8063",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Known identity: ∏_{n≥0}(1+x^{2^n}) = 1/(1-x) for |x|<1.\n\nWith x=1/2: 1/(1-1/2) = 2.\n\nAnswer: B\n\nAnswer: B",
+   "in": 184,
+   "out": 78,
+   "answered": true,
+   "usd": 5.74e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Let’s define  \n\\[\nP=\\prod_{n=0}^\\infty \\left(1+\\left(\\frac12\\right)^{2^n}\\right)\n\\]  \n\nStep 1: Recognize identity \\(1+x = \\frac{1-x^2}{1-x}\\).  \n\nStep 2: Apply with \\(x=(1/2)^{2^n}\\),  \n\\[\n1+(1/2)^{2^n} = \\frac{1-(1/2)^{2^{n+1}}}{1-(1/2)^{2^n}}\n\\]  \n\nStep 3: Product telescopes.  \n\nStep 4:  \n\\[\nP = \\frac{1}{1 - 1/2} = 2\n\\]  \n\nStep 5: Check limit \\(N\\to\\infty\\), numerator tends to 1.  \n\nAnswer: B",
+   "in": 149,
+   "out": 168,
+   "answered": true,
+   "usd": 0.00024629999999999997,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-10257",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "In both fission and fusion, the total number of nucleons is conserved (protons plus neutrons remain the same).\n\nAnswer: H",
+   "in": 188,
+   "out": 43,
+   "answered": true,
+   "usd": 4.0300000000000004e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Fission/fusion conserve nucleon count.  \nProtons change identity but total nucleons same.  \nCharge conserved too, but nucleon number key.  \nAnswer: H",
+   "in": 132,
+   "out": 35,
+   "answered": true,
+   "usd": 8.16e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-3157",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Cell size limited by surface-to-volume ratio: small cells have large SA:V, enabling efficient exchange of materials.\n\nAnswer: F",
+   "in": 311,
+   "out": 49,
+   "answered": true,
+   "usd": 5.56e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Cell size limited by diffusion.  \nSurface area needed for exchange.  \nVolume grows faster than surface.  \nSmall cells have more surface per volume.  \nAnswer: F",
+   "in": 183,
+   "out": 33,
+   "answered": true,
+   "usd": 9.449999999999999e-05,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-11722",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Friis: Pr = Pt Gt Gr (λ/(4πd))^2.\n\nλ = c/f = 3e8/4e9 = 0.075 m.\n4πd = 4π(48000) = 603,186 m.\nλ/(4πd) = 0.075/603186 = 1.2434e-7.\nSquared: 1.5460e-14.\nGt Gr = 10^4 (40 dB each → 10^8 total? Careful: 40dBw means 10^4 W each, so Gt·Gr is in dB: 40+40=80 dB → 10^8).\n\nPr/Pt = 10^8 × 1.5460e-14 = 1.5460e-6.\nPt = 1e-6 / 1.5460e-6 = 0.647 W.\n\nAnswer: F\n\nAnswer: F",
+   "in": 269,
+   "out": 266,
+   "answered": true,
+   "usd": 0.0001599,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Distance 48 km = 48000 m.  \nFrequency 4 GHz → λ = 0.075 m.  \nFriis: P_r = P_t G_t G_r (λ / 4πd)^2.  \nGains 40 dB = 10^4 each.  \nCompute λ/(4πd) = 0.075 / (4π×48000) ≈ 1.243×10^-7.  \nSquare → ≈ 1.545×10^-14.  \nG_t G_r = 10^8.  \nP_r/P_t = 10^8 × 1.545×10^-14 ≈ 1.545×10^-6.  \nP_t = 10^-6 / 1.545×10^-6 ≈ 0.647 W.  \n\nAnswer: F",
+   "in": 193,
+   "out": 172,
+   "answered": true,
+   "usd": 0.0002643,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-3534",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Check each:\nA. MgO magnesium oxide – correct.\nB. AgNO3 silver nitrate – correct.\nC. CuCl2 copper(II) chloride – correct.\nD. H2SO4 sulfuric acid – correct.\nE. K2Cr2O7 potassium dichromate – correct.\nF. Na2SO4 sodium sulfate – correct.\nG. Fe(NO3)3 iron(III) nitrate – correct.\nH. CaCl2 calcium chloride – correct.\nI. AlBr3 aluminum tribromide – aluminum bromide is ionic; standard name aluminum bromide, prefix naming not used.\nJ. Zn(NO3)2 zinc nitrate – correct.\n\nOption I uses molecular prefix naming for an ionic compound, so it is incorrectly named.\n\nAnswer: I",
+   "in": 257,
+   "out": 283,
+   "answered": true,
+   "usd": 0.0001672,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "A. MgO → magnesium oxide correct.  \nB. AgNO3 → silver nitrate correct.  \nC. CuCl2 → copper(II) chloride correct.  \nD. H2SO4 → sulfuric acid correct.  \nE. K2Cr2O7 → potassium dichromate correct.  \nF. Na2SO4 → sodium sulfate correct.  \nG. Fe(NO3)3 → iron(III) nitrate correct.  \nH. CaCl2 → calcium chloride correct.  \nI. AlBr3 → aluminum tribromide: incorrect naming; should be aluminum bromide (no prefix for ionic).  \nJ. Zn(NO3)2 → zinc nitrate correct.  \n\nAnswer: I",
+   "in": 166,
+   "out": 141,
+   "answered": true,
+   "usd": 0.000219,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-8860",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Woman west 3, ship north 22; perpendicular velocities.\nSpeed = sqrt(3² + 22²) = sqrt(9 + 484) = sqrt(493).\n\nStep: perpendicular components.\nStep: magnitude squared sums.\nStep: 9 + 484 = 493.\n\nAnswer: G",
+   "in": 489,
+   "out": 106,
+   "answered": true,
+   "usd": 0.0001019,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Woman speed west: 3  \nShip speed north: 22  \nPerpendicular velocities  \nUse Pythagoras: √(3²+22²)  \n3²=9, 22²=484  \nSum=493  \nSpeed=√493  \nAnswer: G",
+   "in": 255,
+   "out": 55,
+   "answered": true,
+   "usd": 0.0001425,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-7363",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Compute: price $10 per pool, 9 pools → revenue $90. Variable cost $80, fixed cost $20, total cost $100. Profit = 90 − 100 = −$10.\n\nShutdown check: revenue $90 exceeds variable cost $80, so operating covers variable costs; continue operating in short run.\n\nSo Jason should clean 9 pools with economic loss of $10.\n\nAnswer: G",
+   "in": 409,
+   "out": 135,
+   "answered": true,
+   "usd": 0.0001084,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Step 1: Price = $10, quantity = 9.  \nStep 2: Total revenue = 9×10 = $90.  \nStep 3: Total cost = 80+20 = $100.  \nStep 4: Profit = 90−100 = −$10 loss.  \nStep 5: Compare price to average variable cost.  \nStep 6: AVC = 80/9 ≈ $8.89 < $10.  \nStep 7: Since P > AVC, do not shut down.  \nStep 8: Profit-maximizing output at P=MC; given data implies 9 is best.  \n\nAnswer: G",
+   "in": 286,
+   "out": 139,
+   "answered": true,
+   "usd": 0.00025259999999999996,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-8782",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Sample size n=18, df=17. Two-sided 5% critical value for df=17 is ±2.110. |t|=1.973 < 2.110, so fail to reject.\n\nCheck options: C says less extreme than critical value for 17 df, do not reject, no convincing evidence. Correct.\n\nAnswer: C",
+   "in": 1053,
+   "out": 102,
+   "answered": true,
+   "usd": 0.0001563,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "1. Sample size: n=18, df=17.\n2. Two-tailed test, α=0.05, df=17.\n3. Critical t ≈ ±2.110.\n4. t = -1.973, less extreme than -2.110.\n5. Fail to reject null.\n6. Conclusion matches option C.\n\nAnswer: C",
+   "in": 709,
+   "out": 73,
+   "answered": true,
+   "usd": 0.0003003,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-7168",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "If firms expect future prices to be lower, they sell more now before prices fall, increasing current supply.\n\nAnswer: D",
+   "in": 294,
+   "out": 39,
+   "answered": true,
+   "usd": 4.8899999999999996e-05,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Step 1: Expected future price lower.  \nStep 2: Firms want to sell now.  \nStep 3: Current supply increases.  \nAnswer: D",
+   "in": 227,
+   "out": 33,
+   "answered": true,
+   "usd": 0.00010769999999999999,
+   "score": 1.0
+  }
+ },
+ {
+  "id": "mmlu-9987",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Compute resolving power: λ/Δλ, Δλ = 589.593 − 588.996 = 0.597 nm = 0.597 mμ.\nMean λ ≈ 589.29 mμ. R = 589.29/0.597 ≈ 987.1 → N ≥ 987 lines (first order).\n\n(b) Prism: R = b·(dn/dλ) with b base length.\ndn/dλ = 5.30×10⁻⁵ per mμ, so b = R/(dn/dλ) = 987/(5.30×10⁻⁵) ≈ 1.86×10⁷ mμ = 1.86×10⁷ × 10⁻⁶ mm = 18.6 mm ≈ 1.86 cm.\n\nMatches option A (987 lines, 1.87 cm) closely; the nearest listed value for the prism base is 1.87 cm.\n\nAnswer: A",
+   "in": 373,
+   "out": 297,
+   "answered": true,
+   "usd": 0.00018580000000000002,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Step 1: Convert wavelengths to nm: 589.593 mμ = 589.593 nm, 588.996 nm.  \nStep 2: Δλ = 0.597 nm.  \nStep 3: Resolving power needed R = λ/Δλ ≈ 589.3/0.597 ≈ 987.  \nStep 4: First order m=1, N = R/m ≈ 987 lines.  \nStep 5: Prism base b = λ/(d n/dλ * Δλ) formula.  \nStep 6: dn/dλ = 5.30×10⁻⁵ per mμ = 5.30×10⁻⁵ per nm? Careful: 1 mμ=1 nm.  \nStep 7: b = λ/(dn/dλ * Δλ) = 589 nm / (5.30×10⁻⁵ × 0.597) ≈ 1.86 cm.  \nStep 8: Matching option B.\n\nAnswer: B",
+   "in": 271,
+   "out": 212,
+   "answered": true,
+   "usd": 0.0003357,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "(a) Find wavelength difference.  \nΔλ = 589.593 - 588.996 = 0.597 mμ.\n\n(b) Use grating formula.  \nResolving power R = mN / Δλ.  \nFor first order (m = 1),  \nR = N / Δλ.\n\n(c) Calculate resolving power required.  \nR = λ / Δλ = 589 mμ / 0.597 mμ ≈ 987.1.\n\n(d) Grating lines needed.  \nN = R = 988 (round up).\n\n(e) For prism resolution.  \nWidth = Δλ / (dλ/dλ) = Δλ / rate.\n\n(f) Calculate numeric values.  \nWidth = 0.597 mμ / (5.30 × 10^-5 per mμ)  \n= 0.597 / 0.0000530 ≈ 1.89 cm.\n\n(g) Choose closest option.  \nResolution lines: 988, Prism size: 1.89.\n\nFinal options:  \n986 lines, 1.86 cm.  \n990 lines, 1.90 cm.  \n987 lines, 1.87 cm.  \n989 lines, 1.89 cm.  \nCorrect matching: 988 lines, 1.89 cm.\n\nAnswer: D",
+   "in": 277,
+   "out": 270,
+   "answered": true,
+   "usd": 0.00020355000000000001,
+   "score": 0.0
+  },
+  "sonnet": {
+   "text": "",
+   "in": 373,
+   "out": 139,
+   "answered": false,
+   "usd": 0.002136,
+   "score": 0.0
+  }
+ },
+ {
+  "id": "mmlu-9228",
+  "group": "fresh 1",
+  "haiku": {
+   "text": "Special relativity time dilation: Δt/t ≈ v²/(2c²).\n\nv = 7712 m/s, v² = 5.9474×10⁷ m²/s². c² = 8.98755×10¹⁶.\n\nv²/(2c²) = 5.9474×10⁷ / (1.79751×10¹⁷) = 3.3089×10⁻¹⁰.\n\nIn picoseconds per second: 3.3089×10⁻¹⁰ s/s = 330.89 ps/s.\n\nClosest option: 330.76 (D).\n\nCheck against measured: -295.02 = -330.8 + 35.0 ≈ -295.8, consistent within rounding.\n\nAnswer: D",
+   "in": 306,
+   "out": 228,
+   "answered": true,
+   "usd": 0.00014460000000000002,
+   "score": 1.0
+  },
+  "deepseek": {
+   "text": "Velocity time dilation formula.  \n\\( \\gamma = 1/\\sqrt{1-v^2/c^2} \\).  \n\\( v/c \\approx 2.57\\times10^{-5} \\).  \n\\( v^2/(2c^2) \\approx 3.30\\times10^{-10} \\).  \nPer second: \\( 3.30\\times10^{-10} \\) s.  \nConvert to picoseconds: \\( \\times10^{12} \\).  \n\\( \\approx 330 \\) ps/s.  \nGravitational effect given: +35.0 ps/s.  \nNet predicted loss: \\( -330 + 35 \\).  \n\\( \\approx -295 \\) ps/s.  \nQuestion asks expected time lost for moving clock?  \nActually SR alone: ~330 ps/s slower.  \nMeasured net: -295.02 ps/s.  \nOption matching given measured result: 295.02.  \nAnswer: G",
+   "in": 229,
+   "out": 194,
+   "answered": true,
+   "usd": 0.0003015,
+   "score": 0.0
+  },
+  "mini": {
+   "text": "1. Determine relativistic time dilation formula.\n2. Calculate speed factor: \\( v/c \\).\n3. Apply \\( c \\approx 3 \\times 10^8 \\, \\text{m/s} \\).\n4. Calculate expected time loss.\n5. Compare with measured result.\n\nCalculating:\n\n1. Speed of light \\( c \\approx 3 \\times 10^8 \\, \\text{m/s} \\).\n2. Speed of shuttle \\( v = 7712 \\, \\text{m/s} \\).\n3. \\( \\frac{v}{c} = \\frac{7712}{3 \\times 10^8} = 2.57 \\times 10^{-5} \\).\n4. Time dilation due to velocity:\n   \\[ \\Delta t_{\\text{dilation}} \\approx \\frac{v^2}{2c^2} \\approx \\frac{(7712 \\, \\text{m/s})^2}{2(3 \\times 10^8 \\, \\text{m/s})^2} \\]\n\n5. Now, compute:\n   \\[\n   \\Delta t_{\\text{dilation}} \\approx \\frac{59383444}{1.8 \\times 10^{18}} \\approx 3.30 \\times 10^{-14} \\text{ s}\n   \\]\n   \n6. Convert to picoseconds:\n   \\[\n   3.30 \\times 10^{-14} \\text{ s} \\times 10^{12} \\text{ ps/s} \\approx 33.0 \\text{ ps}\n   \\]\n\n7. Account for general relativity:\n   - GR effect = \\( -35.0 \\, \\text{ps/s} \\).\n   \nResulting time loss:\n\\[ \n\\Delta t_{\\text{total}} = 33.0 - 35.0 \\approx -2.0 \\, \\text{ps/s} \n\\]\n\n8. Compare to:\n   - Measured time loss: \\( -295.02 \\pm 0.29 \\text{ ps/s} \\).\n\n9. Expected:\n   \\[ \n   \\Delta t_{\\text{total}} + GR \\approx -295.02 \\quad \\text{(close to measured)}\n   \\]\n\nFinal choice based on the closest alternative:\nC. 220.45\n\nThus, the answer is:\n\nAnswer: C",
+   "in": 232,
+   "out": 502,
+   "answered": true,
+   "usd": 0.00033599999999999993,
+   "score": 0.0
+  },
+  "sonnet": {
+   "text": "",
+   "in": 306,
+   "out": 0,
+   "answered": false,
+   "usd": 0.000612,
+   "score": 0.0
+  }
+ }
+]
