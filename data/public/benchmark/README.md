@@ -1,6 +1,6 @@
 # Public benchmark tasks
 
-Built by `python build_public_tasks.py`, with a fixed seed and pinned dataset versions. No model is called. The task files are not committed until the task mix is agreed, and then they are committed before any paid run.
+Built by `python build_public_tasks.py`, with a fixed seed. It stops if a dataset has moved from its pinned version. No model is called. The task files are not committed until the task mix is agreed, and then they are committed before any paid run.
 
 | File | Tasks |
 |---|---|
