@@ -40,6 +40,7 @@ outright with a 400.
 
 from __future__ import annotations
 
+import sys
 import time
 from typing import Any, Optional
 
@@ -56,7 +57,7 @@ high-effort run spend its whole budget reasoning and return a truncated answer â
 which scores as a quality failure that is really a config bug. See
 Response.truncated."""
 
-_MAX_ATTEMPTS = 2
+_MAX_ATTEMPTS = 5  # one flaky call must not stop a long paid run
 
 
 class AnthropicAdapter(Adapter):
@@ -114,8 +115,10 @@ class AnthropicAdapter(Adapter):
                     messages=[{"role": "user", "content": prompt}],
                     **request_kwargs,
                 )
-            except Exception:
+            except Exception as exc:  # noqa: BLE001 - name only: provider text can hold account details
                 last_latency_ms = (time.perf_counter() - start) * 1000
+                print(f"{self.model_name}: {type(exc).__name__}, retrying", file=sys.stderr)
+                time.sleep(2 ** _attempt)
                 continue
 
             latency_ms = (time.perf_counter() - start) * 1000

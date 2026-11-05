@@ -38,6 +38,7 @@ import math
 import sys
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
@@ -216,6 +217,27 @@ def _check_real(result: Result) -> None:
         raise RunStopped("a provider call failed")
 
 
+def _run_tasks(router, tasks, workers: int, max_spend: Optional[float]):
+    """Yield (task, result, quality) in task order, answering `workers` tasks at a time.
+
+    The spend check runs before each batch and reserves room for the whole
+    batch, so a parallel run stops under the cap just as a serial one does.
+    """
+    capped = max_spend is not None
+
+    def answer(task):
+        result = router.complete(task["prompt"], task=task)
+        if capped:
+            _check_real(result)
+        return task, result, score(task, result.response, strict=capped)
+
+    with ThreadPoolExecutor(workers) as pool:
+        for start in range(0, len(tasks), workers):
+            if capped and SpendMeter.usd + _TASK_RESERVE_USD * workers >= max_spend:
+                raise RunStopped(f"spend cap of ${max_spend:.2f} reached")
+            yield from pool.map(answer, tasks[start:start + workers])
+
+
 def _preflight(roster_name: str) -> None:
     """One tiny real call per roster model, so a bad key or empty account stops the run first."""
     roster = ROSTERS[roster_name]
@@ -281,6 +303,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "For this task type, ask the budget and mid models and keep the answer "
             "if they agree; if not, ask the frontier model. Repeatable. "
             "(--strategy router, not with --learned.)"
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help=(
+            "Answer this many tasks at a time. Faster, and logged in the same order, "
+            "but reported latency then includes load from the other tasks. "
+            "Not with --learned, which depends on task order."
         ),
     )
     parser.add_argument(
@@ -392,6 +424,8 @@ def _run(argv: Optional[list[str]] = None) -> None:
     """Run the full benchmark pipeline end to end and print/save the report."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.workers < 1 or (args.workers > 1 and args.learned):
+        parser.error("--workers must be at least 1, and 1 with --learned")
     if args.max_spend is not None and force_mock():
         parser.error("--max-spend is for live runs; unset AWR_FORCE_MOCK")
     effort_policy = _parse_effort_policy(args.effort_policy)
@@ -418,14 +452,8 @@ def _run(argv: Optional[list[str]] = None) -> None:
         # `run_group` is the chronological cutoff for the learned policy: a
         # task only sees evidence strictly earlier than the run it is part of.
         router.before_run_group(run_group)
-        for task in tasks:
-            if capped and SpendMeter.usd + _TASK_RESERVE_USD >= args.max_spend:
-                raise RunStopped(f"spend cap of ${args.max_spend:.2f} reached")
-            result = router.complete(task["prompt"], task=task)
-            if capped:
-                _check_real(result)
+        for task, result, quality in _run_tasks(router, tasks, args.workers, args.max_spend):
             response = result.response
-            quality = score(task, response, strict=capped)
             fallbacks += result.classifier_fell_back
             truncated += response.truncated
 

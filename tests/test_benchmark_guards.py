@@ -274,5 +274,26 @@ class FrozenTasks(unittest.TestCase):
         self.assertEqual(len(load_tasks(folder / "tasks_public_hard.json")), 40)
 
 
+class TestParallelRun(unittest.TestCase):
+    def setUp(self):
+        self.tasks = [{"id": str(i), "prompt": str(i)} for i in range(7)]
+        result = mock.Mock(simulated=False, classifier_fell_back=False, trace=[])
+        self.router = mock.Mock()
+        self.router.complete.return_value = result
+        patcher = mock.patch.object(run_benchmark, "score", return_value=1.0)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_results_stay_in_task_order(self):
+        got = [t["id"] for t, _, _ in run_benchmark._run_tasks(self.router, self.tasks, 3, None)]
+        self.assertEqual(got, [t["id"] for t in self.tasks])
+
+    def test_the_cap_reserves_room_for_a_whole_batch(self):
+        with mock.patch.object(run_benchmark.SpendMeter, "usd", 0.5), \
+                self.assertRaises(run_benchmark.RunStopped):
+            list(run_benchmark._run_tasks(self.router, self.tasks, 4, 0.85))
+        self.router.complete.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
