@@ -57,7 +57,7 @@ high-effort run spend its whole budget reasoning and return a truncated answer â
 which scores as a quality failure that is really a config bug. See
 Response.truncated."""
 
-_MAX_ATTEMPTS = 5  # one flaky call must not stop a long paid run
+_MAX_ATTEMPTS = 8  # about 2 minutes of waits: one network blip must not stop a long paid run
 
 
 class AnthropicAdapter(Adapter):
