@@ -212,7 +212,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
 
-**Known bug, documented and not fixed.** In real mode, the classifier silently falls back to the free keyword heuristic if it has no key or its call fails, and `Result.simulated` stays `False`. Only a detail in the trace shows it happened, and that heuristic sent 100% of the email above to the top tier. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
+**Known bug, documented and not fixed.** In real mode, the classifier silently falls back to the free keyword heuristic if it has no key or its call fails, and `Result.simulated` stays `False`. Only a detail in the trace shows it happened, and that heuristic sent 100% of the email above to the top tier. The benchmark can now detect this and stop (`--max-spend`), but other callers of the router behave as before. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
 
 **The benchmark is small.**
 

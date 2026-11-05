@@ -34,6 +34,7 @@ breakdown. See src/router/adapters/ and src/router/scoring.py.
 """
 
 import argparse
+import math
 import sys
 import time
 import uuid
@@ -44,13 +45,16 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from router import db  # noqa: E402
+from router.adapters import SpendMeter, get_adapter  # noqa: E402
 from router.api import (  # noqa: E402
-    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, Router, RulesPolicy,
+    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, ProviderError, Result,
+    Router, RulesPolicy,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
 from router.report import build_report, format_report_markdown, print_report  # noqa: E402
-from router.scoring import score  # noqa: E402
+from router.scoring import JudgeError, score  # noqa: E402
+from router.secrets import force_mock  # noqa: E402
 
 # Experimental arms the benchmark can run against the frontier_only baseline.
 EXPERIMENTAL_STRATEGIES = ("router", "cascade", "jury")
@@ -176,6 +180,46 @@ def _report_path(
 _PV = "v2"
 
 
+# ponytail: fixed reserve, enough for one worst-case task (a 1,024-token Opus answer
+# plus a judge call). The cap is per process: replays are free, but after a stopped
+# run pass only what is left of the budget.
+_TASK_RESERVE_USD = 0.10
+
+
+def _spend_cap(raw: str) -> float:
+    """argparse type for --max-spend: a finite cap that can cover at least one task."""
+    cap = float(raw)
+    if not (math.isfinite(cap) and cap > _TASK_RESERVE_USD):
+        raise argparse.ArgumentTypeError(f"must be a finite amount above ${_TASK_RESERVE_USD:.2f}")
+    return cap
+
+
+class RunStopped(RuntimeError):
+    """A --max-spend run hit its cap or something that would make its result untrue."""
+
+
+def _check_real(result: Result) -> None:
+    """Stop a --max-spend run on anything that would quietly weaken its result."""
+    if result.simulated:
+        raise RunStopped("an answer was simulated")
+    if result.classifier_fell_back:
+        raise RunStopped("the classifier failed and the free heuristic picked the route")
+    if any("provider error" in line for line in result.trace):
+        raise RunStopped("a provider call failed")
+
+
+def _preflight(roster_name: str) -> None:
+    """One tiny real call per roster model, so a bad key or empty account stops the run first."""
+    roster = ROSTERS[roster_name]
+    for model in (roster.budget, roster.mid, roster.frontier):
+        try:
+            ok = get_adapter(model, False, use_cache=False).complete("Reply with OK.", max_tokens=16).success
+        except Exception as exc:  # noqa: BLE001 - name only: provider text can hold account details
+            raise RunStopped(f"preflight failed on {model} ({type(exc).__name__})") from None
+        if not ok:
+            raise RunStopped(f"preflight failed on {model}")
+
+
 def _build_policy(args: argparse.Namespace):
     """Map CLI flags to the experimental Policy."""
     if args.strategy == "cascade":
@@ -293,12 +337,34 @@ def _build_parser() -> argparse.ArgumentParser:
             "independence trade-off this flag controls."
         ),
     )
+    parser.add_argument(
+        "--max-spend",
+        type=_spend_cap,
+        default=None,
+        metavar="USD",
+        help=(
+            "Live run with guard rails: test each model first, stop before real "
+            "spend passes USD, and stop on any simulated answer, classifier or "
+            "judge fallback, or provider failure. A stopped run writes no report."
+        ),
+    )
     return parser
 
 
 def main(argv: Optional[list[str]] = None) -> None:
+    """Run the benchmark, turning a guard-rail stop into a clear exit."""
+    try:
+        _run(argv)
+    except (RunStopped, JudgeError, ProviderError) as exc:
+        raise SystemExit(f"STOPPED: {exc}. Real spend ${SpendMeter.usd:.4f}. No report written.") from None
+
+
+def _run(argv: Optional[list[str]] = None) -> None:
     """Run the full benchmark pipeline end to end and print/save the report."""
-    args = _build_parser().parse_args(argv)
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if args.max_spend is not None and force_mock():
+        parser.error("--max-spend is for live runs; unset AWR_FORCE_MOCK")
     effort_policy = _parse_effort_policy(args.effort_policy)
 
     tasks = load_tasks(args.tasks)
@@ -311,18 +377,28 @@ def main(argv: Optional[list[str]] = None) -> None:
     # opts into the offline mock fallback (allow_mock_fallback=True) so a run
     # always completes; real callers use router.api.Router's strict default.
     policy = _build_policy(args)
+    capped = args.max_spend is not None
+    if capped:
+        _preflight(args.roster)
+    fallbacks = truncated = 0
     for pol in (policy, FrontierOnlyPolicy()):
         router = Router(
             pol, roster_name=args.roster, effort_policy=effort_policy,
-            allow_mock_fallback=True,
+            allow_mock_fallback=not capped,
         )
         # `run_group` is the chronological cutoff for the learned policy: a
         # task only sees evidence strictly earlier than the run it is part of.
         router.before_run_group(run_group)
         for task in tasks:
+            if capped and SpendMeter.usd + _TASK_RESERVE_USD >= args.max_spend:
+                raise RunStopped(f"spend cap of ${args.max_spend:.2f} reached")
             result = router.complete(task["prompt"], task=task)
+            if capped:
+                _check_real(result)
             response = result.response
-            quality = score(task, response)
+            quality = score(task, response, strict=capped)
+            fallbacks += result.classifier_fell_back
+            truncated += response.truncated
 
             db.log_run(
                 run_group=run_group,
@@ -356,6 +432,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     out_path = _policy_report_path(args.roster, report.all_real, policy, effort_policy, args.tasks)
     out_path.write_text(format_report_markdown(report))
     print(f"\nFull report written to {out_path}")
+    print(f"Real spend ${SpendMeter.usd:.4f}, classifier fallbacks {fallbacks}, truncated answers {truncated}")
     if not report.all_real:
         print(
             "NOTE: this run was partially simulated, so it was written to a "

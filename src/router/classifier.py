@@ -36,7 +36,7 @@ the gap between them is itself a result worth reporting.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Optional, cast
 
 from .config import get_model, get_roster
@@ -214,6 +214,10 @@ class Classification:
     a disagreement means the classifier and the author differ, not necessarily
     that the classifier is wrong. Report it as such."""
 
+    fell_back: bool = False
+    """True if a model was asked to classify but the free heuristic answered
+    instead, because there was no key or the call failed."""
+
 
 def _coerce(value: str, allowed: tuple[str, ...], default: str) -> str:
     """Map a raw model token onto an allowed value, falling back to `default`."""
@@ -307,7 +311,7 @@ def classify(
     )
 
     if response.simulated or not response.success:
-        return heuristic_classify(prompt)
+        return replace(heuristic_classify(prompt), fell_back=True)
 
     type_match = _TASK_TYPE_RE.search(response.text or "")
     difficulty_match = _DIFFICULTY_RE.search(response.text or "")
@@ -385,6 +389,7 @@ def classify_task(
         cost_usd=result.cost_usd,
         model=result.model,
         simulated=result.simulated,
+        fell_back=result.fell_back,
         agreed_with_label=(
             result.task_type == labelled_type
             and result.difficulty == labelled_difficulty

@@ -24,7 +24,9 @@ from __future__ import annotations
 import hashlib
 import re
 import statistics
-from typing import Any
+import string
+from decimal import Decimal
+from typing import Any, Optional
 
 from .adapters.base import Response
 from .config import MODEL_TIER
@@ -152,6 +154,67 @@ def exact_match(response_text: str, reference: str) -> float:
     return 1.0 if re.search(rf"(?:^|\s){re.escape(ref)}(?:\s|$)", resp) else 0.0
 
 
+REFERENCE_SEP = " || "
+"""Separates alternative correct answers in a `final_answer` reference."""
+
+# Horizontal matching only: a heading such as "Final Answer:" must not swallow the next line.
+_FINAL_LINE_RE = re.compile(r"^[^\w\n]*(?:final[ \t]+)?answer[ \t*`]*[:=](.*)$", re.IGNORECASE | re.MULTILINE)
+_NUMBER_RE = re.compile(r"(?:[+-][$£€]?|[$£€][+-]?)?(?:[1-9]\d{0,2}(?:,\d{3})+|\d+)(?:\.\d+)?%?")
+_MARKUP = string.whitespace + "*`"
+
+
+def _strip_markup(text: str) -> str:
+    """Drop surrounding whitespace, `*` and backticks, and one trailing `.`."""
+    return text.strip(_MARKUP).removesuffix(".").strip(_MARKUP)
+
+
+def _number(text: str) -> Optional[Decimal]:
+    """The exact value of a reply that is only a number, else None. 18.00, $18 and 18 are equal."""
+    bare = _strip_markup(text)
+    return Decimal(re.sub(r"[$£€,%]", "", bare)) if _NUMBER_RE.fullmatch(bare) else None
+
+
+def _canonical(text: str) -> str:
+    """Normalize a text answer so format differences alone never decide a score."""
+    return re.sub(r"^(?:a|an|the) ", "", _normalize(text.replace("_", " ")))
+
+
+def final_answer(response_text: str, reference: str) -> float:
+    """
+    Strict match on the answer a model commits to, not on its working.
+
+    `exact_match` accepts the reference anywhere in the reply, so working that
+    mentions the right number or option passes even when the conclusion is
+    wrong. This reads only the last "Answer: ..." line, or the whole reply if
+    it is a bare answer. A reply with neither scores 0. A number reference needs
+    an exactly equal number. A one-letter reference needs that letter alone, or
+    on an Answer line the letter, maybe bracketed, then `)`, `.` or `:` and optional text.
+
+    Args:
+        response_text: Model output text.
+        reference: Correct answer, with alternatives separated by REFERENCE_SEP.
+
+    Returns:
+        1.0 if the committed answer matches, else 0.0.
+    """
+    text = (response_text or "").strip()
+    lines = _FINAL_LINE_RE.findall(text)
+    got = lines[-1] if lines else text
+    letter_form = r"\(?%s(?:[).:].*)?" if lines else r"%s[.)]?"  # "B) Paris" commits to B only on an Answer line
+    for ref in reference.split(REFERENCE_SEP):
+        ref = ref.strip()
+        number = _number(ref)
+        if number is not None:
+            matched = _number(got) == number
+        elif re.fullmatch(r"[A-Za-z]", ref):
+            matched = bool(re.fullmatch(letter_form % ref, _strip_markup(got), re.IGNORECASE))
+        else:
+            matched = _canonical(got) == _canonical(ref) != ""
+        if matched:
+            return 1.0
+    return 0.0
+
+
 def rubric_judge(task: dict[str, Any], response: Response) -> float:
     """
     OFFLINE MOCK judge (PLACEHOLDER — see QUALITY_PROFILE docstring above).
@@ -194,6 +257,9 @@ def rubric_judge(task: dict[str, Any], response: Response) -> float:
 # since the judge model isn't forced into structured output.
 _JUDGE_SCORE_RE = re.compile(r"(?<![\d.])(0(?:\.\d+)?|1(?:\.0+)?)(?![\d])")
 
+# Strict runs read only a first line that is the score and nothing else.
+_STRICT_JUDGE_RE = re.compile(rf"(?:score[\s*`]*:[\s*`]*)?{_JUDGE_SCORE_RE.pattern}", re.IGNORECASE)
+
 _JUDGE_PROMPT_TEMPLATE = """You are grading a candidate answer to a task.
 
 Task prompt:
@@ -227,6 +293,10 @@ def _parse_judge_score(text: str) -> float:
     return max(0.0, min(1.0, value))
 
 
+class JudgeError(RuntimeError):
+    """A strict run needed a real judge score and did not get one."""
+
+
 def _real_judge_available() -> bool:
     """True if the real judge should be used: ANTHROPIC_API_KEY is
     configured and the test-suite mock-forcing escape hatch isn't set."""
@@ -236,7 +306,7 @@ def _real_judge_available() -> bool:
 
 
 def judge_score_with_model(
-    task: dict[str, Any], response: Response, judge_model: str
+    task: dict[str, Any], response: Response, judge_model: str, strict: bool = False
 ) -> float:
     """
     Real LLM-as-judge score using `judge_model`, via the same adapter + cache
@@ -252,10 +322,15 @@ def judge_score_with_model(
         task: Task dict with at least prompt, reference.
         response: The candidate Response to score.
         judge_model: Model name (key in router.config.MODELS) to judge with.
+        strict: Raise JudgeError instead of using a mock or default score.
 
     Returns:
         Judge-assigned quality score in [0.0, 1.0]; 0.5 if the judge's
         output can't be parsed as a number in range.
+
+    Raises:
+        JudgeError: If strict and the reply is mock, failed, or its first
+            non-empty line is not just a score in range.
     """
     # Local import to avoid a circular import at module load time:
     # router.adapters.mock imports QUALITY_PROFILE from this module, so this
@@ -269,10 +344,16 @@ def judge_score_with_model(
     )
     judge_adapter = get_adapter(judge_model)
     judge_response = judge_adapter.complete(prompt)
-    return _parse_judge_score(judge_response.text)
+    if not strict:
+        return _parse_judge_score(judge_response.text)
+    first_line = (judge_response.text or "").strip().split("\n")[0]
+    match = _STRICT_JUDGE_RE.fullmatch(_strip_markup(first_line))
+    if judge_response.simulated or not judge_response.success or not match:
+        raise JudgeError(f"no real judge score from {judge_model}")
+    return float(match.group(1))
 
 
-def _real_rubric_judge(task: dict[str, Any], response: Response) -> float:
+def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = False) -> float:
     """
     Real LLM-as-judge score using the primary judge model (claude-opus-4-8),
     via `judge_score_with_model`.
@@ -287,10 +368,10 @@ def _real_rubric_judge(task: dict[str, Any], response: Response) -> float:
     """
     from .config import FRONTIER_MODEL
 
-    return judge_score_with_model(task, response, FRONTIER_MODEL)
+    return judge_score_with_model(task, response, FRONTIER_MODEL, strict)
 
 
-def score(task: dict[str, Any], response: Response) -> float:
+def score(task: dict[str, Any], response: Response, strict: bool = False) -> float:
     """
     Score a response against a task using the method named in task['scoring'].
 
@@ -301,19 +382,25 @@ def score(task: dict[str, Any], response: Response) -> float:
     Args:
         task: Task dict with reference/scoring fields.
         response: The Response to score.
+        strict: Raise JudgeError rather than fall back to a mock or default score.
 
     Returns:
         Quality score in [0.0, 1.0].
 
     Raises:
         ValueError: If task['scoring'] is not a supported method.
+        JudgeError: If strict and no real judge score was obtained.
     """
     method = task.get("scoring")
     if method == "exact_match":
         return exact_match(response.text, task["reference"])
+    if method == "final_answer":
+        return final_answer(response.text, task["reference"])
     if method == "rubric_judge":
         if _real_judge_available():
-            return _real_rubric_judge(task, response)
+            return _real_rubric_judge(task, response, strict)
+        if strict:
+            raise JudgeError("real judge unavailable")
         return rubric_judge(task, response)
     raise ValueError(f"Unsupported scoring method: {method!r}")
 

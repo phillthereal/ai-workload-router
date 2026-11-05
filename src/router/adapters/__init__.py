@@ -45,6 +45,32 @@ _PROVIDER_BASE_URL: dict[str, str] = {
 }
 
 
+class SpendMeter:
+    """Running USD total of real, billed provider calls in this process."""
+
+    usd = 0.0
+
+
+class _MeteredAdapter(Adapter):
+    """Adds each real call's cost to SpendMeter. Sits inside the cache, so replays cost nothing."""
+
+    def __init__(self, inner: Adapter, model_name: str) -> None:
+        self.inner = inner
+        self.model_name = model_name
+
+    def complete(
+        self,
+        prompt: str,
+        effort: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+    ) -> Response:
+        response = self.inner.complete(prompt, effort, max_tokens)
+        SpendMeter.usd += get_model(self.model_name).cost_for_tokens(
+            response.input_tokens, response.output_tokens
+        )
+        return response
+
+
 class _FallbackToMockAdapter(Adapter):
     """Runs `primary`; on a failed real call, transparently replays MockAdapter."""
 
@@ -115,9 +141,9 @@ def get_adapter(model_name: str, allow_mock_fallback: bool = True,
             raise MissingProviderError(f"no API key/provider support for {model_name}")
         return MockAdapter(model_name)
 
-    real = _build_real_adapter(model_name, model.provider, api_key)
+    real = _MeteredAdapter(_build_real_adapter(model_name, model.provider, api_key), model_name)
     cached = CachedAdapter(real, model_name) if use_cache else real
     return _FallbackToMockAdapter(cached, model_name) if allow_mock_fallback else cached
 
 
-__all__ = ["Adapter", "Response", "MockAdapter", "get_adapter"]
+__all__ = ["Adapter", "Response", "MockAdapter", "SpendMeter", "get_adapter"]
