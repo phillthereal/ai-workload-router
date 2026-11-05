@@ -21,51 +21,40 @@ This repo tests those questions with measurements, and publishes the cases where
 ## Architecture
 
 ```mermaid
-flowchart TD
+flowchart LR
     subgraph entry["Ways in"]
         WEB["Web UI + POST /route<br/>demo mode by default"]
-        OAI["OpenAI-compatible server<br/>serve.py"]
-        MCP["MCP server<br/>ai-router-mcp"]
-        RAG["RAG demo<br/>examples/rag"]
-        BENCH["Benchmark<br/>run_benchmark.py"]
+        OAI["OpenAI-compatible server"]
+        MCP["MCP server"]
+        RAG["RAG demo"]
+        BENCH["Benchmark"]
     end
 
-    ROUTER["Router.complete(prompt)"]
-    POLICY{"Policy picks a model<br/>rules · learned · cascade · jury"}
+    ROUTER["Router +<br/>policy picks a model<br/>rules · learned ·<br/>cascade · jury"]
 
-    subgraph tiers["Model tiers (default roster)"]
+    subgraph tiers["Tiers (default roster)"]
         BUDGET["Budget<br/>GPT-4o mini"]
         MID["Mid<br/>DeepSeek Chat"]
         FRONTIER["Frontier<br/>Claude Opus 4.8"]
     end
 
-    ADAPTER["Provider adapters<br/>failover up the ladder"]
-    CACHE[("Disk cache<br/>.cache/")]
-    RESULT["Result<br/>answer, model, cost, reasons"]
-
-    subgraph measure["Benchmark only"]
-        SCORE["Scoring<br/>exact match or LLM judge"]
-        DB[("SQLite log<br/>data/runs.db")]
-        REPORT["Reports in data/"]
-    end
+    ADAPTER["Provider adapters<br/>failover up the ladder<br/>disk cache"]
+    RESULT["Result<br/>answer, model,<br/>cost, reasons"]
+    MEASURE["Benchmark only:<br/>scoring, SQLite log,<br/>reports in data/"]
 
     WEB --> ROUTER
     OAI --> ROUTER
     MCP --> ROUTER
     RAG --> ROUTER
     BENCH --> ROUTER
-    ROUTER --> POLICY
-    POLICY --> BUDGET
-    POLICY --> MID
-    POLICY --> FRONTIER
+    ROUTER --> BUDGET
+    ROUTER --> MID
+    ROUTER --> FRONTIER
     BUDGET --> ADAPTER
     MID --> ADAPTER
     FRONTIER --> ADAPTER
-    ADAPTER <--> CACHE
     ADAPTER --> RESULT
-    RESULT --> SCORE
-    SCORE --> DB
-    DB --> REPORT
+    RESULT --> MEASURE
 ```
 
 - **Policies** decide the model, and all share one interface. *Rules* classify the task and look up a tier. *Learned* checks logged outcomes for similar tasks first. *Cascade* tries the cheap model, has a verifier check the answer, and escalates if it fails. *Jury* escalates when cheap models from different vendors disagree.
