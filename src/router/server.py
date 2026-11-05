@@ -19,17 +19,20 @@ import threading
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
+from pathlib import Path
+from typing import Any, Callable, Optional, Union
 
 from .api import (
-    CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, ProviderError, Router, RulesPolicy,
+    CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, RulesPolicy,
 )
 from .config import ROSTERS
 from .spend_guard import SpendGuard
 
+LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
+
 MAX_BODY = 262_144  # 256 KB
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
-SELECTORS = {
+SELECTORS: dict[str, Callable[[], Policy]] = {
     "router": lambda: RulesPolicy(use_labels=False),
     "auto": lambda: RulesPolicy(use_labels=False),
     "router:cascade": CascadePolicy,
@@ -38,7 +41,7 @@ SELECTORS = {
 }
 
 
-def flatten(messages) -> str:
+def flatten(messages: Any) -> str:
     """system + user/assistant turns -> one labelled prompt. Raises ValueError."""
     if not isinstance(messages, list) or not messages:
         raise ValueError("'messages' must be a non-empty array")
@@ -55,9 +58,11 @@ def flatten(messages) -> str:
     return "\n\n".join(parts)
 
 
-def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=None,
+def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: LogDb = None,
                  daily_budget_usd: float = 1.0, allow_frontier: bool = False,
-                 rate_limit_per_min: int = 30, max_concurrent: int = 8, host: str = "127.0.0.1"):
+                 rate_limit_per_min: int = 30, max_concurrent: int = 8,
+                 host: str = "127.0.0.1") -> type[BaseHTTPRequestHandler]:
+    """Build the request handler class, closing over this server's limits and guard."""
     slots = threading.BoundedSemaphore(max_concurrent)
     guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier)
     rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
@@ -66,11 +71,12 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
         timeout = 30  # socket timeout: slow/idle clients can't pin a thread
         server_version = "awr-router"
         protocol_version = "HTTP/1.1"
+        server: ThreadingHTTPServer
 
-        def log_message(self, fmt, *args):  # never log paths/bodies/headers
+        def log_message(self, fmt: str, *args: Any) -> None:  # never log paths/bodies/headers
             pass
 
-        def _send(self, code, obj, headers=None):
+        def _send(self, code: int, obj: Any, headers: Optional[dict[str, str]] = None) -> None:
             body = json.dumps(obj).encode()
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
@@ -80,7 +86,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
             self.end_headers()
             self.wfile.write(body)
 
-        def _err(self, code, msg, typ="invalid_request_error"):
+        def _err(self, code: int, msg: str, typ: str = "invalid_request_error") -> None:
             self._send(code, {"error": {"message": msg, "type": typ, "param": None, "code": None}})
 
         def _gate(self) -> bool:
@@ -110,7 +116,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
             self._err(401, "Invalid or missing bearer token", "authentication_error")
             return False
 
-        def do_GET(self):
+        def do_GET(self) -> None:
             if not self._gate():
                 return
             try:
@@ -118,7 +124,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
             finally:
                 slots.release()
 
-        def do_POST(self):
+        def do_POST(self) -> None:
             if not self._gate():
                 return
             try:
@@ -126,7 +132,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
             finally:
                 slots.release()
 
-        def _get(self):
+        def _get(self) -> None:
             path = self.path.split("?")[0]
             if path == "/healthz":
                 return self._send(200, {"status": "ok"})
@@ -138,7 +144,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
                 return self._send(200, {"object": "list", "data": data})
             self._err(404, "Not found")
 
-        def _read_json(self):
+        def _read_json(self) -> Optional[dict[str, Any]]:
             """Size-limited JSON object body, or None after sending the error."""
             try:
                 n = int(self.headers.get("Content-Length", ""))
@@ -161,7 +167,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
                 return self._err(400, "Request body must be a JSON object")
             return req
 
-        def _post(self):
+        def _post(self) -> None:
             path = self.path.split("?")[0]
             if path not in ("/v1/chat/completions", "/v1/feedback"):
                 return self._err(404, "Not found")
@@ -214,13 +220,14 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
                              "request_id": r.request_id},
             }, {"X-Router-Model": r.model})
 
-        def _feedback(self, req):
+        def _feedback(self, req: dict[str, Any]) -> None:
             """{request_id, score in [0,1]} -> the learned router's live signal."""
             if not log_db:
                 return self._err(400, "Feedback needs the server started with --log-db")
             try:
                 Router(FrontierOnlyPolicy(), log_to=log_db).feedback(
-                    req.get("request_id"), req.get("score"), source="user")
+                    req.get("request_id"), req.get("score"),  # type: ignore[arg-type]  # checked inside
+                    source="user")
             except KeyError:
                 return self._err(404, "Unknown request_id")
             except (ValueError, TypeError) as e:
@@ -230,8 +237,9 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db=Non
     return Handler
 
 
-def make_server(host="127.0.0.1", port=8787, roster="cross_vendor", allow_mock=False,
-                token: Optional[str] = None, log_db=None, daily_budget_usd: float = 1.0,
+def make_server(host: str = "127.0.0.1", port: int = 8787, roster: str = "cross_vendor",
+                allow_mock: bool = False, token: Optional[str] = None, log_db: LogDb = None,
+                daily_budget_usd: float = 1.0,
                 allow_frontier: bool = False, rate_limit_per_min: int = 30,
                 max_concurrent: int = 8) -> ThreadingHTTPServer:
     """token=None means NO authentication (tests/embedding only); the CLI always sets one
@@ -241,7 +249,7 @@ def make_server(host="127.0.0.1", port=8787, roster="cross_vendor", allow_mock=F
         rate_limit_per_min, max_concurrent, host))
 
 
-def resolve_token(env_token: Optional[str], no_auth: bool):
+def resolve_token(env_token: Optional[str], no_auth: bool) -> tuple[Optional[str], bool]:
     """-> (token or None, generated?). Auth is on unless --no-auth."""
     if no_auth:
         return None, False
@@ -250,7 +258,8 @@ def resolve_token(env_token: Optional[str], no_auth: bool):
     return secrets.token_urlsafe(32), True
 
 
-def main(argv=None) -> None:
+def main(argv: Optional[list[str]] = None) -> None:
+    """CLI entry point: parse flags, resolve the bearer token, serve until interrupted."""
     p = argparse.ArgumentParser(description="OpenAI-compatible router endpoint")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8787)

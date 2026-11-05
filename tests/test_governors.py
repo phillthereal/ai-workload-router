@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from router import api, db  # noqa: E402
 from router.adapters.base import Adapter, Response  # noqa: E402
-from router.api import BudgetPolicy, FrontierOnlyPolicy, JuryPolicy, Router, ShadowPolicy  # noqa: E402
+from router.api import BudgetPolicy, JuryPolicy, Router, ShadowPolicy  # noqa: E402
 from router.config import get_roster  # noqa: E402
 from router.governors import RegretWindow  # noqa: E402
 from router.report import build_report  # noqa: E402

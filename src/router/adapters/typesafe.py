@@ -24,6 +24,8 @@ _TIMEOUT_S = 60.0
 
 @dataclass
 class Decision:
+    """One Jev decision: the chosen option, its probabilities and the call's metadata."""
+
     choice: Optional[str]
     confidence: float = 0.0
     probabilities: dict[str, float] = field(default_factory=dict)
@@ -35,14 +37,17 @@ class Decision:
 
     @property
     def top_prob(self) -> float:
+        """Highest option probability (0.0 if there are none)."""
         return max(self.probabilities.values(), default=0.0)
 
     @property
     def cost_usd(self) -> float:
+        """Cost of this decision in USD: input tokens only, output is free."""
         return self.input_tokens / 1e6 * COST_PER_1M_INPUT
 
 
 def build_body(state: str, instructions: str, criteria: dict[str, str], name: str = "answer") -> dict:
+    """Build the /v1/systemone request: one choice question called `name`."""
     return {"state": state, "model": MODEL, "questions": {name: {
         "type": "choice", "instructions": instructions, "criteria": criteria}}}
 
@@ -71,10 +76,13 @@ def mock_decision(state: str, criteria: dict[str, str]) -> Decision:
 
 
 class JevClient:
+    """HTTP client for Jev. API failures come back as data, not exceptions."""
+
     def __init__(self, api_key: Optional[str] = None, url: str = URL) -> None:
         self.api_key, self.url = api_key, url
 
     def decide(self, state: str, instructions: str, criteria: dict[str, str]) -> Decision:
+        """Ask Jev to pick from `criteria`; any failure returns success=False."""
         if force_mock():
             return mock_decision(state, criteria)
         key = self.api_key or get_api_key("TYPESAFE_API_KEY")

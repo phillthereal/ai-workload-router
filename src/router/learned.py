@@ -59,11 +59,11 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from . import db
 from .classifier import keyword_signal_groups
-from .config import TIER_ORDER, get_roster
+from .config import TIER_ORDER, Roster, get_roster
 from .report import QUALITY_RETENTION_TARGET_PCT
 from .router import DEFAULT_ROUTING_RULES
 
@@ -351,9 +351,9 @@ def _tier_for(task_type: str, difficulty: str, routing_rules: Optional[dict]) ->
 def _gather_evidence(
     tier: str,
     features: FeatureBucket,
-    roster,
+    roster: Roster,
     before_run_group: Optional[str],
-    db_path,
+    db_path: Optional[Union[str, Path]],
     task_registry: dict[str, str],
     now: Optional[datetime],
 ) -> Evidence:

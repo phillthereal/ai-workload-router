@@ -8,6 +8,7 @@ env/
 venv/
 ENV/
 .venv
+*.egg-info/
 
 # Project-specific
 .env

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
-from router.config import get_roster, TIER_ORDER  # noqa: E402
+from router.config import get_roster  # noqa: E402
 from router.governors import BudgetPolicy, RegretWindow, cheaper_tier  # noqa: E402
 
 R = get_roster("claude_tiers")
@@ -98,7 +98,7 @@ def sim_shadow(table, p, seed, drop=0.3):
     hit = set(rng.sample(types, len(types) // 2))
     days = traffic(table, seed)
     w = RegretWindow(WINDOW, THRESH, MIN_S)
-    reqs = false_alarm = detect = None
+    false_alarm = detect = None
     answers_cost = shadow_cost = 0.0
     n = 0
     for di, d in enumerate(days):

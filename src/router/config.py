@@ -186,6 +186,7 @@ class Roster:
     frontier: str
 
     def model_for_tier(self, tier: str) -> str:
+        """Model name at `tier`. KeyError for an unknown tier."""
         return {"budget": self.budget, "mid": self.mid, "frontier": self.frontier}[tier]
 
     def price_range(self) -> float:

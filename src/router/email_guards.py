@@ -28,8 +28,10 @@ _SECURITY = re.compile(
 
 
 def injection_hit(text: str) -> bool:
+    """True if the email appears to address the classifier rather than a person."""
     return bool(_INJECTION.search(text or ""))
 
 
 def security_veto(text: str) -> bool:
+    """True if the email carries security, payment or identity language."""
     return bool(_SECURITY.search(text or ""))

@@ -99,6 +99,7 @@ class AnthropicAdapter(Adapter):
         effort: Optional[str] = None,
         max_tokens: Optional[int] = None,
     ) -> Response:
+        """Call the Messages API, retrying once on an exception; failures return success=False."""
         import anthropic  # lazy import — keeps the offline path dependency-free
 
         client = anthropic.Anthropic(api_key=self.api_key)

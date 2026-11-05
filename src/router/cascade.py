@@ -139,6 +139,7 @@ class CascadeResult:
 
     @property
     def total_cost(self) -> float:
+        """Answer plus overhead, in USD."""
         return self.answer_cost + self.overhead_cost
 
 

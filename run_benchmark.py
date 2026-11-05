@@ -49,7 +49,7 @@ from router.api import (  # noqa: E402
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
-from router.report import BASELINE_STRATEGY, build_report, format_report_markdown, print_report  # noqa: E402
+from router.report import build_report, format_report_markdown, print_report  # noqa: E402
 from router.scoring import score  # noqa: E402
 
 # Experimental arms the benchmark can run against the frontier_only baseline.

@@ -11,17 +11,19 @@ chosen tier's model. Jev failure or an unparseable fallback reply fails toward q
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, cast
 
 from .adapters.base import Response
 from .adapters.typesafe import Decision, JevClient, MODEL
-from .api import Result
+from .api import Ctx, Result
 from .rulebook import Rulebook
 from .untrusted import fence
 
 
 @dataclass
 class JevResult(Result):
+    """Result plus Jev's decision: the choice, its probabilities and whether it escalated."""
+
     choice: Optional[str] = None
     jev_probabilities: Optional[dict] = None
     escalated: bool = False
@@ -29,6 +31,8 @@ class JevResult(Result):
 
 
 class JevClassifierPolicy:
+    """Pick a rulebook option with Jev; escalate to the fallback LLM when unsure."""
+
     name = "jev_classifier"
 
     def __init__(self, rulebook: Rulebook, threshold: float = 0.9, protected: Sequence[str] = (),
@@ -42,15 +46,19 @@ class JevClassifierPolicy:
         self.client = client or JevClient()
 
     def report_tags(self) -> list[str]:
+        """Tag reports with the confidence threshold."""
         return [f"jev-{self.threshold}"]
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
-    def sure(self, d) -> bool:
+    def sure(self, d: Decision) -> bool:
+        """True if Jev succeeded, cleared the threshold and the choice is not protected."""
         return d.success and d.top_prob >= self.threshold and d.choice not in self.protected
 
-    def run(self, prompt: str, task: dict[str, Any], ctx) -> JevResult:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> JevResult:
+        """Return Jev's choice if sure, otherwise the fallback model's choice."""
         state = task.get("state") or prompt
         rb = self.rulebook
         if self.guard and self.guard(state):
@@ -58,12 +66,13 @@ class JevClassifierPolicy:
         else:
             d = self.client.decide(fence(state, "email") if self.fence_state else state,
                                    rb.render_instructions(), rb.criteria)
-        common = dict(jev_probabilities=d.probabilities, rulebook_hash=rb.content_hash(),
+        common: dict[str, Any] = dict(jev_probabilities=d.probabilities, rulebook_hash=rb.content_hash(),
                       routing_cost_usd=d.cost_usd)
         why = (f"jev {d.choice} p={d.top_prob:.2f}" if d.success else f"jev failed ({d.error})")
         if self.sure(d):
-            resp = Response(d.choice, d.input_tokens, 0, d.latency_ms, MODEL, d.simulated)
-            return JevResult(text=d.choice, model=MODEL, answer_cost_usd=0.0, simulated=d.simulated,
+            # sure() implies a choice, so the casts below are safe.
+            resp = Response(cast(str, d.choice), d.input_tokens, 0, d.latency_ms, MODEL, d.simulated)
+            return JevResult(text=cast(str, d.choice), model=MODEL, answer_cost_usd=0.0, simulated=d.simulated,
                              trace=[f"{why} -> handled"], response=resp, choice=d.choice, **common)
         f = ctx.call(self.fallback_model, rb.render_prompt(state), max_tokens=16)
         choice = rb.parse_choice(f.text) or d.choice
@@ -88,16 +97,19 @@ class JevTierPolicy:
         self.rulebook, self.threshold, self.client = rulebook, threshold, client or JevClient()
 
     def report_tags(self) -> list[str]:
+        """Tag reports with the confidence threshold."""
         return [f"jevtier-{self.threshold}"]
 
     def before_run_group(self, run_group: str) -> None:
+        """No-op: this policy has no per-run state."""
         pass
 
-    def run(self, prompt: str, task: dict[str, Any], ctx) -> JevResult:
+    def run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> JevResult:
+        """Let Jev pick the tier (frontier if unsure), then answer on that tier's model."""
         rb = self.rulebook
         d = self.client.decide(prompt, rb.render_instructions(), rb.criteria)
         sure = d.success and d.top_prob >= self.threshold and d.choice in ("budget", "mid", "frontier")
-        tier = d.choice if sure else "frontier"
+        tier = cast(str, d.choice) if sure else "frontier"
         r = ctx.call(ctx.roster.model_for_tier(tier), prompt)
         return JevResult(text=r.text, model=r.model, answer_cost_usd=ctx.cost(r), routing_cost_usd=d.cost_usd,
                          simulated=r.simulated or d.simulated, response=r, choice=tier, escalated=not sure,

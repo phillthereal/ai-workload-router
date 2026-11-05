@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from .config import get_model, get_roster
 from .scoring import DIFFICULTIES, TASK_TYPES
@@ -367,8 +367,9 @@ def classify_task(
 
     if use_labels:
         return Classification(
-            task_type=labelled_type,
-            difficulty=labelled_difficulty,
+            # Callers pass use_labels=True only for labelled tasks; nothing enforces it.
+            task_type=cast(str, labelled_type),
+            difficulty=cast(str, labelled_difficulty),
             cost_usd=0.0,
             model=None,
             simulated=False,

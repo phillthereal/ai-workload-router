@@ -21,7 +21,7 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 import jev_loop as L  # noqa: E402  (reuse gate / select_examples / leak / parse_proposal / apply_proposal)
-from jev_calibration import BINS, JEV_PER_TOK, auroc, calibration  # noqa: E402
+from jev_calibration import JEV_PER_TOK, auroc, calibration  # noqa: E402
 
 DATA = ROOT / "data" / "public" / "banking77"
 BASE = ROOT / "data" / "rulebooks" / "banking77_base.json"
