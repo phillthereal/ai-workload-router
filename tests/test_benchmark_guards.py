@@ -170,13 +170,14 @@ class StrictJudge(unittest.TestCase):
         self.assertEqual(self.judged(response("0.9"), strict=True), 0.9)
         self.assertEqual(self.judged(response("great"), strict=False), 0.5)
 
-    def test_strict_needs_a_first_line_that_is_only_a_score_in_range(self):
+    def test_strict_needs_a_first_or_last_line_that_is_only_a_score_in_range(self):
         for text in ("Meets 1 of 3 requirements.", "Score: 1.5", "1.5", "great", "", "0.85 because it is good",
-                     "It is good.\n0.85"):
+                     "It is good, about 0.85.\nDone.", "0.9\nOn reflection:\n0.3"):
             with self.assertRaises(JudgeError, msg=text):
                 self.judged(response(text), strict=True)
         for text, value in (("0.85", 0.85), ("Score: 0.85.", 0.85), ("**1.0**", 1.0), ("0", 0.0),
-                            ("**Score:** 0.85", 0.85), ("\n0.85\nGood answer.", 0.85)):
+                            ("**Score:** 0.85", 0.85), ("\n0.85\nGood answer.", 0.85),
+                            ("Let me count: 8.\n\n0.95", 0.95), ("0.9\nChecked.\n0.9", 0.9)):
             self.assertEqual(self.judged(response(text), strict=True), value, text)
 
     def test_non_strict_keeps_reading_a_score_out_of_prose(self):

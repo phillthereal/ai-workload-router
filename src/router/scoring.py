@@ -257,7 +257,7 @@ def rubric_judge(task: dict[str, Any], response: Response) -> float:
 # since the judge model isn't forced into structured output.
 _JUDGE_SCORE_RE = re.compile(r"(?<![\d.])(0(?:\.\d+)?|1(?:\.0+)?)(?![\d])")
 
-# Strict runs read only a first line that is the score and nothing else.
+# Strict runs read only a first or last line that is the score and nothing else.
 _STRICT_JUDGE_RE = re.compile(rf"(?:score[\s*`]*:[\s*`]*)?{_JUDGE_SCORE_RE.pattern}", re.IGNORECASE)
 
 _JUDGE_PROMPT_TEMPLATE = """You are grading a candidate answer to a task.
@@ -329,8 +329,8 @@ def judge_score_with_model(
         output can't be parsed as a number in range.
 
     Raises:
-        JudgeError: If strict and the reply is mock, failed, or its first
-            non-empty line is not just a score in range.
+        JudgeError: If strict and the reply is mock, failed, or neither its
+            first nor last line is just a score in range, or they disagree.
     """
     # Local import to avoid a circular import at module load time:
     # router.adapters.mock imports QUALITY_PROFILE from this module, so this
@@ -346,11 +346,13 @@ def judge_score_with_model(
     judge_response = judge_adapter.complete(prompt)
     if not strict:
         return _parse_judge_score(judge_response.text)
-    first_line = (judge_response.text or "").strip().split("\n")[0]
-    match = _STRICT_JUDGE_RE.fullmatch(_strip_markup(first_line))
-    if judge_response.simulated or not judge_response.success or not match:
+    lines = (judge_response.text or "").strip().split("\n")
+    matches = [_STRICT_JUDGE_RE.fullmatch(_strip_markup(line)) for line in (lines[0], lines[-1])]
+    scores = {float(match.group(1)) for match in matches if match}
+    # Two different scores are ambiguous, so they stop the run like no score does.
+    if judge_response.simulated or not judge_response.success or len(scores) != 1:
         raise JudgeError(f"no real judge score from {judge_model}")
-    return float(match.group(1))
+    return scores.pop()
 
 
 def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = False) -> float:
