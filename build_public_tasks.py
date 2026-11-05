@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from router.scoring import REFERENCE_SEP  # noqa: E402
 
 SEED = 2026
+PAGE = 100  # the most rows the rows API returns per request
 ANSWER_LINE = "End your reply with one final line in exactly this form:\nAnswer: <your answer>"
 HEADERS = {"User-Agent": "ai-workload-router-task-builder"}
 
@@ -74,10 +75,14 @@ def sample(dataset: str, n: int, convert: Callable[[Row, int], Optional[Task]]) 
     order = list(range(total))
     random.Random(f"{SEED}-{dataset}").shuffle(order)
     tasks: list[Task] = []
+    pages: dict[int, list[Any]] = {}  # same rows as one request per row, far fewer requests
     for index in order:
         if len(tasks) == n:
             return tasks
-        task = convert(_get(_rows_url(dataset, index, 1))["rows"][0]["row"], index)
+        page = index // PAGE
+        if page not in pages:
+            pages[page] = _get(_rows_url(dataset, page * PAGE, PAGE))["rows"]
+        task = convert(pages[page][index % PAGE]["row"], index)
         if task:
             tasks.append(task)
     raise SystemExit(f"{dataset} has too few usable rows")
@@ -157,10 +162,32 @@ def build() -> tuple[list[Task], list[Task]]:
     return mixed + mmlu[:24], hard_set() + mmlu[24:]
 
 
+def build_fresh() -> list[Task]:
+    """The next 300 tasks in each dataset's seeded order, unused by build(), same type shares."""
+    with (ROOT / "data" / "public" / "banking77" / "test.csv").open(newline="") as f:
+        rows = list(csv.DictReader(f))
+    categories = sorted({r["category"] for r in rows})
+    order = list(range(len(rows)))
+    random.Random(f"{SEED}-banking77").shuffle(order)
+    fresh = [banking(rows[i]["text"], rows[i]["category"], categories, i) for i in order[96:192]]
+    fresh += sample("rajpurkar/squad_v2", 168, squad)[84:]
+    fresh += sample("google/IFEval", 144, ifeval)[72:]
+    fresh += sample("openai/gsm8k", 48, gsm8k)[24:]
+    return fresh + sample("TIGER-Lab/MMLU-Pro", 78, mmlu_pro)[54:]
+
+
 def main() -> None:
-    """Write both task files."""
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data" / "public" / "benchmark"
+    """Write both task files, or with --fresh only tasks_public_fresh.json."""
+    fresh = "--fresh" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--fresh"]
+    out = Path(args[0]) if args else ROOT / "data" / "public" / "benchmark"
     out.mkdir(parents=True, exist_ok=True)
+    if fresh:
+        data = {"version": 2, "tasks": build_fresh()}
+        path = out / "tasks_public_fresh.json"
+        path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
+        print(f"{path}: {len(data['tasks'])} tasks")
+        return
     mixed, hard = build()
     for name, tasks in (("tasks_public.json", mixed), ("tasks_public_hard.json", hard)):
         data = {"version": 2, "tasks": tasks}
