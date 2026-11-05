@@ -164,7 +164,7 @@ On the judge check: a second judge, GPT-4o mini, re-scored the 30 rubric-judged 
 
 **Trade-off.** Reasoning tasks do not get cheaper. They are 16% of tasks and 33% of the baseline bill in the easy set (README), which caps the saving.
 
-**Rejected.** Routing easy reasoning cheaper. The rule treats a wrong logic step as costing more than the saving.
+**Rejected.** Not tried: a cheaper tier for easy reasoning as a rule. I ruled it out by judgement, not by a test: a wrong logic step costs more than the saving.
 
 **At production scale.** Test this per workload. The learned router showed that some hard shapes can move down when there is evidence [R12].
 
