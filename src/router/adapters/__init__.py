@@ -21,6 +21,7 @@ normalized output and metadata (tokens, latency).
 
 from __future__ import annotations
 
+import threading
 from typing import Optional
 
 from ..config import get_model
@@ -49,6 +50,7 @@ class SpendMeter:
     """Running USD total of real, billed provider calls in this process."""
 
     usd = 0.0
+    lock = threading.Lock()
 
 
 class _MeteredAdapter(Adapter):
@@ -65,9 +67,11 @@ class _MeteredAdapter(Adapter):
         max_tokens: Optional[int] = None,
     ) -> Response:
         response = self.inner.complete(prompt, effort, max_tokens)
-        SpendMeter.usd += get_model(self.model_name).cost_for_tokens(
+        cost = get_model(self.model_name).cost_for_tokens(
             response.input_tokens, response.output_tokens
         )
+        with SpendMeter.lock:  # parallel benchmark runs must not lose an update
+            SpendMeter.usd += cost
         return response
 
 

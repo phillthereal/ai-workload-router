@@ -38,6 +38,7 @@ import math
 import sys
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
@@ -48,9 +49,10 @@ from router import db  # noqa: E402
 from router.adapters import SpendMeter, get_adapter  # noqa: E402
 from router.api import (  # noqa: E402
     CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, ProviderError, Result,
-    Router, RulesPolicy,
+    Router, RulesPolicy, default_policy,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
+from router.lookup import public_lookup  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
 from router.report import build_report, format_report_markdown, print_report  # noqa: E402
 from router.scoring import JudgeError, score  # noqa: E402
@@ -105,6 +107,10 @@ def _report_path(
     verifier: Optional[str] = None,
     learned_flag: bool = False,
     jury_mode: Optional[str] = None,
+    agree: bool = False,
+    pinned: bool = False,
+    consensus: bool = False,
+    lookup: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -153,6 +159,10 @@ def _report_path(
         and tag is None
         and verifier is None
         and not learned_flag
+        and not agree
+        and not pinned
+        and not consensus
+        and not lookup
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -164,6 +174,14 @@ def _report_path(
         parts.append("classified")
     if learned_flag:
         parts.append("learned")
+    if agree:
+        parts.append("agree")
+    if pinned:
+        parts.append("pinned")
+    if consensus:
+        parts.append("consensus")
+    if lookup:
+        parts.append("lookup")
     if effort_policy:
         parts.append("effort")
     if verifier:
@@ -208,6 +226,27 @@ def _check_real(result: Result) -> None:
         raise RunStopped("a provider call failed")
 
 
+def _run_tasks(router, tasks, workers: int, max_spend: Optional[float]):
+    """Yield (task, result, quality) in task order, answering `workers` tasks at a time.
+
+    The spend check runs before each batch and reserves room for the whole
+    batch, so a parallel run stops under the cap just as a serial one does.
+    """
+    capped = max_spend is not None
+
+    def answer(task):
+        result = router.complete(task["prompt"], task=task)
+        if capped:
+            _check_real(result)
+        return task, result, score(task, result.response, strict=capped)
+
+    with ThreadPoolExecutor(workers) as pool:
+        for start in range(0, len(tasks), workers):
+            if capped and SpendMeter.usd + _TASK_RESERVE_USD * workers >= max_spend:
+                raise RunStopped(f"spend cap of ${max_spend:.2f} reached")
+            yield from pool.map(answer, tasks[start:start + workers])
+
+
 def _preflight(roster_name: str) -> None:
     """One tiny real call per roster model, so a bad key or empty account stops the run first."""
     roster = ROSTERS[roster_name]
@@ -220,15 +259,27 @@ def _preflight(roster_name: str) -> None:
             raise RunStopped(f"preflight failed on {model}")
 
 
-def _build_policy(args: argparse.Namespace):
-    """Map CLI flags to the experimental Policy."""
+def _is_default_run(args: argparse.Namespace) -> bool:
+    """A plain run gets the router's default. Any routing flag keeps that flag's own meaning."""
+    return (args.strategy == "router" and args.roster == DEFAULT_ROSTER and not args.effort_policy
+            and not (args.classic or args.classify or args.learned or args.lookup
+                     or args.agree_on or args.frontier_on or args.consensus_on))
+
+
+def _build_policy(args: argparse.Namespace, tasks: list[dict]):
+    """Map CLI flags to the experimental Policy. The lookup never sees the tasks under test."""
     if args.strategy == "cascade":
         return CascadePolicy(args.verifier, args.escalate_threshold, prompt_version=_PV)
     if args.strategy == "jury":
         return JuryPolicy(mode=args.jury_mode, prompt_version=_PV)
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
-    return RulesPolicy(use_labels=not args.classify, prompt_version=_PV)
+    if _is_default_run(args):
+        return default_policy(_PV, public_lookup(t["prompt"] for t in tasks))
+    return RulesPolicy(use_labels=not args.classify, prompt_version=_PV,
+                       agree_on=tuple(args.agree_on), frontier_on=tuple(args.frontier_on),
+                       consensus_on=tuple(args.consensus_on),
+                       lookup=public_lookup(t["prompt"] for t in tasks) if args.lookup else None)
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
@@ -239,6 +290,10 @@ def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
         next((t[len("verifier-"):] for t in tags if t.startswith("verifier-")), None),
         "learned" in tags,
         next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
+        "agree" in tags,
+        "pinned" in tags,
+        "consensus" in tags,
+        "lookup" in tags,
     )
 
 
@@ -260,6 +315,56 @@ def _build_parser() -> argparse.ArgumentParser:
             "Per-tier effort, e.g. 'budget=off,mid=low,frontier=medium'. "
             "Omit to send no effort/thinking config (the v1 request shape)."
         ),
+    )
+    parser.add_argument(
+        "--agree-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help=(
+            "For this task type, ask the budget and mid models and keep the answer "
+            "if they agree; if not, ask the frontier model. Repeatable. "
+            "(--strategy router, not with --learned.)"
+        ),
+    )
+    parser.add_argument(
+        "--classic",
+        action="store_true",
+        help="Hand labels and the rules table only: the v1 setup behind data/benchmark_report.md.",
+    )
+    parser.add_argument(
+        "--consensus-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help=(
+            "For this task type, ask Haiku 5.5 and the mid model and keep the mid answer "
+            "if they agree. If not, reasoning gets a vote from the budget model, then "
+            "Sonnet 5.5 decides. Repeatable. (As --agree-on.)"
+        ),
+    )
+    parser.add_argument(
+        "--lookup",
+        action="store_true",
+        help="Predict type and difficulty free from the most similar public tasks, "
+             "leaving out the tasks under test. (As --agree-on, replaces --classify.)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help=(
+            "Answer this many tasks at a time. Faster, and logged in the same order, "
+            "but reported latency then includes load from the other tasks. "
+            "Not with --learned, which depends on task order."
+        ),
+    )
+    parser.add_argument(
+        "--frontier-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help="Always answer this task type on the frontier model. Repeatable. (As --agree-on.)",
     )
     parser.add_argument(
         "--classify",
@@ -363,6 +468,8 @@ def _run(argv: Optional[list[str]] = None) -> None:
     """Run the full benchmark pipeline end to end and print/save the report."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.workers < 1 or (args.workers > 1 and args.learned):
+        parser.error("--workers must be at least 1, and 1 with --learned")
     if args.max_spend is not None and force_mock():
         parser.error("--max-spend is for live runs; unset AWR_FORCE_MOCK")
     effort_policy = _parse_effort_policy(args.effort_policy)
@@ -376,7 +483,7 @@ def _run(argv: Optional[list[str]] = None) -> None:
     # the report's net-savings accounting is identical for either. The benchmark
     # opts into the offline mock fallback (allow_mock_fallback=True) so a run
     # always completes; real callers use router.api.Router's strict default.
-    policy = _build_policy(args)
+    policy = _build_policy(args, tasks)
     capped = args.max_spend is not None
     if capped:
         _preflight(args.roster)
@@ -389,14 +496,8 @@ def _run(argv: Optional[list[str]] = None) -> None:
         # `run_group` is the chronological cutoff for the learned policy: a
         # task only sees evidence strictly earlier than the run it is part of.
         router.before_run_group(run_group)
-        for task in tasks:
-            if capped and SpendMeter.usd + _TASK_RESERVE_USD >= args.max_spend:
-                raise RunStopped(f"spend cap of ${args.max_spend:.2f} reached")
-            result = router.complete(task["prompt"], task=task)
-            if capped:
-                _check_real(result)
+        for task, result, quality in _run_tasks(router, tasks, args.workers, args.max_spend):
             response = result.response
-            quality = score(task, response, strict=capped)
             fallbacks += result.classifier_fell_back
             truncated += response.truncated
 

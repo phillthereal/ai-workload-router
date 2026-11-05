@@ -4,7 +4,7 @@
 
 **[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls and a real classifier it cut cost by 84.1% but kept only 91.8% of quality, so it **missed the 95% quality target**. An earlier 25-task benchmark that I wrote myself had looked better, at 65.6% cheaper with about the same quality. It is a personal project and has not served any customer or company traffic.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls, the default rule cut cost by **86.4%** at **98.7%** of the quality of Claude Opus 4.8. With 99% certainty it saves at least 80.8% and keeps at least 95.1%, so it **meets the 95% quality target**. The first version missed that target, at 84.1% saved and 91.8% quality. Quality on hard tasks alone is not proven yet. It is a personal project and has not served any customer or company traffic.
 
 ## The problem
 
@@ -57,7 +57,7 @@ flowchart LR
     RESULT --> MEASURE
 ```
 
-- **Policies** decide the model, and all share one interface. *Rules* classify the task and look up a tier. *Learned* checks logged outcomes for similar tasks first. *Cascade* tries the cheap model, has a verifier check the answer, and escalates if it fails. *Jury* escalates when cheap models from different vendors disagree.
+- **Policies** decide the model, and all share one interface. *Rules* classify the task and look up a tier. The default adds a free lookup for the task type, and answers from cheap models that must agree (see [Measured results](#measured-results)). *Learned* checks logged outcomes for similar tasks first. *Cascade* tries the cheap model, has a verifier check the answer, and escalates if it fails. *Jury* escalates when cheap models from different vendors disagree.
 - **Adapters** give Anthropic and the OpenAI-style providers one interface, so a model is a config change. If a provider errors, the router tries the next model up and records that in the trace.
 - **Rosters** are the sets of models the router can pick from. The default spans three vendors, with about a 42× gap in output price between budget and frontier. `claude_tiers` stays inside one vendor, with a 5× gap.
 - **Scoring** only happens in the benchmark, because it needs an answer key. Of the 25 tasks, 10 are graded by exact match and 15 by a Claude Opus 4.8 judge against a rubric.
@@ -136,6 +136,21 @@ python redteam.py heuristic
 
 ## Measured results
 
+**The default rule: 300 public tasks, target met.** One real run ([report](data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_fresh2.md)), compared with sending every task to Claude Opus 4.8. Ranges here are 99%, and the cost includes every discarded answer.
+
+| Tasks | Number | Cost cut [99% range] | Quality vs Opus [99% range] |
+|---|---|---|---|
+| All | 300 | **86.4%** [80.8, 90.7] | **98.7%** [95.1, 102.4] |
+| Reasoning | 48 | 84.1% [67.7, 92.4] | 97.8% [90.9, 100.0] |
+| Extraction | 84 | 87.5% [82.8, 91.4] | 98.7% [89.9, 108.3] |
+| Classification | 96 | 71.0% [59.2, 81.9] | 98.7% [90.9, 106.8] |
+| Short writing | 72 | 94.8% [87.8, 97.3] | 99.3% [94.3, 104.2] |
+| Hard | 24 | 80.0% [56.7, 92.9] | 95.2% [80.0, 100.0] |
+
+- **How it routes.** A free nearest-match lookup picks the task type. Reasoning and extraction go to Haiku 5.5 and DeepSeek, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to GPT-4o mini and DeepSeek, then Opus if they differ. Short writing follows the rules table.
+- **Chain of Draft was tested and left out.** On 96 reasoning tasks it saved more (92.0% against 80.4%), but quality fell from 98.9% to 95.6%, and on 48 hard tasks to 90.5% ([test](experiments/cheap_tier_draft.py)).
+- **To repeat the run,** use `python run_benchmark.py --tasks data/public/benchmark/tasks_public_fresh2.json`. Use `--classic` for the hand-label setup behind the July report.
+
 The benchmark rows below came from real API calls, and each links to its committed report. Row-level data for them is in [`data/bi/fact_runs.csv`](data/bi/fact_runs.csv). The confidence intervals are explained in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 
 **The headline result: 300 public tasks, target missed.** The tasks, the plan and the target were [fixed before any paid call](docs/BENCHMARK_PLAN.md). Both runs use the three-vendor roster and a real classifier, and are compared with sending every task to Claude Opus 4.8.
@@ -192,7 +207,7 @@ The lesson across these runs: **savings depend on how much of the work is genuin
 | Can words in a prompt steer the routing? | Attacks that inflate cost fell from 7/10 to 0/10 on the keyword classifier after hardening, and 3/10 to 0/10 on the LLM classifier. Making a hard task look easy still works 2/9 times. | [V5_REDTEAM](docs/V5_REDTEAM.md) |
 | Does the result survive price changes? | Re-priced at OpenRouter's list prices, the 53.6% run came out at 53.58%. | [V5_PRICES](docs/V5_PRICES.md) |
 | Can a spend cap and a background check run unattended? | In simulation only: checking 5% of traffic caught a quality drop in 83.3% of runs, for 6.1% extra cost. | [V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md) |
-| Is Kimi K3 a cheaper mid tier? | No. It has Sonnet's list price plus billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
+| Is Kimi K3 a cheaper mid tier? | No. It lists above Sonnet ($3/$15 against $2/$10) and adds billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
 | Does it work on real text? | On 150 of my own emails, from a personal setup, the keyword classifier sent everything to the top tier. A cheap-first cascade saved 76.4% at 95.3% agreement with Haiku, but missed 1 of 13 emails that needed action. | [REAL_TRAFFIC_ASSESSMENT](docs/REAL_TRAFFIC_ASSESSMENT.md), [SHADOW_TEST](docs/SHADOW_TEST.md) |
 | Can a model's stated confidence be trusted? | On 800 public banking queries with true labels, the Jev model was 94.2% right when at least 90% sure, covering 71.5% of queries. GPT-4o mini was 83.7% right at the same bar, on 300 of them. A self-improving rulebook loop did not help here: all three proposed edits were rejected. This tests confidence, not routing savings. | [PUBLIC_DATASET](docs/PUBLIC_DATASET.md) |
 | Is the judge reliable? | A second judge from another vendor, GPT-4o mini, re-scored the 30 rubric-judged answers from the hand-label run: 96.7% within 0.15, mean difference 0.010. No human has scored them yet. | [CASE_STUDY](CASE_STUDY.md#validating-the-judge) |
@@ -216,6 +231,13 @@ None of the following is evidence of anything. It exists so the project runs for
 - **RAG demo without `--paid`:** the retrieved passages are real, the cost is simulated, and there is no answer.
 
 ## Limitations
+
+**What the default rule has not proven.**
+
+- **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small.
+- **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. It has not been run through the router on the 40-task hard set.
+- **It needs a final `Answer:` line.** Agreement is checked on that line. A prompt without one skips the cheap-model check for reasoning and extraction and follows the rules table, so everyday prompts save less than the benchmark shows.
+- **The lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus.
 
 **The newest parts are untested with real models.**
 

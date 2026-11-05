@@ -48,8 +48,8 @@ class TestDrift(unittest.TestCase):
     def test_statuses(self):
         r = self.rows([
             ("openai/gpt-4o-mini", "1.5e-7", "6e-7"),
-            ("deepseek/deepseek-chat", "2.5e-7", "1.1e-6"),    # -7.4% -> OK
-            ("anthropic/claude-sonnet-5", "2e-6", "1e-5"),     # -33% -> DRIFT
+            ("deepseek/deepseek-chat", "2.8e-7", "1.2e-6"),    # -6.7% -> OK
+            ("anthropic/claude-sonnet-5", "3e-6", "1.5e-5"),   # +50% -> DRIFT
             ("anthropic/claude-opus-4.8", "5e-3", "2.5e-2"),   # > $1000/1M -> SUSPECT
             ("anthropic/claude-haiku-4.5", "1e-7", "5e-7"),    # 10x down -> SUSPECT
         ])

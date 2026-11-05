@@ -85,6 +85,55 @@ class TestPolicies(unittest.TestCase):
         self.assertEqual(RulesPolicy(True).report_tags(), [])
 
 
+class TestAgreeOrFrontier(unittest.TestCase):
+    def run_with(self, answers):
+        """answers: tier -> reply. Returns the Result and the models called."""
+        ro = get_roster("cross_vendor")
+        by_model = {getattr(ro, tier): text for tier, text in answers.items()}
+        called = []
+
+        class Scripted(Adapter):
+            def __init__(self, model):
+                self.model = model
+
+            def complete(self, prompt, effort=None, max_tokens=None):
+                called.append(self.model)
+                return Response(text=by_model[self.model], input_tokens=10, output_tokens=5,
+                                latency_ms=1.0, model=self.model, simulated=False, success=True)
+
+        policy = RulesPolicy(True, agree_on=("classification",))
+        with mock.patch.object(api, "get_adapter", lambda m, allow_mock_fallback=True: Scripted(m)):
+            return Router(policy, "cross_vendor").complete(TASK["prompt"], task=TASK), called, ro
+
+    def test_agreement_keeps_the_mid_answer_and_skips_the_frontier(self):
+        r, called, ro = self.run_with({"budget": "Answer: card_arrival",
+                                       "mid": "It is about delivery.\n\nAnswer: card_arrival"})
+        self.assertEqual(r.model, ro.mid)
+        self.assertNotIn(ro.frontier, called)
+        self.assertGreater(r.routing_cost_usd, 0)
+
+    def test_disagreement_goes_to_the_frontier_and_charges_both_cheap_calls(self):
+        r, called, ro = self.run_with({"budget": "Answer: card_arrival", "mid": "Answer: top_up_failed",
+                                       "frontier": "Answer: top_up_failed"})
+        self.assertEqual(r.model, ro.frontier)
+        self.assertEqual(called, [ro.budget, ro.mid, ro.frontier])
+        self.assertGreater(r.routing_cost_usd, 0)
+
+    def test_an_empty_answer_never_counts_as_agreement(self):
+        r, _, ro = self.run_with({"budget": "", "mid": "", "frontier": "Answer: x"})
+        self.assertEqual(r.model, ro.frontier)
+
+    def test_frontier_on_pins_the_type_to_the_frontier(self):
+        r = Router(RulesPolicy(True, frontier_on=("classification",)), "cross_vendor",
+                   allow_mock_fallback=True).complete(TASK["prompt"], task=TASK)
+        self.assertEqual(r.model, get_roster("cross_vendor").frontier)
+
+    def test_off_by_default(self):
+        self.assertEqual(RulesPolicy(False).report_tags(), ["classified"])
+        self.assertEqual(RulesPolicy(False, agree_on=("classification",)).report_tags(),
+                         ["classified", "agree"])
+
+
 class TestFailover(unittest.TestCase):
     def run_router(self, failing, mode="raise", policy=None):
         f = fake_factory(failing, mode)

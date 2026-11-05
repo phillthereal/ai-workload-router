@@ -76,7 +76,8 @@ def load_rules():
     tasks = json.load(open('data/public/benchmark/tasks_public.json'))['tasks']
     rules = {}
     for t in (x for x in tasks if x['scoring'] == 'rubric_judge'):
-        row = b._get(b._rows_url('google/IFEval', int(t['id'].split('-')[1]), 1))['rows'][0]['row']
+        index = int(t['id'].split('-')[1])
+        row = b._page('google/IFEval', index // b.PAGE)[index % b.PAGE]['row']
         assert row['prompt'] == t['prompt'], t['id']
         rules[t['id']] = row
     return rules

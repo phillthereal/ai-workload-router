@@ -179,6 +179,11 @@ def _canonical(text: str) -> str:
     return re.sub(r"^(?:a|an|the) ", "", _normalize(text.replace("_", " ")))
 
 
+def committed_answer(response_text: str) -> str:
+    """The text after the last "Answer:" in a reply, or the whole reply if it has none."""
+    return (response_text or "").rsplit("Answer:", 1)[-1].strip()
+
+
 def final_answer(response_text: str, reference: str) -> float:
     """
     Strict match on the answer a model commits to, not on its working.

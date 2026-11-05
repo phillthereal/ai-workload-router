@@ -333,7 +333,7 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     if report.routing_cost > 0:
         lines.append(
             "This run predicted each task's `(task_type, difficulty)` from the "
-            "prompt using the roster's budget model, rather than reading a "
+            "prompt, rather than reading a "
             "hand-authored label. That is what a real deployment has — and it "
             "means the router costs money to run. That cost is charged against "
             "the savings below, not excluded from them."
@@ -342,7 +342,7 @@ def format_report_markdown(report: BenchmarkReport) -> str:
         lines.append("| Metric | Value |")
         lines.append("|---|---|")
         lines.append(f"| Router model spend | ${report.router_cost:.6f} |")
-        lines.append(f"| Routing (classifier) spend | ${report.routing_cost:.6f} |")
+        lines.append(f"| Routing spend (classifier and discarded answers) | ${report.routing_cost:.6f} |")
         lines.append(f"| **Router total, net** | **${report.net_router_cost:.6f}** |")
         lines.append(f"| Cost reduction, gross | {report.cost_reduction_pct:.1f}% |")
         lines.append(f"| **Cost reduction, net** | **{report.net_cost_reduction_pct:.1f}%** |")

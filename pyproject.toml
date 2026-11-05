@@ -26,7 +26,7 @@ ai-router-mcp = "router.mcp_server:main"
 ai-router-web = "router.web:main"
 
 [tool.setuptools.package-data]
-router = ["*.html"]
+router = ["*.html", "*.json"]
 # Entry point: python run_benchmark.py (see README for usage)
 
 [tool.ruff]
@@ -43,7 +43,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "!src/**" = ["D101", "D102", "D103"]  # scripts and tests are not a public API
-"experiments/*" = ["B007"]            # frozen research scripts
+"experiments/*" = ["B007", "B023"]    # frozen research scripts; their lambdas run inside the loop
 
 [tool.mypy]
 python_version = "3.11"

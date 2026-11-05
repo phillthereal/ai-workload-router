@@ -31,11 +31,21 @@ from .adapters import get_adapter
 from .adapters.base import Response
 from .cascade import run_cascade
 from .classifier import Classification, classify_task
-from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
+from .config import EFFORT_OFF, MODEL_TIER, TIER_ORDER, get_model, get_roster
 from .governors import BudgetPolicy, ShadowPolicy  # noqa: F401  (re-exported)
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
+from .lookup import Lookup, shared_lookup
 from .router import route_task
+from .scoring import committed_answer, final_answer
 from .untrusted import DEFAULT_PROMPT_VERSION, check_version
+
+
+CONSENSUS_FIRST = "claude-haiku-5-5"
+"""Answers beside the roster's mid model in RulesPolicy._consensus."""
+CONSENSUS_LAST = "claude-sonnet-5-5"
+"""Decides when the cheaper models in RulesPolicy._consensus cannot agree."""
+ANSWER_ONLY = "\nReply with only that final line, with no explanation."
+"""Added to extraction prompts in _consensus: a passage answer needs no working."""
 
 
 class ProviderError(RuntimeError):
@@ -150,6 +160,11 @@ class Policy(Protocol):
         ...
 
 
+def _agree(a: Response, b: Response) -> bool:
+    """True if `a` commits to the same final answer as `b`."""
+    return final_answer(a.text, committed_answer(b.text)) == 1.0
+
+
 def _answer(prompt: str, model: str, effort: Optional[str], ctx: Ctx, routing_cost: float = 0.0,
             trace: Optional[list[str]] = None, **extra: Any) -> Result:
     resp = ctx.call(model, prompt, effort)
@@ -187,19 +202,35 @@ class RulesPolicy:
     name = "router"
 
     def __init__(self, use_labels: bool = True,
-                 prompt_version: str = DEFAULT_PROMPT_VERSION) -> None:
+                 prompt_version: str = DEFAULT_PROMPT_VERSION,
+                 agree_on: tuple[str, ...] = (), frontier_on: tuple[str, ...] = (),
+                 consensus_on: tuple[str, ...] = (), lookup: Optional[Lookup] = None) -> None:
         self.use_labels = use_labels
         self.prompt_version = check_version(prompt_version)
+        self.agree_on = agree_on
+        """Task types answered by _agree_or_frontier instead of the rules table."""
+        self.frontier_on = frontier_on
+        """Task types always answered on the frontier tier."""
+        self.consensus_on = consensus_on
+        """Task types answered by _consensus instead of the rules table."""
+        self.lookup = lookup
+        """If set, predicts type and difficulty for free in place of labels or the classifier."""
 
     def report_tags(self) -> list[str]:
-        """Tag reports 'classified' when routing on predicted, not hand-written, labels."""
-        return [] if self.use_labels else ["classified"]
+        """Tag reports 'classified' for predicted labels, plus any per-type routing overrides."""
+        return (([] if self.use_labels and not self.lookup else ["classified"])
+                + (["agree"] if self.agree_on else [])
+                + (["pinned"] if self.frontier_on else [])
+                + (["consensus"] if self.consensus_on else [])
+                + (["lookup"] if self.lookup else []))
 
     def before_run_group(self, run_group: str) -> None:
         """No-op: this policy has no per-run state."""
         pass
 
     def _classify(self, task: dict[str, Any], ctx: Ctx) -> Classification:
+        if self.lookup:
+            return self.lookup.classify(task)
         # Labels only exist for benchmark tasks; a bare prompt must be classified.
         labelled = bool(task.get("task_type") and task.get("difficulty"))
         return classify_task(
@@ -211,7 +242,13 @@ class RulesPolicy:
         """Classify the task, look up its tier in the rules table, answer there."""
         c = self._classify(task, ctx)
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
-                       task_type=c.task_type, difficulty=c.difficulty)
+                       task_type=c.task_type, difficulty=c.difficulty,
+                       tier_override="frontier" if c.task_type in self.frontier_on else None)
+        # Agreement can only be checked on a committed final line. Without one, use the table.
+        if c.task_type in self.consensus_on and not d.gated_models and "Answer:" in prompt:
+            return self._consensus(prompt, c, ctx)
+        if c.task_type in self.agree_on and not d.gated_models:
+            return self._agree_or_frontier(prompt, c, ctx)
         return _answer(
             prompt, d.chosen_model, d.effort, ctx, routing_cost=c.cost_usd,
             trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model}, "
@@ -219,6 +256,68 @@ class RulesPolicy:
             classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
         )
+
+
+    def _agree_or_frontier(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
+        """Keep the answer if the budget and mid models commit to the same one, else ask the frontier."""
+        low = ctx.call(ctx.roster.budget, prompt)
+        mid = ctx.call(ctx.roster.mid, prompt)
+        extra: dict[str, Any] = dict(
+            classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
+            task_type=c.task_type, difficulty=c.difficulty,
+        )
+        trace = [f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
+        if _agree(low, mid):
+            return Result(
+                text=mid.text, model=mid.model, answer_cost_usd=ctx.cost(mid),
+                routing_cost_usd=c.cost_usd + ctx.cost(low),
+                simulated=low.simulated or mid.simulated,
+                trace=trace + [f"{low.model} and {mid.model} agree"],
+                response=mid, effort=mid.effort, **extra,
+            )
+        effort = (ctx.effort_policy or {}).get("frontier")
+        return _answer(
+            prompt, ctx.roster.frontier, effort, ctx,
+            routing_cost=c.cost_usd + ctx.cost(low) + ctx.cost(mid),
+            trace=trace + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
+        )
+
+    def _consensus(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
+        """Two cheap models answer. If they differ, a reasoning task gets a third vote, then Sonnet decides.
+
+        Never reaches the frontier unless a provider fails. Every discarded call counts as routing cost.
+        """
+        if c.task_type == "extraction":
+            prompt += ANSWER_ONLY
+        low = ctx.call(CONSENSUS_FIRST, prompt, EFFORT_OFF)
+        mid = ctx.call(ctx.roster.mid, prompt)
+        calls, keep, why = [low, mid], mid, f"{low.model} and {mid.model} agree"
+        if not _agree(low, mid):
+            vote = ctx.call(ctx.roster.budget, prompt) if c.task_type == "reasoning" else None
+            if vote:
+                calls.append(vote)
+            if vote and (_agree(vote, low) or _agree(vote, mid)):
+                keep, why = vote, f"{vote.model} broke the tie"
+            else:
+                keep = ctx.call(CONSENSUS_LAST, prompt, EFFORT_OFF)
+                calls.append(keep)
+                why = f"no agreement -> {keep.model}"
+        return Result(
+            text=keep.text, model=keep.model, answer_cost_usd=ctx.cost(keep),
+            routing_cost_usd=c.cost_usd + sum(ctx.cost(r) for r in calls if r is not keep),
+            simulated=any(r.simulated for r in calls),
+            trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})", why],
+            response=keep, effort=keep.effort,
+            classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
+            task_type=c.task_type, difficulty=c.difficulty,
+        )
+
+
+def default_policy(prompt_version: str = DEFAULT_PROMPT_VERSION,
+                   lookup: Optional[Lookup] = None) -> RulesPolicy:
+    """The router's default: free lookup, classification by agreement, the rest by consensus."""
+    return RulesPolicy(use_labels=False, prompt_version=prompt_version, agree_on=("classification",),
+                       consensus_on=("reasoning", "extraction"), lookup=lookup or shared_lookup())
 
 
 class LearnedPolicy(RulesPolicy):
