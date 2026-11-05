@@ -83,7 +83,7 @@ Before each call the server checks that today's spend plus the worst case for th
 - Single-turn only: one prompt in, one routing decision out. No streaming, no conversation history, no feedback tool, no learned or cascade policy.
 - A paid call goes to whichever roster model the heuristic picks. There is no quality check on the answer.
 - stdio only. There is no authentication because the client launches the process itself; do not wrap it in a network transport without adding it.
-- It does not write to the Notion log, email triage or any other production data path.
+- It does not write to the Notion log, email triage or any other live data path.
 
 ## Tests
 

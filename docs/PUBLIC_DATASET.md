@@ -55,7 +55,7 @@ Stopped after 3 consecutive rejections; **selected version = round 0 (the base r
   On the email task the starting descriptions were vague, which is where a teacher's clarifications paid off
   (holdout handled share 36% -> 60%).
 - **The safety gate is doing its job in both directions:** it accepted useful edits on email, and here it kept
-  three plausible-sounding edits out of production because they did not measurably help.
+  three plausible-sounding edits out of the rulebook because they did not measurably help.
 - Next lever if wanted: allow multi-edit proposals per round, or a larger LEARN slice, rather than loosening the gate.
 
 ## Limits

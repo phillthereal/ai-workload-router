@@ -72,7 +72,7 @@ class ModelConfig:
 # Registry of available models.
 #
 # v1 uses a genuine 3-vendor roster (OpenAI, DeepSeek, Anthropic) spanning a
-# real ~80x price range budget -> frontier, so the benchmark's cost claims
+# real ~42x price range budget -> frontier, so the benchmark's cost claims
 # hold up across providers rather than just across one vendor's tiers. Each
 # model's adapter (see router.adapters.get_adapter) already routes by
 # `provider` and falls back to the offline mock if that provider's API key

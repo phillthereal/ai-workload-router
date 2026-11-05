@@ -12,9 +12,9 @@ Jev (current rulebook) -> sure? (p >= 0.9 and not protected)
         no  -> teacher sees disagreements with the reference -> proposes ONE generic edit
                -> re-run Jev on TRAIN -> gate -> keep or discard
 ```
-- Data: the 150 unique production classifier prompts (same indices as `shadow_test.load()`), split **chronologically**
+- Data: the 150 unique live classifier prompts (same indices as `shadow_test.load()`), split **chronologically**
   by `started`: oldest 100 = TRAIN (learn + gate), newest 50 = HOLDOUT (scored every round, never used to accept or reject).
-- Reference label = Haiku's recorded production label (free). It is a reference, not truth.
+- Reference label = Haiku's recorded live label (free). It is a reference, not truth.
 - Teacher: a Claude Sonnet agent answering through a file handshake (`--teacher manual`), so the loop costs no
   Anthropic API credit. An API teacher (`--teacher claude-haiku-4-5`) is also supported. The teacher sees up to 6
   TRAIN emails (costly misses first, then disagreements, then right-but-unsure) and returns one edit: a reworded
@@ -58,7 +58,7 @@ HOLDOUT handled share by round (each # = 2%)
   agreement peaked at 84% after round 1, and rounds 7–8 introduced a costly miss on holdout that training never
   showed. Narrow, sender-specific notes generalise worse than reworded category descriptions.
 - **Design fix this points to:** pick the version by a held-out validation score, and stop when it stops improving,
-  instead of accepting every edit that passes on training. In production, the owner's corrections in the email log
+  instead of accepting every edit that passes on training. In the live setup, the owner's corrections in the email log
   are the natural validation set.
 
 ## Limits
