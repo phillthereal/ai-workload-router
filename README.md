@@ -4,7 +4,7 @@
 
 **[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On a 25-task benchmark with real API calls it cut cost by 53.6% with hand-written task labels and 65.6% with a real classifier, at about the same quality as sending everything to the top model. On a set of hard tasks it saved nothing. It has not been used in production.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On a 25-task benchmark with real API calls it cut cost by 53.6% with hand-written task labels and 65.6% with a real classifier, at about the same quality as sending everything to the top model. On a set of hard tasks it saved nothing. It is a personal project and has not served any customer or company traffic.
 
 ## The problem
 
