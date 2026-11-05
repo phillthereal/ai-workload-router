@@ -4,9 +4,9 @@ Question: is TypeSafe Jev's confidence honest on real email classification? Repr
 `python3 jev_calibration.py report <private-dir>` (the `run` subcommand makes the live calls).
 
 ## Method
-- Data: the 150 unique production classifier prompts from the shadow test (same indices as `shadow_test.load()`), one Jev call each, single run, `jev-1.14.0`, via `POST /v1/systemone` directly (no repo adapters, no `.cache/`).
-- Prompt split, identical for every email: `criteria` = the 7 category lines of the production prompt; `state` = text between "Email to classify:" and "Respond with:"; `instructions` = one fixed line.
-- Reference = Haiku's production label. It is a reference, **not truth**: a "miss" can be Haiku's error.
+- Data: the 150 unique live classifier prompts from the shadow test (same indices as `shadow_test.load()`), one Jev call each, single run, `jev-1.14.0`, via `POST /v1/systemone` directly (no repo adapters, no `.cache/`).
+- Prompt split, identical for every email: `criteria` = the 7 category lines of the live prompt; `state` = text between "Email to classify:" and "Respond with:"; `instructions` = one fixed line.
+- Reference = Haiku's live label. It is a reference, **not truth**: a "miss" can be Haiku's error.
 - Spend: $0.0048 (114k input tokens at $0.042/1M), cap was $0.10. 0 failed calls.
 
 ## Results (n=150; Haiku labels: IGNORE 79, FYI 35, JOB_ALERT 23, ACTION_NEEDED 13)

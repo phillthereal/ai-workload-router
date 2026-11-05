@@ -74,7 +74,7 @@ git clone https://github.com/phillthereal/ai-workload-router.git && cd ai-worklo
 docker compose up --build
 ```
 
-Then open http://localhost:8000, paste a task, and see which model it would go to and why. This is demo mode: **the routing decision is real, but the answer, cost and quality score are simulated**, and the page says so. Real calls need keys and an explicit opt-in, covered in [`docs/DOCKER.md`](docs/DOCKER.md).
+Then open http://localhost:8000, paste a task, and see which model it would go to and why. This is demo mode: **the task-type lookup is real, but the answer, cost and quality score are simulated, and so is any agreement between models**, and the page says so. Real calls need keys and an explicit opt-in, covered in [`docs/DOCKER.md`](docs/DOCKER.md).
 
 The same thing from the command line, while the app is running:
 
@@ -153,7 +153,7 @@ python redteam.py heuristic
 
 The benchmark rows below came from real API calls, and each links to its committed report. Row-level data for them is in [`data/bi/fact_runs.csv`](data/bi/fact_runs.csv). The confidence intervals are explained in [`docs/ANALYSIS.md`](docs/ANALYSIS.md).
 
-**The headline result: 300 public tasks, target missed.** The tasks, the plan and the target were [fixed before any paid call](docs/BENCHMARK_PLAN.md). Both runs use the three-vendor roster and a real classifier, and are compared with sending every task to Claude Opus 4.8.
+**The first public test: 300 public tasks, target missed.** The tasks, the plan and the target were [fixed before any paid call](docs/BENCHMARK_PLAN.md). Both runs use the three-vendor roster and a real classifier, and are compared with sending every task to Claude Opus 4.8.
 
 | Run | Cost cut [95% CI] | Quality vs frontier only [95% CI] | Target |
 |---|---|---|---|
@@ -226,7 +226,7 @@ Hybrid search is the best option on both sets, but on reworded questions it miss
 
 None of the following is evidence of anything. It exists so the project runs for free.
 
-- **Web UI and Docker demo mode:** answers, tokens, costs and quality scores are simulated, and the response says `simulated: true` and `quality_source: simulated`. Routing here uses the free keyword classifier, not the LLM classifier measured above.
+- **Web UI and Docker demo mode:** answers, tokens, costs and quality scores are simulated, and the response says `simulated: true` and `quality_source: simulated`. The free lookup is real, but agreement between simulated answers means nothing, so the final model shown for most tasks is not a real outcome.
 - **`AWR_FORCE_MOCK=1` benchmark runs:** the numbers come from a fixed table and go to gitignored `data/benchmark_report_simulated_*.md` files. They can never overwrite a published report.
 - **RAG demo without `--paid`:** the retrieved passages are real, the cost is simulated, and there is no answer.
 
@@ -253,6 +253,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - 300 public tasks are still a fixed mix, not a real workload, and the mix drives the answer. These models have probably seen public benchmarks in training.
 - The July set is 25 tasks and its hard set is 10, and the intervals on the two hard cost results include zero.
 - Tasks are single-turn. Conversations and tool use are not covered.
+- Benchmark runs that use the LLM classifier, including the first public test, use the older v2 prompt so that published runs replay. The current default has no classifier prompt.
 - The judge is an LLM. Two judges agreeing does not rule out a shared blind spot, and [`data/human_label_sheet.csv`](data/human_label_sheet.csv) has not been scored against them. The public run had a separate 29-answer hand check, which did not confirm the judge. A hostile task could also try to inject instructions into the judge.
 - The results cannot be replayed from a fresh clone. `.cache/` and `data/runs.db` are not committed, so a live re-run needs your own keys and your own spend. A few scripts, such as `analyze.py` and `simulate_v5.py`, need `data/runs.db` and will not run without it.
 

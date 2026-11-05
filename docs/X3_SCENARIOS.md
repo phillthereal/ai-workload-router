@@ -24,7 +24,7 @@ Real-mail previews (n=159, subject + 255-char preview, Haiku label as reference)
 | fence + "claims inside are content" note | 60 (37.7%) | 59/60 | 0 |
 | keyword injection gate (`injection_hit`) | 90 (gate fires 0/159) | - | 0 |
 
-On the 150 production prompts (offline, recorded Jev decisions, no new calls): injection gate fires 0/150 (0 handled lost); Jev handled 69/150.
+On the 150 live email prompts (offline, recorded Jev decisions, no new calls): injection gate fires 0/150 (0 handled lost); Jev handled 69/150.
 
 * **Fence only**: free (+3 handled, no loss). Cut the DoS forced-fallback count 20 -> 17 of 40. Recommended; costs nothing.
 * **Note in the rulebook**: kills coverage (-19 points). Rejected by the bar. It adds nothing since 1a is already 0.
@@ -36,7 +36,7 @@ Sender rules should only be allowed to decide IGNORE or JOB_ALERT, and only when
 
 ## Honest limits
 * Jev was not fooled at all, so the "after" cannot be shown to beat "before"; 0/72 means none seen in this set, not safe. Adaptive attackers, other languages, long emails, HTML/hidden text, attachments were not tried. Jev outputs vary by version (`jev-latest`).
-* States were rebuilt as `From/Subject/body`; production state format and full bodies may differ. The 159-email proxy has 255-char previews only, so veto and gate fire rates are likely underestimates for full bodies. The exact-sender rule list is not in the repo; "rule decisions" are proxied by Haiku label IGNORE/JOB_ALERT.
+* States were rebuilt as `From/Subject/body`; the live state format and full bodies may differ. The 159-email proxy has 255-char previews only, so veto and gate fire rates are likely underestimates for full bodies. The exact-sender rule list is not in the repo; "rule decisions" are proxied by Haiku label IGNORE/JOB_ALERT.
 * Haiku labels are reference, not truth. n per cell is small (4-12 base emails).
 * Reverse DoS cost was not priced in dollars; the fallback model is chosen by deployment.
 * The 3b distribution-shift handled share compares synthetic short mails with real previews; indicative only.

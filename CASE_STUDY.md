@@ -102,7 +102,7 @@ A backend benchmark harness, deliberately minimal:
 | **Provider adapter layer** | One internal interface over multiple model APIs, so a model is swappable by config. |
 | **Rules router** | Classifies each task and picks a tier: easy → budget model, medium → mid, hard/reasoning → frontier. |
 | **Live LLM judge** | Grades open-ended answers 0–1 against a rubric, using a strong model as the judge. |
-| **Record & replay cache** | Every real API response is cached, so the whole benchmark re-runs for free and is fully reproducible by anyone. |
+| **Record & replay cache** | Every real API response is cached, so the whole benchmark re-runs for free from a local cache, which is not committed. |
 | **Performance log** | Every run records task, model, tokens, cost, latency, and quality — the data layer that would drive adaptive routing later. |
 
 **Models (this run):** the three tiers now span three real vendors — GPT-4o mini (OpenAI, $0.15 / $0.60 per 1M tokens, budget), DeepSeek Chat (DeepSeek, ~$0.27 / $1.10, mid), and Claude Opus 4.8 (Anthropic, $5 / $25, frontier). The judge is Claude Opus 4.8, cross-validated by a second, independent judge — see "Validating the judge" below. This is the second iteration of the benchmark: the first run kept all three tiers on Claude models (Opus / Sonnet / Haiku) to prove the method fast on a single working key, and landed 32.5% savings. This run swaps the budget and mid tiers onto OpenAI and DeepSeek, widening the price range the router has to work with — see "The insight that matters" for what that did to the ceiling.
@@ -218,7 +218,7 @@ v1–v3 showed routing could work on my own tasks, but the router only existed i
 - **One API.** `Router(policy).complete(prompt)` returns the answer, the model, the cost and a "why" trace. Every strategy is an interchangeable policy behind it.
 - **Real failover.** A provider error retries the next model up the ladder and is recorded in the trace, instead of a silent fake answer.
 - **A live learning signal.** The v3 learned router needed an answer key that production never has. `feedback(request_id, score)` replaces it; self-verification evidence is down-weighted so it can never trigger a cheaper route alone.
-- **Drop-in endpoint.** OpenAI-compatible — change one URL in an existing app. Localhost-only by default, optional auth, 1 MB request cap, logging opt-in because it stores prompts.
+- **Drop-in endpoint.** OpenAI-compatible — change one URL in an existing app. Localhost-only by default, auth on by default, 256 KB request cap, logging opt-in because it stores prompts.
 
 I also found and fixed a test bug that had silently switched later tests to live paid APIs (6 tiny calls, under $0.001), and added a guard so it can't recur.
 
@@ -244,9 +244,9 @@ Test the one assumption first, then build, then measure honestly. v5's shadow te
 
 **Confidence you can trust is worth more than accuracy on average.**
 
-**The overfitting lesson.** Rounds 7-8 reached 66% but caused 1 missed action item the training-only gate couldn't see, so round 6 is the keeper. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md).
+**The overfitting lesson.** Rounds 7-8 reached 66% but caused 1 missed action item the training-only gate couldn't see, so round 6 is the keeper. The fix is to choose the version by a held-out score; in the live email setup, that's the owner's own corrections. Write-up: [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md).
 
-## v7: into production
+## v7: into my own email setup
 
 **The cheapest model is no model.** The last step was deploying these ideas into the owner's live email automation. A reality check on 150 real emails from the live classifier: the router's free length-based difficulty heuristic sent 100% to the expensive model, so 0% saved. The benchmark shortcut didn't survive real data.
 

@@ -1,14 +1,14 @@
-# Live shadow test: cheap models vs. production Haiku on real email classification
+# Live shadow test: cheap models vs. live Haiku on real email classification
 
 Aggregates only. No email text, subjects, senders or ids are committed.
 
 ## Method
-- Input: 150 unique classifier prompts from 3 days of real traffic in the owner's n8n email classifier (production model: Claude Haiku 4.5). Job-alert scoring calls excluded.
-- Each prompt was sent byte-for-byte as production sent it to `gpt-4o-mini` and `deepseek-chat`, once each, sequentially, default parameters. Adapters were built directly (not via `get_adapter`), so the record/replay `.cache/` was untouched (878 files before and after).
+- Input: 150 unique classifier prompts from 3 days of real traffic in the owner's n8n email classifier (model in use: Claude Haiku 4.5). Job-alert scoring calls excluded.
+- Each prompt was sent byte-for-byte as the live classifier sent it to `gpt-4o-mini` and `deepseek-chat`, once each, sequentially, default parameters. Adapters were built directly (not via `get_adapter`), so the record/replay `.cache/` was untouched (878 files before and after).
 - An answer counts only if it parses to JSON with a valid `category` and integer `confidence` (accepting a flat object or an `output` wrapper). Anything else is a parse failure.
 - **Haiku's label is the reference, not ground truth.** "Agreement" means "same as Haiku"; where they differ Haiku may be the wrong one.
 - Cascade (simulated from recorded answers, no extra calls): cheap model first; escalate to Haiku if the cheap model says a protected category (ACTION_NEEDED, JOB_REJECTION, RECRUITER_REPLY), reports confidence < 80, or fails to parse. Final label for escalated emails is Haiku's recorded answer; cost = cheap + Haiku.
-- Cost uses real returned token counts x `src/router/config.py` prices. Haiku cost is recomputed from recorded tokens on the same 150 prompts ($1.68 per 1,000), lower than the $2.56 production figure, which likely includes other call volume.
+- Cost uses real returned token counts x `src/router/config.py` prices. Haiku cost is recomputed from recorded tokens on the same 150 prompts ($1.68 per 1,000), lower than the $2.56 figure from the real-traffic assessment, which likely includes other call volume.
 - CIs: percentile bootstrap (2,000 resamples, seed 0, resampling emails).
 - Actual spend: **$0.086** (cap $0.25).
 

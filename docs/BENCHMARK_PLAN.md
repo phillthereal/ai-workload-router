@@ -79,3 +79,4 @@ This is a what-if test, and the published scores stay as fixed above. With code 
 - Answers are capped at 1,024 tokens. A cut-off answer loses its `Answer:` line and scores 0, and the run prints how many were cut off.
 - Answers in the wrong format score 0, for every model.
 - The judge reads IFEval's instructions but does not check them with code, so short writing is the softest score.
+- `run_benchmark.py` pins the v2 prompts so older runs replay. These two runs therefore used the older classifier prompt, not the v3 prompt the code defaults to.

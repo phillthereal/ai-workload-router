@@ -565,7 +565,7 @@
           <li><b>One API.</b> <code>Router(policy).complete(prompt)</code> returns the answer, the model, the cost and a &ldquo;why&rdquo; trace. Every strategy is an interchangeable policy behind it.</li>
           <li><b>Real failover.</b> A provider error retries the next model up the ladder, recorded in the trace, instead of a silent fake answer.</li>
           <li><b>A live learning signal.</b> <code>feedback(request_id, score)</code> replaces the answer key production never has. Self-verification evidence is down-weighted so it can never trigger a cheaper route alone.</li>
-          <li><b>Drop-in endpoint.</b> OpenAI-compatible: change one URL in an existing app. Localhost-only by default, optional auth, 1 MB request cap, logging opt-in because it stores prompts.</li>
+          <li><b>Drop-in endpoint.</b> OpenAI-compatible: change one URL in an existing app. Localhost-only by default, auth on by default, 256 KB request cap, logging opt-in because it stores prompts.</li>
         </ul>
         <p class="delta-note">Also found and fixed a test bug that had silently switched later tests to live paid APIs (6 tiny calls, under <b>$0.001</b>), and added a guard so it can't recur.</p>
       </div>
@@ -649,11 +649,11 @@
         <p class="big">Confidence you can trust is worth more than accuracy on average.</p>
       </div>
 
-      <p><b>The overfitting lesson.</b> Rounds 7&ndash;8 reached 66% but caused one missed action item that the training-only gate couldn't see, so round 6 is the version to keep. The fix is to choose the version by a held-out score; in production, that's the owner's own corrections. Write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/JEV_LOOP.md" style="color:var(--teal)">docs/JEV_LOOP.md</a>.</p>
+      <p><b>The overfitting lesson.</b> Rounds 7&ndash;8 reached 66% but caused one missed action item that the training-only gate couldn't see, so round 6 is the version to keep. The fix is to choose the version by a held-out score; in the live email setup, that's the owner's own corrections. Write-up: <a href="https://github.com/phillthereal/ai-workload-router/blob/main/docs/JEV_LOOP.md" style="color:var(--teal)">docs/JEV_LOOP.md</a>.</p>
     </section>
 
-    <section aria-label="production chain">
-      <p class="kicker">V7 &mdash; into production</p>
+    <section aria-label="email chain">
+      <p class="kicker">V7 &mdash; into my own email setup</p>
       <h2>The cheapest model is no model.</h2>
       <p>The last step was deploying these ideas into the owner's live email automation. First, a reality check on 150 real emails from the live classifier: the router's free length-based difficulty heuristic sent <b>100% to the expensive model &mdash; 0% saved</b>. The benchmark shortcut didn't survive real data. What did: rules learned only from the older 100 emails and tested on the newest 50 unseen.</p>
 

@@ -57,6 +57,7 @@ the within-vendor cascade ~31%.
 **Decision.** Keep 53.6% as the headline; present 65.6% as a follow-up result.
 **Why.** They are different claims (hand labels vs predicted labels), and the more
 conservative, longer-validated number is the one to lead with.
+**Later change.** Both are now history. Since November 2026 the README leads with the public-task results.
 
 ### 8. Build a harder benchmark — and publish where routing loses
 **Context.** The original 25 tasks score ~0.99 on every model tier, so they cannot show
@@ -107,6 +108,7 @@ silent fake answer.
 **Security calls.** Localhost-only by default, optional auth, a 1 MB request cap, and
 request logging **off by default** because it stores users' prompts. Provider errors show
 in the trace as status and type only, never the raw message, which can contain account ids.
+**Later change.** Hardened on 2026-10-25: bearer auth is now on by default and the request cap is 256 KB.
 
 ### 14. Report the experiments that didn't work
 **Jury of cheap models (v5).** Best balance on easy work (66.1% net, quality 0.99) but
