@@ -1,0 +1,365 @@
+{
+ "version": 2,
+ "tasks": [
+  {
+   "id": "rsn-h01",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A tank holds at most 240 liters and starts empty. It is filled at 30 L/min for 10 minutes, then drained at 5 L/min for 8 minutes, then filled at 40 L/min for 6 minutes. The tank can never exceed 240 liters; any overflow is lost. How many liters are in the tank at the end? Answer with just the number.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "240",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "rsn-h02",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Five runners finished a race with no ties. Alice finished before Bob but after Carol. Dana finished after Bob. Eve finished before Carol. Who finished third? Answer with one name only.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "Alice",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "rsn-h03",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A ruler and an eraser cost $1.10 together. The ruler costs $1.00 more than the eraser. How much does the eraser cost, in dollars? Answer with just the number, e.g. 0.20.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "0.05",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "rsn-h04",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Three pumps working together fill a pool in 6 hours. Pump A alone would take 18 hours. Pump B alone would take 12 hours. How many hours would pump C take alone? Answer with just the number.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "36",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "ext-h01",
+   "task_type": "extraction",
+   "difficulty": "hard",
+   "prompt": "Three products sold last quarter. Widget A: 100 units, $1,500 total revenue. Widget B: 40 units, $800 total revenue. Widget C: 200 units, $2,400 total revenue. Which product had the highest revenue PER UNIT? Answer with the product name only.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "Widget B",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "ext-h02",
+   "task_type": "extraction",
+   "difficulty": "hard",
+   "prompt": "Read this and name the person accountable for the budget: 'Maria owns the timeline. Devon, who reports to Maria, handles vendor contracts. Priya, unlike Devon, is accountable for the budget, while Sam tracks the schedule.' Answer with one name only.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "Priya",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "cls-h01",
+   "task_type": "classification",
+   "difficulty": "hard",
+   "prompt": "Is the following argument logically valid (does the conclusion necessarily follow)? 'All successful startups take risks. This company takes risks. Therefore this company is a successful startup.' Answer with one word: valid or invalid.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "invalid",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "cls-h02",
+   "task_type": "classification",
+   "difficulty": "hard",
+   "prompt": "Consider: 'In a room of exactly five people, all with distinct ages, every person is older than at least one other person in the room.' Is this possible or impossible? Answer with exactly one word: possible or impossible.\n\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "impossible",
+   "scoring": "final_answer",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "gen-h01",
+   "task_type": "short_generation",
+   "difficulty": "hard",
+   "prompt": "Rewrite the following in exactly two sentences, under 30 words total, with no jargon, while preserving the 30-day deadline: 'Per our SLA, reimbursement claims must be adjudicated within the 30-day window post-purchase, failing which the associated liability is rendered void.'",
+   "reference": "A good answer is exactly two sentences, under 30 words, uses plain language with no jargon (no 'SLA', 'adjudicated', 'liability', 'rendered void'), and clearly keeps the rule that claims must be made/handled within 30 days of purchase or they are lost.",
+   "scoring": "rubric_judge",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "ext-h03",
+   "task_type": "extraction",
+   "difficulty": "hard",
+   "prompt": "From this meeting note, list only the action items that have an explicit deadline, with their owner: 'Ravi will send the deck before Thursday. Someone should book the venue at some point. Lena needs to confirm the caterer by end of week. We should all review the budget eventually. Tom is going to call the printer tomorrow morning.' List each as owner: task.",
+   "reference": "A good answer includes exactly the three items with explicit deadlines: Ravi (send the deck, before Thursday), Lena (confirm the caterer, by end of week), and Tom (call the printer, tomorrow morning). It should EXCLUDE the two items with no explicit deadline (booking the venue 'at some point', reviewing the budget 'eventually').",
+   "scoring": "rubric_judge",
+   "source": "repo_hard_set"
+  },
+  {
+   "id": "mmlu-6790",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A 19-year-old Asian female college student comes to the university health center because of a 1-week history of nasal stuffiness, occasional clear rhinorrhea, and a mild sore throat. Two days ago, she began to feel hot, but she has not taken her temperature. Medical history is unremarkable and her only medication is an oral contraceptive. She has no history of allergies. She does not smoke cigarettes. BMI is 22 kg/m2 . Vital signs are temperature 38.1°C (100.6°F), pulse 88/min, respirations 16/min, and blood pressure 116/74 mm Hg. Physical examination discloses tenderness over the left maxillary sinus without purulent drainage. There is clear fluid behind the left tympanic membrane, enlarged tonsils bilaterally, and pain with tapping of the left upper incisors. Left frontal sinus does not transilluminate. Cardiopulmonary examination discloses no abnormalities. Which of the following is the most likely underlying mechanism of this patient's sinusitis?\n\nA. Mucosal edema\nB. Fungal infection\nC. Bacterial infection\nD. Chronic sinusitis\nE. Oral contraceptive use\nF. Viral infection\nG. Allergic reaction\nH. Immune system disorder\nI. Nasal polyps\nJ. Eustachian tube dysfunction\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "A",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-4125",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "If the vapor pressure of ethyl alcohol, C_2H_5OH, is 0.132 atm at 34.9°C, and 0.526 atm at 63.5°C what do you predict it will be at 19.0°C?\n\nA. 0.3 atm\nB. 0.65 atm\nC. 0.08 atm\nD. 0.025 atm\nE. 0.2 atm\nF. 0.132 atm\nG. 0.0545 atm\nH. 0.7 atm\nI. 0.4 atm\nJ. 0.526 atm\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "G",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-10909",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": " Which of the following is one of de Marneffe's responses to the objection that drug prohibition would be paternalistic?\n\nA. Paternalism is always justified when the paternalistic practices truly are in the best interest of those affected.\nB. Drug prohibition would be paternalistic, but its consequences would be good enough to outweigh considerations about paternalism.\nC. Paternalism is a positive trait when it helps guide individuals away from harmful behaviors like drug use.\nD. Drug prohibition would be a form of societal control, not paternalism.\nE. Drug prohibition would be targeted to adults, and one can only be paternalistic toward children.\nF. Drug prohibition would be paternalistic, but it is a necessary evil to maintain order and protect public health.\nG. The concept of paternalism doesn't apply to the issue of drug prohibition.\nH. Drug prohibition is not paternalistic as it does not impose a 'parent-like' authority over individuals.\nI. Drug prohibition would not be paternalistic because it would protect society from the harmful effects of drugs.\nJ. Drug prohibition would be done for the benefit of others, not the benefit of those who wish to produce/sell drugs, so it is not paternalistic in an objectionable sense.\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "J",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-5597",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "The population pyramid of a population that has had a slightly larger birth rate than death rate for several generations will most likely have which of the following shapes?\n\nA. Narrow at the bottom and wide at the top\nB. Having parallel sides\nC. Having a diamond shape\nD. Even width from bottom to top\nE. Bulging at the top\nF. Bulging in the middle\nG. Wider at the top than in the middle\nH. Wider at the bottom than at the top\nI. Narrow at the top and wide in the middle\nJ. Narrow in the middle and wide at the top and bottom\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "H",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-7655",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Which of the following are alternative names for the independent variable (usually denoted by x) in linear regression analysis?\n\n(i) The regressor\n\n(ii) The regressand\n\n(iii) The causal variable\n\n(iv) The effect variable\n\nA. (i), (ii), (iii), and (iv)\nB. (ii), (iii), and (iv) only\nC. (i), (iii), and (iv) only\nD. (i), (ii), and (iii) only\nE. (ii) and (iv) only\nF. (i) and (iii) only\nG. (ii) and (iii) only\nH. (i) and (iv) only\nI. (i) and (ii) only\nJ. (iii) and (iv) only\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "F",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-12251",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A volatile fuel when spilled on a large flat surface quickly spreadsover a depth 1/4 in. and a length of 7 ft. The fuel is at60°F with a vapor pressure of 2psiahas the physical propertiesѵ = 10^-5 ft / sec, \\rho = 54lb_m/ ft^3 and D_AB = 0.55 ft^2 / hr. The kinematic viscosity of air is 1.62 × 10^-4 ft^2 / sec.If a breeze at 75°F blows parallel to the fuelsurface at 15 mph, determine the evaporation rate.\n\nA. 1.200lb_m/hr-ft^2\nB. 0.990lb_m/hr-ft^2\nC. 0.400lb_m/hr-ft^2\nD. 1.050lb_m/hr-ft^2\nE. 0.774lb_m/hr-ft^2\nF. 0.500lb_m/hr-ft^2\nG. 0.875lb_m/hr-ft^2\nH. 0.350lb_m/hr-ft^2\nI. 0.650lb_m/hr-ft^2\nJ. 0.925lb_m/hr-ft^2\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "E",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-11378",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Let \\textphi = x^2 - y^2 be the potential functions for anirrotational flow. Find the velocity components as functions of x, y, and z.\n\nA. V_x= 2x^2, V_y= -2y^2, V_z= 0\nB. V_x= 2y, V_y= -2x, V_z= 0\nC. V_x= 2x, V_y= -2y, V_z= 0\nD. V_x= x, V_y= y, V_z= z\nE. V_x= 0, V_y= 0, V_z= 0\nF. V_x= 2x, V_y= 2y, V_z= 2z\nG. V_x= x^2, V_y= -y^2, V_z= 2z\nH. V_x= -2x, V_y= 2y, V_z= -z\nI. V_x= 2x, V_y= -2y, V_z= z\nJ. V_x= x, V_y= -y, V_z= 0\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "C",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-10177",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Two bicycle tires are set rolling with the same initial speed of 3.5 m/s on a long, straight road, and the distance each travels before its speed is reduced by half is measured. One tire is inflated to a pressure of 40 psi and goes 18.1 m; the other is at 105 psi and goes 92.9 m. What is the coefficient of rolling friction for each? Assume that the net horizontal force is due to rolling friction only.\n\nA. [0.0459, 0.00305]\nB. [0.0309, 0.00705]\nC. [0.0109, 0.01005]\nD. [0.0259, 0.00505]\nE. [0.0509, 0.00105]\nF. [0.0359, 0.00405]\nG. [0.0409, 0.00905]\nH. [0.0209, 0.00805]\nI. [0.0559, 0.00205]\nJ. [0.0159, 0.00605]\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "D",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-7785",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A boy found a bicycle lock for which the combination was unknown. The correct combination is a four-digit number, $d_1 d_2 d_3 d_4$, where $d_i, i=1,2,3,4$, is selected from $1,2,3,4,5,6,7$, and 8 . How many different lock combinations are possible with such a lock?\n\nA. 32768\nB. 8192\nC. 2048\nD. 1000\nE. 7000\nF. 256\nG. 4096\nH. 16384\nI. 1024\nJ. 512\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "G",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-10088",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A rotating mirror experiment, to measure the speed of light, is set up on Mt. Wilson with the return mirror on Mt. San Antonia 35377 meters away. When the 8-face mirror rotates at a speed of 530rpsno shift of the light source is obtained. Calculate the velocity of light.\n\nA. 2.00 ×10^8 m/sec\nB. 3.00 ×10^8 m/sec\nC. 1.00 × 10^9 m/sec\nD. 1.50 × 10^8 m/sec\nE. 2.50 × 10^8 m/sec\nF. 4.00 ×10^8 m/sec\nG. 6.00 × 10^8 m/sec\nH. 7.00 × 10^8 m/sec\nI. 3.50 × 10^8 m/sec\nJ. 5.00 ×10^8 m/sec\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "B",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-11611",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Consider a straight wire of radius r_0 oriented along the Z-axis carrying a steady current I. Determine the total power entering a unit length of wire.\n\nA. IR^2/π\nB. 0.5I/R\nC. I^2R^2\nD. I/R^2\nE. I^2R\nF. πI^2r_0^2\nG. 2πI/r_0\nH. I^2/R\nI. 2I^2R\nJ. I^2/r_0\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "E",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-3313",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Discuss the role of a stimulus that elicits a behavior pattern.\n\nA. The intensity of the stimuli necessary to evoke a behavior is directly proportional to the animal's motivation\nB. Only stimuli of a social nature can elicit behavior patterns in animals\nC. Behavior patterns are random and not specifically elicited by any particular stimuli\nD. A stimulus always requires conscious recognition by the animal to elicit a behavior pattern\nE. All stimuli can elicit specific behavior patterns\nF. A stimulus elicits a behavior pattern based solely on the physical strength of the stimulus, regardless of the animal's internal state\nG. Sign stimuli elicit specific responses from an animal and the intensity of the stimuli necessary to evoke a behavior pattern is inversely proportional to the animal's motivation to perform that behavior.\nH. Sign stimuli suppress specific responses in an animal\nI. The frequency of a stimulus rather than its intensity determines the likelihood of eliciting a behavior pattern\nJ. Stimuli that elicit behavior patterns are only effective in the presence of other, secondary stimuli\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "G",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-4548",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Hydrogen gas will dissociate into atoms at a high enough temperature, i.e., H_2 = 2H. Assuming ideal gas behavior for H_2 and H, what should be the density of hydrogen at 2000°C if it is 33% dissociated into atoms? The pressure is 1 atm.\n\nA. 6.07 × 10^-3 gm/liter\nB. 5.07 × 10^-3 gm/liter\nC. 8.07 × 10^-3 gm/liter\nD. 12.07 × 10^-3 gm/liter\nE. 13.07 × 10^-3 gm/liter\nF. 10.07 × 10^-3 gm/liter\nG. 11.07 × 10^-3 gm/liter\nH. 7.07 × 10^-3 gm/liter\nI. 9.07 × 10^-3 gm/liter\nJ. 4.07 × 10^-3 gm/liter\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "C",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-6940",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Suppose that the public wishes to hold 15 percent of its total money balances as cash, the remainder in the form of bank deposits, and banks hold cash reserves equal to 12 per-cent of the deposits. What total amount of cash will be re-quired, for use both by the banks and the public, for a total money supply of $ 200 billion?\n\nA. $ 100 billion\nB. $ 50.4 billion\nC. $ 170 billion\nD. $ 60 billion\nE. $ 30 billion\nF. $ 24 billion\nG. $ 42 billion\nH. $ 75 billion\nI. $ 20.4 billion\nJ. $ 36 billion\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "B",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-2426",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Explain the concepts of existential neurosis andlogotherapy.\n\nA. Existential neurosis is a term used to describe the thrill of extreme sports\nB. Existential neurosis is characterized by extreme happiness and contentment\nC. Logotherapy is a therapy focused on physical health and wellness\nD. Logotherapy is a form of psychoanalysis that focuses on interpreting dreams\nE. Existential neurosis is a physical ailment resulting from lack of physical activity\nF. Existential neurosis is a condition of heightened sensory perception and artistic creativity\nG. Logotherapy is a type of group therapy that emphasizes social interaction and communal living\nH. Existential neurosis is a contemporary disorder characterized by a sense of meaninglessness, loneliness, boredom, apathy, and lack of direction. Logotherapy is a treatment devised to help the patient find a purpose for living, a meaning to life.\nI. Existential neurosis refers to a state of excessive euphoria and unrealistic optimism\nJ. Logotherapy is a dietary regimen designed to enhance cognitive function\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "H",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-5250",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A passage Jane Eyre is as follows. This was all the account I got from Mrs. Fairfax of her employer and mine. There are people who seem to have no notion of sketching a character, or observing and describing salient points, either in persons or things: the good lady evidently belonged to this class; my queries puzzled, but did not draw her out. Mr. Rochester was Mr. Rochester in her eyes, a gentleman, a landed proprietor‚Äìnothing more: she inquired and searched no further, and evidently wondered at my wish to gain a more definite notion of his identity. The passage suggests that the speaker would describe the \"account\" mentioned in the first sentence as\n\nA. comprehensive\nB. exaggerated\nC. insightful\nD. precise\nE. adequate\nF. mystifying\nG. deficient\nH. erroneous\nI. misleading\nJ. enlightening\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "G",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-8524",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "What's phi(29791) where phi is Euler's Totient Function?\n\nA. 28500\nB. 30000\nC. 26000\nD. 29790\nE. 31000\nF. 25000\nG. 32000\nH. 29520\nI. 27500\nJ. 28830\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "J",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-6788",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Which of the following is not a recognized complication of cystic fibrosis?\n\nA. Cancer of the oesophagus\nB. Liver cirrhosis\nC. Congenital absence of the vas deferens\nD. Diabetes mellitus\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "A",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-5167",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "What city is known as 'the rubber capital of the world'?\n\nA. Toledo Ohio\nB. Akron Ohio\nC. Detroit Michigan\nD. Omaha Nebraska\nE. Grand Rapids Michigan\nF. Columbus Ohio\nG. Cleveland Ohio\nH. Rockford Illinois\nI. Pittsburgh Pennsylvania\nJ. Dayton Ohio\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "B",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-677",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "An automobile insurance policy purchased on March 10, with a$155 premium, was cancelled on September 6 by the ownerof the car. How much was the refund on the policy?\n\nA. $100\nB. $155\nC. $30\nD. $110\nE. $93\nF. $125\nG. $180\nH. $62\nI. $45\nJ. $77\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "H",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-9537",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A ball of mass is attached to a string connected to the ceiling, forming a pendulum. When the string is raised to an angle of 50 degrees below the horizontal (the ceiling) and released, the ball swings back and forth with a period of 0.4 s. Which of the following changes to the pendulum would decrease the period of the pendulum?\n\nA. Releasing the string from a higher point\nB. Increasing the angle of the string from the horizontal when released\nC. Decreasing the angle of the string from the horizontal when released\nD. Decreasing the mass of the ball\nE. Increasing the length of the string\nF. Releasing the ball from a lower point\nG. Decreasing the length of the string\nH. Increasing the mass of the ball\nI. Decreasing the gravity acting on the ball\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "G",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-11350",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Compute the heat gained by the room at 80°F from a vertical plate3 ft. wide and 4 ft. high maintained at 115°F.\n\nA. 550.3 Btu/hr\nB. 684.2 Btu/hr\nC. 596.4 Btu/hr\nD. 712.6 Btu/hr\nE. 739.1 Btu/hr\nF. 678.9 Btu/hr\nG. 503.8 Btu/hr\nH. 625.7 Btu/hr\nI. 485.2 Btu/hr\nJ. 460.5 Btu/hr\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "C",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-8457",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Rob uses 1 box of cat food every 5 days to feed his cats. Approximately how many boxes of cat food does he use per month?\n\nA. 3 boxes\nB. 4 boxes\nC. 6 boxes\nD. 10 boxes\nE. 8 boxes\nF. 5 boxes\nG. 7 boxes\nH. 2 boxes\nI. 1 box\nJ. 12 boxes\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "C",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-1236",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A husband and a wife are filing for divorce. At issue is the market value of the house they own. During the divorce proceedings, the husband's lawyer calls a neighbor to testify that the market value of the home exceeds $100,000. She states that her testimony is based on an estimate contained in an appraisal report that she saw. The appraisal had been prepared at the husband's request by a well-known real estate company in the area. Upon objection by the wife's attorney, the neighbor's testimony will be held\n\nA. admissible, because the neighbor is a witness to the house's value.\nB. admissible, because it supports the husband's claim.\nC. inadmissible, because the neighbor has not been shown to be an expert on real estate market values.\nD. admissible, because it is based on a reliable source.\nE. inadmissible, because the neighbor is not a party involved in the divorce.\nF. inadmissible, because the appraisal report was not officially presented in court.\nG. admissible, because she had firsthand knowledge of the estimate contained in the appraisal report.\nH. admissible as proper lay opinion.\nI. inadmissible, because it involves a privileged communication between husband and wife.\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "C",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-11948",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A 6 × 19 IPS rope of diameter 1 7/8 in. is used to lift a load of 8.0 tons from a depth of 760 ft. at a speed of 1500 fpm attained in 10 sec. Calculate the percentage increase in the starting load if a slack of 1 ft. is introduced on the rope.\n\nA. 7.58%\nB. 0.58%\nC. 2.58%\nD. 8.58%\nE. 1.58%\nF. 6.58%\nG. 9.58%\nH. 4.58%\nI. 5.58%\nJ. 3.58%\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "J",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-5098",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Who was on the $500 bill?\n\nA. Calvin Coolidge\nB. Abraham Lincoln\nC. George Washington\nD. Benjamin Franklin\nE. Andrew Jackson\nF. William McKinley\nG. Thomas Jefferson\nH. John Adams\nI. Ulysses S. Grant\nJ. Aaron Burr\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "F",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-8588",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "A number’s prime factors are 2, 5, 7, 13, and 31. Which of the following must be a factor of the number?\n\nA. 10\nB. 25\nC. 6\nD. 8\nE. 15\nF. 30\nG. 20\nH. 4\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "A",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-8437",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Statement 1 | Every free abelian group is torsion free. Statement 2 | Every finitely generated torsion-free abelian group is a free abelian group.\n\nA. Statement 1 is True, Statement 2 is not provided\nB. Statement 1 is True, Statement 2 is both True and False\nC. False, False\nD. Statement 1 is not provided, Statement 2 is True\nE. True, False\nF. Both statements are not provided\nG. False, True\nH. Statement 1 is False, Statement 2 is not provided\nI. True, True\nJ. Statement 1 is not provided, Statement 2 is False\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "I",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-10316",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "Acompressionalwave of frequency 250/sec is set up in an iron rod and passes from the rod into air. The speed of the wave is 1.6 x 10^4 ft/sec in iron and 1.1 x 10^3 ft/sec in air. Find the wavelength in each material.\n\nA. 70 ft in iron, 3.5 ft in air\nB. 68 ft in iron, 4.8 ft in air\nC. 60 ft in iron, 5 ft in air\nD. 80 ft in iron, 4.0 ft in air\nE. 62 ft in iron, 4.2 ft in air\nF. 72 ft in iron, 5.5 ft in air\nG. 66 ft in iron, 4.6 ft in air\nH. 75 ft in iron, 3.9 ft in air\nI. 65 ft in iron, 4.5 ft in air\nJ. 64 ft in iron, 4.4 ft in air\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "J",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  },
+  {
+   "id": "mmlu-8901",
+   "task_type": "reasoning",
+   "difficulty": "hard",
+   "prompt": "The surface area, S, of a right rectangular prism with length l, width w, and height h can be found using the formula S = 2(lw+ wh + hl). What is the surface area, in square inches, of a prism with a length of 12 inches, a width of 9 inches, and a height of 2 inches?\n\nA. 300\nB. 92\nC. 150\nD. 258\nE. 276\nF. 210\nG. 225\nH. 268\nI. 320\nJ. 180\n\nGive the letter of the correct option.\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>",
+   "reference": "A",
+   "scoring": "final_answer",
+   "source": "mmlu_pro"
+  }
+ ]
+}

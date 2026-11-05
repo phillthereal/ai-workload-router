@@ -266,5 +266,12 @@ class MaxSpendRun(unittest.TestCase):
                 run_benchmark._check_real(Result(**{**good, **bad}))
 
 
+class FrozenTasks(unittest.TestCase):
+    def test_the_committed_task_files_load_at_their_planned_sizes(self):
+        folder = Path(__file__).resolve().parent.parent / "data" / "public" / "benchmark"
+        self.assertEqual(len(load_tasks(folder / "tasks_public.json")), 300)
+        self.assertEqual(len(load_tasks(folder / "tasks_public_hard.json")), 40)
+
+
 if __name__ == "__main__":
     unittest.main()
