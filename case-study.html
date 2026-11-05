@@ -111,6 +111,7 @@
     font-variant-numeric: tabular-nums; color: var(--ink);
   }
   .stat .num.pos { color: var(--teal); }
+  .stat .num.miss { color: var(--amber); }
   .stat .lbl {
     font-family: var(--mono); font-size: .7rem; letter-spacing: .08em;
     text-transform: uppercase; color: var(--muted); margin-top: .6rem; line-height: 1.35;
@@ -224,27 +225,69 @@
 
     <header>
       <p class="eyebrow">Product Case Study</p>
-      <h1>Cutting an LLM bill in half, without touching quality.</h1>
-      <p class="lede">A routing layer that sends each task to the cheapest model that can still do it well &mdash; across three real vendors &mdash; and a benchmark that proves the tradeoff instead of assuming it.</p>
+      <h1>84% cheaper, but the quality target was missed.</h1>
+      <p class="lede">A routing layer that sends each task to the cheapest model that can still do it well &mdash; across three real vendors &mdash; and benchmarks that measure the tradeoff instead of assuming it.</p>
       <p class="byline">Fil Ivanov &middot; Product &mdash; problem framing &rarr; spec &rarr; benchmark &rarr; result</p>
     </header>
 
     <section aria-label="Headline results">
-      <span class="tag"><span class="dot"></span>Live results &middot; 25-task benchmark, three vendors &middot; reproducible</span>
+      <span class="tag"><span class="dot"></span>Live results &middot; 300 public tasks, three vendors</span>
       <div class="hero-stats">
         <div class="stat">
-          <div class="num pos">53.6%</div>
+          <div class="num pos">84.1%</div>
           <div class="lbl">Cost reduction<br>vs. frontier-only</div>
         </div>
         <div class="stat">
-          <div class="num">100%</div>
+          <div class="num miss">91.8%</div>
           <div class="lbl">Quality retained<br>of baseline</div>
         </div>
         <div class="stat">
-          <div class="num pos">46%</div>
-          <div class="lbl">Faster<br>mean latency</div>
+          <div class="num">95%</div>
+          <div class="lbl">Quality target<br>not met</div>
         </div>
       </div>
+    </section>
+
+    <section aria-label="Public test">
+      <p class="kicker">The public test</p>
+      <h2>On 300 public tasks, the router missed the quality target.</h2>
+      <p>I reran the router on public tasks, with real API calls and the classifier choosing each route. The targets were unchanged: at least 40% cheaper than sending everything to Opus, and at least 95% of its quality. The runs cost $2.7228 in total, including one attempt that stopped early.</p>
+
+      <div class="panel">
+        <p class="panel-title">Results with 95% ranges</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Run</th><th>Cheaper</th><th>Quality kept</th><th>Targets</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Mixed, 300 tasks</td><td class="save-cell">84.1%<br>79.0&ndash;88.7%</td><td class="flat-cell">91.8%<br>86.9&ndash;96.6%</td><td class="flat-cell">Not met</td></tr>
+              <tr><td>Hard, 40 tasks</td><td>22.2%<br>9.0&ndash;40.3%</td><td>96.1%<br>89.5&ndash;100.0%</td><td>Apply to the mixed run only</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-title">Mixed run by task type</p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Task type</th><th>Tasks</th><th>Cheaper</th><th>Quality kept</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Classification</td><td>96</td><td>96.6%</td><td class="flat-cell">80.3%</td></tr>
+              <tr><td>Extraction</td><td>84</td><td>95.1%</td><td>91.8%</td></tr>
+              <tr><td>Reasoning</td><td>48</td><td>29.9%</td><td>97.8%</td></tr>
+              <tr><td>Short writing</td><td>72</td><td>88.6%</td><td>101.1%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p><strong>The loss is concentrated.</strong> Classification gave up the most quality, and reasoning saved the least. On the hard set the router sent 27 of 40 tasks to Opus, so it saved much less. My 25 tasks scored near 0.99 on every tier, so they could not have shown this.</p>
+      <p><strong>Checking the judge.</strong> Short writing is scored by an LLM judge, so I checked it two ways. I scored 29 randomly picked answers by hand, without seeing the model or the judge's score. We agreed on pass or fail for 22 of the 29, but the correlation was only about 0.03, so the check did not confirm the judge. A code check then tested 95 of the 99 instruction rules on the 69 tasks it could cover. On those tasks the router kept 98.2% of Opus's quality (87.9% to 109.4%), not the judge's 101.1%. The judge gave 0.9 or more to 15 answers that broke a rule, and under 0.5 to 4 that passed. With code in place of the judge on those tasks, the mixed run would keep 90.8% (85.6% to 96.0%). The target is still missed, and the published scores stay as they are.</p>
+      <p>The rest of this page is the earlier work, in the order it happened. Its numbers come from smaller or private tests.</p>
     </section>
 
     <section>
@@ -271,8 +314,8 @@
     </section>
 
     <section aria-label="The result">
-      <p class="kicker">The result</p>
-      <h2>53.6% cheaper. Quality held. Faster too.</h2>
+      <p class="kicker">The first result</p>
+      <h2>On my own 25 tasks: 53.6% cheaper, quality held, faster too.</h2>
 
       <div class="panel">
         <p class="panel-title">Total cost across 25 tasks &mdash; router vs. baseline</p>
@@ -325,8 +368,8 @@
     </section>
 
     <section aria-label="Cross-checked judge and at-scale projection">
-      <p class="kicker">Second-order proof points</p>
-      <h2>The judge checks out. The savings hold at scale.</h2>
+      <p class="kicker">Earlier checks on the 25 tasks</p>
+      <h2>A second judge agreed, and a rough projection at scale.</h2>
 
       <div class="panel">
         <p class="panel-title">Validating the judge &mdash; second, independent judge vs. primary judge</p>
@@ -430,7 +473,7 @@
         <li><span class="n">1</span><b>Adaptive routing.</b> Feed the performance log back into the router so model choice is learned per task type, not hand-configured. The log was designed for this from day one.</li>
         <li><span class="n">2</span><b>Confidence-based escalation.</b> Try the cheap model first; auto-retry on a stronger one only when the judge score is low &mdash; more savings without breaching the quality floor.</li>
         <li><span class="n">3</span><b>More vendors.</b> Cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); v5 added Kimi (Moonshot) as a fourth, offline-only so far; a Gemini adapter is the next test of whether the ceiling keeps climbing or starts to plateau.</li>
-        <li><span class="n">4</span><b>Judge-vs-human validation.</b> The cross-judge check passed (96.7% agreement); next is scoring the exported human label sheet against both judges, and growing past 25 tasks, before quoting absolute quality numbers as precise.</li>
+        <li><span class="n">4</span><b>Judge checks.</b> The second judge agreed on the 25-task run (96.7%), and the eval has grown to 300 public tasks. A hand check on the public run did not confirm the judge, so the next steps are running the second judge there and using code wherever a rule can be checked.</li>
       </ol>
     </section>
 
@@ -467,7 +510,7 @@
 
     <section aria-label="v4 result">
       <p class="kicker">V4 &mdash; from benchmark to usable router</p>
-      <h2>v1&ndash;v3 proved routing works. v4 makes it something an app can call.</h2>
+      <h2>v1&ndash;v3 showed routing could work on my own tasks. v4 makes it something an app can call.</h2>
       <p>Until now the router only existed inside a benchmark script. There is no new headline number here &mdash; v4 is the product surface.</p>
       <div class="panel">
         <p class="panel-title">What shipped</p>
@@ -612,8 +655,9 @@
       <p class="kicker">Honest limitations</p>
       <h2>What this does and doesn't prove.</h2>
       <ul class="limits">
-        <li><b>The judge is validated, not proven.</b> LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) &mdash; but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet is exported; scoring it is the remaining step.</li>
-        <li><b>25 tasks is a starting eval,</b> enough to demonstrate the method and the composition insight &mdash; not to certify a production savings figure.</li>
+        <li><b>The judge is only partly confirmed.</b> On the 25-task run a second judge from a different vendor agreed (96.7% within 0.15, 0.010 mean difference), but both are LLMs. On the public run my hand check agreed on pass or fail for 22 of 29 answers, with a correlation of only about 0.03, and a code check found 15 answers the judge scored too generously and 4 too harshly. The second judge has not been run there.</li>
+        <li><b>The public test is still a fixed mix.</b> It is not a real workload, the mix drives the answer, and the models have probably seen public benchmarks in training. Answers are capped at 1,024 tokens, and the mixed run printed 11 cut-offs while the database shows 14 answers at the limit. That gap isn't explained.</li>
+        <li><b>25 tasks is a starting eval.</b> It was enough to demonstrate the method, not to certify a savings figure, and its quality result did not carry over to the public test.</li>
         <li><b>v5 results are small-n and partly modelled.</b> The jury's errors are correlated (shared blind spots), the red-team runs use n of 5&ndash;10, the budget simulation imputes some mid-tier quality (optimistic), and Kimi's quality is unmeasured &mdash; only its price is projected.</li>
         <li><b>The Jev result is small-n.</b> 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.</li>
         <li><b>The live chain numbers are early.</b> They come from a 23-email pre-release test and the first live runs; the fallback path and the fixed job-saving step had not yet run live at time of writing. The old classifier is the reference, not truth.</li>
@@ -626,7 +670,7 @@
       Try the decision rule yourself: <a href="https://phillthereal.github.io/ai-workload-router/calculator.html" style="color:var(--teal)">Do you even need a router? &mdash; interactive ROI calculator</a>, calibrated on this benchmark's live results (it will tell you when the answer is no).<br>
       Code &amp; benchmark: <a href="https://github.com/phillthereal/ai-workload-router" style="color:var(--teal)">github.com/phillthereal/ai-workload-router</a><br>
       Reproduce it &mdash; works with any subset of provider keys. Add whichever of <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, or <code>DEEPSEEK_API_KEY</code> you have and run <code>python run_benchmark.py</code>; a missing provider's key falls back to a labeled mock adapter. The first run makes live calls (for whichever keys are present) and caches them; every run after is free and byte-identical.<br>
-      Stack: Python &middot; Anthropic / OpenAI / DeepSeek adapters &middot; SQLite performance log &middot; record-and-replay cache &middot; LLM-as-judge scoring, cross-validated.
+      Stack: Python &middot; Anthropic / OpenAI / DeepSeek adapters &middot; SQLite performance log &middot; record-and-replay cache &middot; LLM-as-judge scoring, partly checked by hand and code.
     </p>
 
   </div>

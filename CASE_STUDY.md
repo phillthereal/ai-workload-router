@@ -2,7 +2,7 @@
 
 **Author:** Fil Ivanov · **Role:** Product (end-to-end: problem framing → spec → benchmark → result)
 
-> A cost-optimizing routing layer for LLM applications. This case study shows how I took a sprawling idea, isolated the one assumption worth testing, cut scope to test it fast, and proved the result with a live benchmark. The code is the evidence; the product thinking is the exhibit.
+> A cost-optimizing routing layer for LLM applications. This case study shows how I took a sprawling idea, isolated the one assumption worth testing, cut scope to test it fast, and tested the result with live benchmarks, including one that missed its target. The code is the evidence; the product thinking is the exhibit.
 
 ---
 
@@ -10,9 +10,33 @@
 
 Teams building on LLMs overpay by sending every request to one premium model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well, logging cost and quality on every call so routing improves over time.
 
-**On a 25-task benchmark, routing across a three-vendor roster cut cost 53.6% with no measurable quality loss (100.4% of the frontier-only baseline) and ran 46.2% faster.** The hypothesis (≥40% cost reduction, ≥95% quality retention) **passed.** Every number is from live API calls, graded by an LLM judge that's itself been cross-checked by a second, independent judge, and the whole run is reproducible from cache.
+**On 300 public tasks, routing cut cost 84.1% but kept only 91.8% of quality, so it missed the 95% quality target.** The 40% cost target was met. An earlier 25-task benchmark that I wrote myself had passed both targets: 53.6% cheaper with my hand labels, 65.6% with the classifier, and quality about level. The public test is the bigger and fairer one, so it leads here. Every number is from live API calls. A hand check and a code check only partly confirmed the judge on the public run, and the target is still missed when code replaces the judge wherever it can.
 
 The most useful finding wasn't the headline number — it was *why* the savings stopped where they did. That's the part a good PM cares about, and it's below.
+
+---
+
+## The public test: the quality target was missed
+
+I reran the router on public tasks, with real API calls and the classifier choosing each route. The targets were unchanged: at least 40% cheaper than sending everything to Opus, and at least 95% of its quality. The runs cost $2.7228 in total, including one attempt that stopped early.
+
+| Run | Cheaper than all-Opus | 95% range | Quality kept | 95% range | Targets |
+|---|---|---|---|---|---|
+| Mixed, 300 tasks | 84.1% | 79.0% to 88.7% | **91.8%** | 86.9% to 96.6% | **Not met** |
+| Hard, 40 tasks | 22.2% | 9.0% to 40.3% | 96.1% | 89.5% to 100.0% | Apply to the mixed run only |
+
+| Task type (mixed run) | Tasks | Cheaper | Quality kept |
+|---|---|---|---|
+| Classification | 96 | 96.6% | **80.3%** |
+| Extraction | 84 | 95.1% | 91.8% |
+| Reasoning | 48 | 29.9% | 97.8% |
+| Short writing | 72 | 88.6% | 101.1% |
+
+**The loss is concentrated.** Classification gave up the most quality, and reasoning saved the least. On the hard set the router sent 27 of 40 tasks to Opus, so it saved much less. My 25 tasks scored near 0.99 on every tier, so they could not have shown this.
+
+**Checking the judge.** Short writing is scored by an LLM judge, so I checked it two ways. I scored 29 randomly picked answers by hand, without seeing the model or the judge's score. We agreed on pass or fail for 22 of the 29, but the correlation was only about 0.03, so the check did not confirm the judge. A code check then tested 95 of the 99 instruction rules on the 69 tasks it could cover. On those tasks the router kept 98.2% of Opus's quality (87.9% to 109.4%), not the judge's 101.1%. The judge gave 0.9 or more to 15 answers that broke a rule, and under 0.5 to 4 that passed. With code in place of the judge on those tasks, the mixed run would keep 90.8% (85.6% to 96.0%). The target is still missed, and the published scores stay as they are.
+
+The rest of this case study is the earlier work, in the order it happened. Its numbers come from smaller or private tests.
 
 ---
 
@@ -55,7 +79,7 @@ A backend benchmark harness, deliberately minimal:
 
 **Benchmark:** 25 tasks weighted to resemble real production traffic — mostly classification and extraction, some short generation, a minority of hard reasoning (roughly 32% / 28% / 24% / 16%).
 
-## The result
+## The first result: 25 tasks I wrote
 
 | Strategy | Total cost | Mean quality | Mean latency |
 |---|---|---|---|
@@ -65,7 +89,7 @@ A backend benchmark harness, deliberately minimal:
 - **Cost reduction: 53.6%**
 - **Quality retention: 100.4%** of baseline (the router edged it, within noise)
 - **Latency: 46.2% faster** (median 1,208 ms vs. 3,663 ms) — cheaper models also happen to respond faster, so this is a second win at zero extra cost, not a tradeoff.
-- **Hypothesis (≥40% cost reduction, ≥95% quality retention): PASSED.**
+- **Hypothesis (≥40% cost reduction, ≥95% quality retention): PASSED on these 25 tasks.** The 300-task public test did not pass.
 - The router sent 11 tasks to the budget tier (GPT-4o mini), 7 to the mid tier (DeepSeek Chat), 7 to the frontier (Opus) — a sensible spread by difficulty, not a blunt "cheapest everywhere."
 
 ## What this looks like at scale
@@ -81,7 +105,7 @@ This is directional, not a forecast — it assumes production traffic resembles 
 
 ## Validating the judge
 
-An LLM judge grading its own routing decisions is a circularity worth checking. A second, independent judge (GPT-4o mini — a different vendor from the primary judge, Claude Opus 4.8) re-scored all 30 rubric-judged answers from this run blind. Agreement: **mean absolute difference of 0.010, with 96.7% of scores within 0.15 of each other.** That's a meaningfully lower bar than ground truth, but it's evidence the primary judge isn't an outlier — two different judges, from two different vendors, converge on similar scores. The remaining step is a human-labeled subset (a label sheet is already exported for this run) to check both judges against an actual human, not just against each other.
+An LLM judge grading its own routing decisions is a circularity worth checking. A second, independent judge (GPT-4o mini — a different vendor from the primary judge, Claude Opus 4.8) re-scored all 30 rubric-judged answers from this run blind. Agreement: **mean absolute difference of 0.010, with 96.7% of scores within 0.15 of each other.** That's a meaningfully lower bar than ground truth, but it's evidence the primary judge isn't an outlier — two different judges, from two different vendors, converge on similar scores. That check covers this 25-task run only. On the public run, a hand check did not confirm the judge, and the second judge has not been run.
 
 ## The insight that matters
 
@@ -112,7 +136,7 @@ Everything is additive and reproducible — the default configuration still repr
 1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one; the v2 classifier is a first step — prediction from the prompt rather than a static rule.)
 2. **Confidence-based escalation** — ✅ *built in v2 (the cascade): try the cheap model first, a reference-free verifier checks the answer, escalate only on a failed check.* Next: tune the escalate threshold per task type from the performance log, rather than a single global value.
 3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); v5 added Kimi (Moonshot) as a fourth, offline-only so far; a Gemini adapter is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
-4. **Judge-vs-human validation** — the cross-judge check passed (96.7% agreement); the next step is scoring the exported human label sheet against both judges, and growing the eval beyond 25 tasks, before quoting absolute quality numbers as precise. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
+4. **Judge checks** — the second judge agreed on the 25-task run (96.7%), and the eval has grown to 300 public tasks. A hand check on the public run did not confirm the judge, so the next steps are running the second judge there and using code wherever a rule can be checked. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
 
 ## v3: the router learns from its own log
 
@@ -159,7 +183,7 @@ feasibility fight over undated history and the per-task evidence log:
 
 ## v4: from benchmark to usable router
 
-v1–v3 proved routing works, but the router only existed inside a benchmark script — nothing an app could call. v4 has no new headline number; it is the product surface:
+v1–v3 showed routing could work on my own tasks, but the router only existed inside a benchmark script — nothing an app could call. v4 has no new headline number; it is the product surface:
 
 - **One API.** `Router(policy).complete(prompt)` returns the answer, the model, the cost and a "why" trace. Every strategy is an interchangeable policy behind it.
 - **Real failover.** A provider error retries the next model up the ladder and is recorded in the trace, instead of a silent fake answer.
@@ -214,8 +238,9 @@ Test the one assumption first, then build, then measure honestly. v5's shadow te
 
 ## Honest limitations
 
-- **The judge is validated, not proven.** LLM-as-judge scoring is now cross-checked by a second, independent judge from a different vendor (96.7% agreement, 0.010 mean difference) — but both are still LLMs and could share blind spots a human grader wouldn't. A human label sheet has been exported for this run; scoring it is the remaining step before quality numbers are trusted as ground truth.
-- **25 tasks is a starting eval,** not a production-scale one. It's enough to demonstrate the method and the composition insight; it's not enough to certify a production savings figure.
+- **The judge is only partly confirmed.** On the 25-task run a second judge from a different vendor agreed (96.7% within 0.15, 0.010 mean difference), but both are LLMs. On the public run my hand check agreed on pass or fail for 22 of 29 answers, with a correlation of only about 0.03, and a code check found 15 answers the judge scored too generously and 4 too harshly. The second judge has not been run there.
+- **The public test is still a fixed mix.** It is not a real workload, the mix drives the answer, and the models have probably seen public benchmarks in training. Answers are capped at 1,024 tokens, and the mixed run printed 11 cut-offs while the database shows 14 answers at the limit. That gap isn't explained.
+- **25 tasks is a starting eval.** It was enough to demonstrate the method, not to certify a savings figure, and its quality result did not carry over to the public test.
 - **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
 - **The Jev result is small-n.** 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.
 - **The live chain numbers are early.** They come from a 23-email pre-release test and the first live runs; the fallback path and the fixed job-saving step had not yet run live at time of writing. The old classifier is the reference, not truth.
