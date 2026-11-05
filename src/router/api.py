@@ -249,7 +249,8 @@ class LearnedPolicy(RulesPolicy):
             trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})",
                    f"learned: {ld.direction} {ld.classifier_tier}->{ld.chosen_tier}: {ld.reason}",
                    d.reason],
-            classifier_agreed=c.agreed_with_label, learned_evidence=ld.to_log_dict(),
+            classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
+            learned_evidence=ld.to_log_dict(),
             task_type=c.task_type, difficulty=c.difficulty,
         )
 

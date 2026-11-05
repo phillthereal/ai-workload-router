@@ -163,7 +163,8 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     mixed, hard = build()
     for name, tasks in (("tasks_public.json", mixed), ("tasks_public_hard.json", hard)):
-        (out / name).write_text(json.dumps(tasks, indent=1, ensure_ascii=False) + "\n")
+        data = {"version": 2, "tasks": tasks}
+        (out / name).write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
         print(f"{out / name}: {len(tasks)} tasks")
 
 

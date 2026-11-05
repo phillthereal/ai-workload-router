@@ -24,7 +24,9 @@ from __future__ import annotations
 import hashlib
 import re
 import statistics
-from typing import Any
+import string
+from decimal import Decimal
+from typing import Any, Optional
 
 from .adapters.base import Response
 from .config import MODEL_TIER
@@ -155,16 +157,26 @@ def exact_match(response_text: str, reference: str) -> float:
 REFERENCE_SEP = " || "
 """Separates alternative correct answers in a `final_answer` reference."""
 
-_FINAL_LINE_RE = re.compile(r"^\W*(?:final\s+)?answer\s*[:=]\s*(.+?)\s*$", re.IGNORECASE | re.MULTILINE)
+# Horizontal matching only: a heading such as "Final Answer:" must not swallow the next line.
+_FINAL_LINE_RE = re.compile(r"^[^\w\n]*(?:final[ \t]+)?answer[ \t*`]*[:=](.*)$", re.IGNORECASE | re.MULTILINE)
+_NUMBER_RE = re.compile(r"(?:[+-][$£€]?|[$£€][+-]?)?(?:[1-9]\d{0,2}(?:,\d{3})+|\d+)(?:\.\d+)?%?")
+_MARKUP = string.whitespace + "*`"
+
+
+def _strip_markup(text: str) -> str:
+    """Drop surrounding whitespace, `*` and backticks, and one trailing `.`."""
+    return text.strip(_MARKUP).removesuffix(".").strip(_MARKUP)
+
+
+def _number(text: str) -> Optional[Decimal]:
+    """The exact value of a reply that is only a number, else None. 18.00, $18 and 18 are equal."""
+    bare = _strip_markup(text)
+    return Decimal(re.sub(r"[$£€,%]", "", bare)) if _NUMBER_RE.fullmatch(bare) else None
 
 
 def _canonical(text: str) -> str:
-    """Normalize an answer so format differences alone never decide a score."""
-    bare = text.replace(",", "").replace("_", " ").strip().strip("*`").rstrip(".")
-    try:
-        return f"{float(bare.lstrip('$').rstrip('%')):g}"  # 18.00, $18 and 18 are the same number
-    except ValueError:
-        return re.sub(r"^(?:a|an|the) ", "", _normalize(bare))
+    """Normalize a text answer so format differences alone never decide a score."""
+    return re.sub(r"^(?:a|an|the) ", "", _normalize(text.replace("_", " ")))
 
 
 def final_answer(response_text: str, reference: str) -> float:
@@ -174,7 +186,9 @@ def final_answer(response_text: str, reference: str) -> float:
     `exact_match` accepts the reference anywhere in the reply, so working that
     mentions the right number or option passes even when the conclusion is
     wrong. This reads only the last "Answer: ..." line, or the whole reply if
-    it is a bare answer. A reply with neither scores 0.
+    it is a bare answer. A reply with neither scores 0. A number reference needs
+    an exactly equal number. A one-letter reference needs that letter alone, or
+    on an Answer line the letter, maybe bracketed, then `)`, `.` or `:` and optional text.
 
     Args:
         response_text: Model output text.
@@ -185,10 +199,18 @@ def final_answer(response_text: str, reference: str) -> float:
     """
     text = (response_text or "").strip()
     lines = _FINAL_LINE_RE.findall(text)
-    got = _canonical(lines[-1] if lines else text)
-    for ref in map(_canonical, reference.split(REFERENCE_SEP)):
-        # "B) Paris" commits to option B when the reference is the letter.
-        if got == ref or (len(ref) == 1 and ref.isalpha() and got.split()[:1] == [ref]):
+    got = lines[-1] if lines else text
+    letter_form = r"\(?%s(?:[).:].*)?" if lines else r"%s[.)]?"  # "B) Paris" commits to B only on an Answer line
+    for ref in reference.split(REFERENCE_SEP):
+        ref = ref.strip()
+        number = _number(ref)
+        if number is not None:
+            matched = _number(got) == number
+        elif re.fullmatch(r"[A-Za-z]", ref):
+            matched = bool(re.fullmatch(letter_form % ref, _strip_markup(got), re.IGNORECASE))
+        else:
+            matched = _canonical(got) == _canonical(ref) != ""
+        if matched:
             return 1.0
     return 0.0
 
@@ -234,6 +256,9 @@ def rubric_judge(task: dict[str, Any], response: Response) -> float:
 # permissive about surrounding text ("Score: 0.85." or "I'd give this 0.7")
 # since the judge model isn't forced into structured output.
 _JUDGE_SCORE_RE = re.compile(r"(?<![\d.])(0(?:\.\d+)?|1(?:\.0+)?)(?![\d])")
+
+# Strict runs read only a first line that is the score and nothing else.
+_STRICT_JUDGE_RE = re.compile(rf"(?:score[\s*`]*:[\s*`]*)?{_JUDGE_SCORE_RE.pattern}", re.IGNORECASE)
 
 _JUDGE_PROMPT_TEMPLATE = """You are grading a candidate answer to a task.
 
@@ -302,6 +327,10 @@ def judge_score_with_model(
     Returns:
         Judge-assigned quality score in [0.0, 1.0]; 0.5 if the judge's
         output can't be parsed as a number in range.
+
+    Raises:
+        JudgeError: If strict and the reply is mock, failed, or its first
+            non-empty line is not just a score in range.
     """
     # Local import to avoid a circular import at module load time:
     # router.adapters.mock imports QUALITY_PROFILE from this module, so this
@@ -315,10 +344,13 @@ def judge_score_with_model(
     )
     judge_adapter = get_adapter(judge_model)
     judge_response = judge_adapter.complete(prompt)
-    if strict and (judge_response.simulated or not judge_response.success
-                   or not _JUDGE_SCORE_RE.search(judge_response.text or "")):
+    if not strict:
+        return _parse_judge_score(judge_response.text)
+    first_line = (judge_response.text or "").strip().split("\n")[0]
+    match = _STRICT_JUDGE_RE.fullmatch(_strip_markup(first_line))
+    if judge_response.simulated or not judge_response.success or not match:
         raise JudgeError(f"no real judge score from {judge_model}")
-    return _parse_judge_score(judge_response.text)
+    return float(match.group(1))
 
 
 def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = False) -> float:

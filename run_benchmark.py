@@ -34,6 +34,7 @@ breakdown. See src/router/adapters/ and src/router/scoring.py.
 """
 
 import argparse
+import math
 import sys
 import time
 import uuid
@@ -185,6 +186,14 @@ _PV = "v2"
 _TASK_RESERVE_USD = 0.10
 
 
+def _spend_cap(raw: str) -> float:
+    """argparse type for --max-spend: a finite cap that can cover at least one task."""
+    cap = float(raw)
+    if not (math.isfinite(cap) and cap > _TASK_RESERVE_USD):
+        raise argparse.ArgumentTypeError(f"must be a finite amount above ${_TASK_RESERVE_USD:.2f}")
+    return cap
+
+
 class RunStopped(RuntimeError):
     """A --max-spend run hit its cap or something that would make its result untrue."""
 
@@ -330,7 +339,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--max-spend",
-        type=float,
+        type=_spend_cap,
         default=None,
         metavar="USD",
         help=(
