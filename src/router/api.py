@@ -35,6 +35,7 @@ from .config import MODEL_TIER, TIER_ORDER, get_model, get_roster
 from .governors import BudgetPolicy, ShadowPolicy  # noqa: F401  (re-exported)
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
 from .router import route_task
+from .scoring import committed_answer, final_answer
 from .untrusted import DEFAULT_PROMPT_VERSION, check_version
 
 
@@ -187,13 +188,16 @@ class RulesPolicy:
     name = "router"
 
     def __init__(self, use_labels: bool = True,
-                 prompt_version: str = DEFAULT_PROMPT_VERSION) -> None:
+                 prompt_version: str = DEFAULT_PROMPT_VERSION,
+                 agree_on: tuple[str, ...] = ()) -> None:
         self.use_labels = use_labels
         self.prompt_version = check_version(prompt_version)
+        self.agree_on = agree_on
+        """Task types answered by _agree_or_frontier instead of the rules table."""
 
     def report_tags(self) -> list[str]:
-        """Tag reports 'classified' when routing on predicted, not hand-written, labels."""
-        return [] if self.use_labels else ["classified"]
+        """Tag reports 'classified' for predicted labels and 'agree' when agree_on is set."""
+        return ([] if self.use_labels else ["classified"]) + (["agree"] if self.agree_on else [])
 
     def before_run_group(self, run_group: str) -> None:
         """No-op: this policy has no per-run state."""
@@ -212,12 +216,39 @@ class RulesPolicy:
         c = self._classify(task, ctx)
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty)
+        if c.task_type in self.agree_on and not d.gated_models:
+            return self._agree_or_frontier(prompt, c, ctx)
         return _answer(
             prompt, d.chosen_model, d.effort, ctx, routing_cost=c.cost_usd,
             trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model}, "
                    f"agreed_with_label={c.agreed_with_label})", d.reason],
             classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
+        )
+
+
+    def _agree_or_frontier(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
+        """Keep the answer if the budget and mid models commit to the same one, else ask the frontier."""
+        low = ctx.call(ctx.roster.budget, prompt)
+        mid = ctx.call(ctx.roster.mid, prompt)
+        extra: dict[str, Any] = dict(
+            classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
+            task_type=c.task_type, difficulty=c.difficulty,
+        )
+        trace = [f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
+        if final_answer(low.text, committed_answer(mid.text)) == 1.0:
+            return Result(
+                text=mid.text, model=mid.model, answer_cost_usd=ctx.cost(mid),
+                routing_cost_usd=c.cost_usd + ctx.cost(low),
+                simulated=low.simulated or mid.simulated,
+                trace=trace + [f"{low.model} and {mid.model} agree"],
+                response=mid, effort=mid.effort, **extra,
+            )
+        effort = (ctx.effort_policy or {}).get("frontier")
+        return _answer(
+            prompt, ctx.roster.frontier, effort, ctx,
+            routing_cost=c.cost_usd + ctx.cost(low) + ctx.cost(mid),
+            trace=trace + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
         )
 
 

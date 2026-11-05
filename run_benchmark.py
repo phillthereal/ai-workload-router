@@ -105,6 +105,7 @@ def _report_path(
     verifier: Optional[str] = None,
     learned_flag: bool = False,
     jury_mode: Optional[str] = None,
+    agree: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -153,6 +154,7 @@ def _report_path(
         and tag is None
         and verifier is None
         and not learned_flag
+        and not agree
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -164,6 +166,8 @@ def _report_path(
         parts.append("classified")
     if learned_flag:
         parts.append("learned")
+    if agree:
+        parts.append("agree")
     if effort_policy:
         parts.append("effort")
     if verifier:
@@ -228,7 +232,8 @@ def _build_policy(args: argparse.Namespace):
         return JuryPolicy(mode=args.jury_mode, prompt_version=_PV)
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
-    return RulesPolicy(use_labels=not args.classify, prompt_version=_PV)
+    return RulesPolicy(use_labels=not args.classify, prompt_version=_PV,
+                       agree_on=tuple(args.agree_on))
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
@@ -239,6 +244,7 @@ def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
         next((t[len("verifier-"):] for t in tags if t.startswith("verifier-")), None),
         "learned" in tags,
         next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
+        "agree" in tags,
     )
 
 
@@ -259,6 +265,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Per-tier effort, e.g. 'budget=off,mid=low,frontier=medium'. "
             "Omit to send no effort/thinking config (the v1 request shape)."
+        ),
+    )
+    parser.add_argument(
+        "--agree-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help=(
+            "For this task type, ask the budget and mid models and keep the answer "
+            "if they agree; if not, ask the frontier model. Repeatable. "
+            "(--strategy router, not with --learned.)"
         ),
     )
     parser.add_argument(
