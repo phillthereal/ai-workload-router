@@ -33,7 +33,7 @@ from router.untrusted import IGNORE_NOTE, fence  # noqa: E402
 HERE = Path(__file__).resolve().parent
 DOCS_DIR = HERE / "docs"
 INDEX_PATH = HERE / ".index.json"
-EVAL_PATH = HERE / "eval_questions.json"
+EVAL_PATHS = [HERE / "eval_questions.json", HERE / "eval_questions_sampled.json"]
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 CHUNK_CHARS = 800
 OVERLAP_CHARS = 150
@@ -202,21 +202,31 @@ def ask(question: str, k: int) -> None:
         print(f"\nAnswer:\n{result.text}")
 
 
+def hit_rank(found: list[Chunk], case: dict[str, Any]) -> int | None:
+    """1-based position of the first passage from an expected page, or None."""
+    want = [(case["doc"], p) for p in case["pages"]]
+    return next((i for i, h in enumerate(found, 1) if (h["doc"], h["page"]) in want), None)
+
+
 def evaluate(k: int) -> None:
     """Measure retrieval: does a passage from the expected page come back in the top k?"""
     chunks = load_index()
-    cases = json.loads(EVAL_PATH.read_text())
-    vectors = embed_queries([c["question"] for c in cases])
-    top1 = topk = 0
-    for case, vector in zip(cases, vectors):
-        found = [(h["doc"], h["page"]) for h in retrieve(case["question"], vector, chunks, k)]
-        want = [(case["doc"], p) for p in case["pages"]]
-        rank = next((i for i, f in enumerate(found, 1) if f in want), None)
-        top1 += rank == 1
-        topk += rank is not None
-        print(f"{'miss' if rank is None else f'rank {rank}':7} {case['question']}")
-    n = len(cases)
-    print(f"\nHit@1: {top1}/{n}. Hit@{k}: {topk}/{n}.")
+    methods: dict[str, Callable[[str, list[float]], list[Chunk]]] = {
+        "Embeddings": lambda q, v: [chunks[i] for i in embedding_ranking(v, chunks)[:k]],
+        "Keywords": lambda q, v: [chunks[i] for i in keyword_ranking(q, chunks)[:k]],
+        "Hybrid": lambda q, v: retrieve(q, v, chunks, k),
+    }
+    for path in EVAL_PATHS:
+        cases = json.loads(path.read_text())
+        vectors = embed_queries([c["question"] for c in cases])
+        print(f"\n{path.name}")
+        for name, search in methods.items():
+            ranks = [hit_rank(search(c["question"], v), c) for c, v in zip(cases, vectors)]
+            if name == "Hybrid":
+                for case, rank in zip(cases, ranks):
+                    print(f"{'miss' if rank is None else f'rank {rank}':7} {case['question']}")
+            first = sum(r == 1 for r in ranks)
+            print(f"{name}: Hit@1 {first}/{len(cases)}, Hit@{k} {sum(r is not None for r in ranks)}/{len(cases)}")
 
 
 def main() -> None:
@@ -226,7 +236,7 @@ def main() -> None:
     ask_parser = commands.add_parser("ask", help="answer one question")
     ask_parser.add_argument("question")
     ask_parser.add_argument("--paid", action="store_true", help="make one real, billed model call")
-    commands.add_parser("eval", help="measure retrieval on eval_questions.json")
+    commands.add_parser("eval", help="measure retrieval on both question sets")
     args = parser.parse_args()
     if args.command == "eval":
         evaluate(TOP_K)
