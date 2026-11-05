@@ -64,7 +64,13 @@ Run A quality kept by task type: classification 80.3%, extraction 91.8%, reasoni
 
 ## Review
 
-A person scores 30 judged answers by hand, to check the Opus judge. `judge_validation` adds GPT-4o mini as a second judge.
+A person scores 30 judged answers by hand, to check the Opus judge. `judge_validation` adds GPT-4o mini as a second judge; that step has not been run.
+
+**Hand check.** Filip scored 29 of 30 randomly picked short-writing answers, without seeing the model or the judge's score. They agreed with the judge on pass or fail for 22 of the 29, counting a judge score of 0.5 or more as a pass, but the correlation was only about 0.03. Filip scored 0 or 1, while the judge mostly gave 0.9 or more, which lowers that figure. So the check did not confirm the judge. On these answers the router kept 98.2% of all-Opus quality on Filip's scores and 96.0% on the judge's.
+
+**Code check.** `check_ifeval_rules.py` was added after the run, and tests 95 of the 99 IFEval rules with simplified versions of the published checks, without any model calls. The other 4 are language rules. On the 69 tasks with a rule it could check, 79.7% of router answers and 81.2% of all-Opus answers passed every rule, so the router kept 98.2% (95% range 87.9% to 109.4%), not the judge's 101.1%. The judge agreed with the code on 115 of 138 answers. It gave 0.9 or more to 15 answers that broke a countable rule, and under 0.5 to 4 that passed.
+
+This is a what-if test, and the published scores stay as fixed above. With code in place of the judge on those 69 tasks, Run A would keep 90.8% of quality (85.6% to 96.0%), so the target is still missed.
 
 ## Known limits
 
