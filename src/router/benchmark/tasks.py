@@ -7,7 +7,7 @@ Parses and validates the benchmark task set. Each task has:
 - difficulty: easy, medium, or hard
 - prompt: the input text sent to the model
 - reference: expected answer (exact_match) or rubric (rubric_judge)
-- scoring: exact_match or rubric_judge
+- scoring: exact_match, final_answer or rubric_judge
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ DEFAULT_TASKS_PATH = Path(__file__).resolve().parents[3] / "data" / "tasks.json"
 _REQUIRED_FIELDS = ("id", "task_type", "difficulty", "prompt", "reference", "scoring")
 _VALID_TASK_TYPES = {"classification", "extraction", "short_generation", "reasoning"}
 _VALID_DIFFICULTIES = {"easy", "medium", "hard"}
-_VALID_SCORING = {"exact_match", "rubric_judge"}
+_VALID_SCORING = {"exact_match", "final_answer", "rubric_judge"}
 
 
 def load_tasks(path: Optional[Union[str, Path]] = None) -> list[dict[str, Any]]:

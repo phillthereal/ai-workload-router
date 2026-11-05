@@ -56,6 +56,8 @@ class Result:
     response: Optional[Response] = None
     effort: Optional[str] = None
     classifier_agreed: Optional[bool] = None
+    classifier_fell_back: bool = False
+    """The classifying model failed, so the free heuristic picked the route."""
     verifier_scores: Optional[list[float]] = None
     learned_evidence: Optional[dict] = None
     task_type: Optional[str] = None
@@ -214,7 +216,7 @@ class RulesPolicy:
             prompt, d.chosen_model, d.effort, ctx, routing_cost=c.cost_usd,
             trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model}, "
                    f"agreed_with_label={c.agreed_with_label})", d.reason],
-            classifier_agreed=c.agreed_with_label,
+            classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
         )
 
