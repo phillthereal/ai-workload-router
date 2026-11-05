@@ -103,7 +103,8 @@ class AnthropicAdapter(Adapter):
         """Call the Messages API, retrying once on an exception; failures return success=False."""
         import anthropic  # lazy import — keeps the offline path dependency-free
 
-        client = anthropic.Anthropic(api_key=self.api_key)
+        # The SDK default waits 10 minutes on a stalled call, and repeats it. Retries live in the loop below.
+        client = anthropic.Anthropic(api_key=self.api_key, timeout=120.0, max_retries=0)
         request_kwargs = self._request_kwargs(effort, max_tokens)
 
         last_latency_ms = 0.0
@@ -117,7 +118,8 @@ class AnthropicAdapter(Adapter):
                 )
             except Exception as exc:  # noqa: BLE001 - name only: provider text can hold account details
                 last_latency_ms = (time.perf_counter() - start) * 1000
-                print(f"{self.model_name}: {type(exc).__name__}, retrying", file=sys.stderr)
+                cause = type(exc.__cause__).__name__
+                print(f"{self.model_name}: {type(exc).__name__} ({cause}), retrying", file=sys.stderr)
                 time.sleep(2 ** _attempt)
                 continue
 
