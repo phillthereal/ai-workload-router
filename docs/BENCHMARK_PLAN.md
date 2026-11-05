@@ -1,6 +1,6 @@
 # Public benchmark plan
 
-Fixed before any paid call, so the test can't be chosen after seeing the result. This commit holds the plan, the tasks in `data/public/benchmark/` and the pass bar. **No real run has happened yet.**
+Fixed before any paid call, so the test can't be chosen after seeing the result. This commit holds the plan, the tasks in `data/public/benchmark/` and the pass bar. One real attempt has stopped early; see "Change after the first attempt".
 
 ## The question
 
@@ -41,11 +41,26 @@ A capped run stops, and writes no report, when:
 
 - less than $0.10 of the cap is left
 - a classifier call falls back to the keyword heuristic
-- a judge call fails or its reply is not just a score
+- a judge call fails or its reply has no line that is just a score
 - a provider returns an error
 - any answer is marked simulated
 
 A stopped run is reported as stopped, not patched up.
+
+## Change after the first attempt
+
+The first Run A stopped at task 190 of 300, having spent $0.0837 and before any comparison existed. The Opus judge wrote out its working and put a score on the last line. With Filip's approval the judge check now accepts a score alone on the first or last line, and still stops if neither line is just a score or if the two disagree. The tasks, the router, the judge's instructions and the pass bar did not change. The rerun gets only what is left of the $8.
+
+## Results
+
+Real spend was $2.7228 of the $8: $0.0837 on the stopped attempt, $2.3805 on Run A and $0.2586 on Run B. The 95% ranges below come from `analyze.py`'s paired bootstrap, and they aren't in the run reports.
+
+| Run | Cheaper than all-Opus | 95% range | Quality kept | 95% range | Pass bar |
+|---|---|---|---|---|---|
+| A: mixed, 300 tasks | 84.1% | 79.0% to 88.7% | 91.8% | 86.9% to 96.6% | **Not met** |
+| B: hard, 40 tasks | 22.2% | 9.0% to 40.3% | 96.1% | 89.5% to 100.0% | Applies to Run A only |
+
+Run A quality kept by task type: classification 80.3%, extraction 91.8%, reasoning 97.8%, short writing 101.1%. Run B sent 27 of its 40 tasks to Opus. Neither run had a classifier fallback. The runs printed 11 and 4 cut-off answers, but the database shows 14 Run A answers at the 1,024-token limit, and that gap isn't explained. The reports are `data/benchmark_report_cross_vendor_classified_public.md` and `data/benchmark_report_cross_vendor_classified_public_hard.md`.
 
 ## Review
 
