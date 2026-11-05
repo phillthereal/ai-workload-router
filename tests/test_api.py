@@ -123,6 +123,11 @@ class TestAgreeOrFrontier(unittest.TestCase):
         r, _, ro = self.run_with({"budget": "", "mid": "", "frontier": "Answer: x"})
         self.assertEqual(r.model, ro.frontier)
 
+    def test_frontier_on_pins_the_type_to_the_frontier(self):
+        r = Router(RulesPolicy(True, frontier_on=("classification",)), "cross_vendor",
+                   allow_mock_fallback=True).complete(TASK["prompt"], task=TASK)
+        self.assertEqual(r.model, get_roster("cross_vendor").frontier)
+
     def test_off_by_default(self):
         self.assertEqual(RulesPolicy(False).report_tags(), ["classified"])
         self.assertEqual(RulesPolicy(False, agree_on=("classification",)).report_tags(),

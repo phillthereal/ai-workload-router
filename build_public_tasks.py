@@ -68,6 +68,17 @@ def check_pin(dataset: str) -> None:
         raise SystemExit(f"{dataset} changed: expected {PINS[dataset][0]}, found {sha}")
 
 
+def _page(dataset: str, page: int) -> list[Any]:
+    """One page of rows, kept on disk per pinned dataset version, so later builds skip the wait."""
+    path = ROOT / ".cache" / "rows" / PINS[dataset][0] / f"{page}.json"
+    if path.exists():
+        return json.loads(path.read_text())
+    rows = _get(_rows_url(dataset, page * PAGE, PAGE))["rows"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rows))
+    return rows
+
+
 def sample(dataset: str, n: int, convert: Callable[[Row, int], Optional[Task]]) -> list[Task]:
     """First n rows, in seeded random order, that `convert` accepts."""
     check_pin(dataset)
@@ -81,7 +92,7 @@ def sample(dataset: str, n: int, convert: Callable[[Row, int], Optional[Task]]) 
             return tasks
         page = index // PAGE
         if page not in pages:
-            pages[page] = _get(_rows_url(dataset, page * PAGE, PAGE))["rows"]
+            pages[page] = _page(dataset, page)
         task = convert(pages[page][index % PAGE]["row"], index)
         if task:
             tasks.append(task)
@@ -162,29 +173,31 @@ def build() -> tuple[list[Task], list[Task]]:
     return mixed + mmlu[:24], hard_set() + mmlu[24:]
 
 
-def build_fresh() -> list[Task]:
-    """The next 300 tasks in each dataset's seeded order, unused by build(), same type shares."""
+def build_fresh(batch: int = 1) -> list[Task]:
+    """Unused batch `batch` of 300 tasks, next in each dataset's seeded order, same type shares."""
     with (ROOT / "data" / "public" / "banking77" / "test.csv").open(newline="") as f:
         rows = list(csv.DictReader(f))
     categories = sorted({r["category"] for r in rows})
     order = list(range(len(rows)))
     random.Random(f"{SEED}-banking77").shuffle(order)
-    fresh = [banking(rows[i]["text"], rows[i]["category"], categories, i) for i in order[96:192]]
-    fresh += sample("rajpurkar/squad_v2", 168, squad)[84:]
-    fresh += sample("google/IFEval", 144, ifeval)[72:]
-    fresh += sample("openai/gsm8k", 48, gsm8k)[24:]
-    return fresh + sample("TIGER-Lab/MMLU-Pro", 78, mmlu_pro)[54:]
+    fresh = [banking(rows[i]["text"], rows[i]["category"], categories, i)
+             for i in order[96 * batch:96 * (batch + 1)]]
+    fresh += sample("rajpurkar/squad_v2", 84 * (batch + 1), squad)[84 * batch:]
+    fresh += sample("google/IFEval", 72 * (batch + 1), ifeval)[72 * batch:]
+    fresh += sample("openai/gsm8k", 24 * (batch + 1), gsm8k)[24 * batch:]
+    return fresh + sample("TIGER-Lab/MMLU-Pro", 54 + 24 * batch, mmlu_pro)[30 + 24 * batch:]
 
 
 def main() -> None:
-    """Write both task files, or with --fresh only tasks_public_fresh.json."""
-    fresh = "--fresh" in sys.argv
-    args = [a for a in sys.argv[1:] if a != "--fresh"]
+    """Write both task files, or with --fresh[=N] only that batch's task file."""
+    fresh = next((a for a in sys.argv[1:] if a.startswith("--fresh")), None)
+    args = [a for a in sys.argv[1:] if not a.startswith("--fresh")]
     out = Path(args[0]) if args else ROOT / "data" / "public" / "benchmark"
     out.mkdir(parents=True, exist_ok=True)
     if fresh:
-        data = {"version": 2, "tasks": build_fresh()}
-        path = out / "tasks_public_fresh.json"
+        batch = int(fresh.partition("=")[2] or 1)
+        data = {"version": 2, "tasks": build_fresh(batch)}
+        path = out / f"tasks_public_fresh{'' if batch == 1 else batch}.json"
         path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
         print(f"{path}: {len(data['tasks'])} tasks")
         return

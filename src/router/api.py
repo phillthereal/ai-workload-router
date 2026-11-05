@@ -189,15 +189,19 @@ class RulesPolicy:
 
     def __init__(self, use_labels: bool = True,
                  prompt_version: str = DEFAULT_PROMPT_VERSION,
-                 agree_on: tuple[str, ...] = ()) -> None:
+                 agree_on: tuple[str, ...] = (), frontier_on: tuple[str, ...] = ()) -> None:
         self.use_labels = use_labels
         self.prompt_version = check_version(prompt_version)
         self.agree_on = agree_on
         """Task types answered by _agree_or_frontier instead of the rules table."""
+        self.frontier_on = frontier_on
+        """Task types always answered on the frontier tier."""
 
     def report_tags(self) -> list[str]:
-        """Tag reports 'classified' for predicted labels and 'agree' when agree_on is set."""
-        return ([] if self.use_labels else ["classified"]) + (["agree"] if self.agree_on else [])
+        """Tag reports 'classified' for predicted labels, plus any per-type routing overrides."""
+        return (([] if self.use_labels else ["classified"])
+                + (["agree"] if self.agree_on else [])
+                + (["pinned"] if self.frontier_on else []))
 
     def before_run_group(self, run_group: str) -> None:
         """No-op: this policy has no per-run state."""
@@ -215,7 +219,8 @@ class RulesPolicy:
         """Classify the task, look up its tier in the rules table, answer there."""
         c = self._classify(task, ctx)
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
-                       task_type=c.task_type, difficulty=c.difficulty)
+                       task_type=c.task_type, difficulty=c.difficulty,
+                       tier_override="frontier" if c.task_type in self.frontier_on else None)
         if c.task_type in self.agree_on and not d.gated_models:
             return self._agree_or_frontier(prompt, c, ctx)
         return _answer(

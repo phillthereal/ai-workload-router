@@ -106,6 +106,7 @@ def _report_path(
     learned_flag: bool = False,
     jury_mode: Optional[str] = None,
     agree: bool = False,
+    pinned: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -155,6 +156,7 @@ def _report_path(
         and verifier is None
         and not learned_flag
         and not agree
+        and not pinned
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -168,6 +170,8 @@ def _report_path(
         parts.append("learned")
     if agree:
         parts.append("agree")
+    if pinned:
+        parts.append("pinned")
     if effort_policy:
         parts.append("effort")
     if verifier:
@@ -233,7 +237,7 @@ def _build_policy(args: argparse.Namespace):
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
     return RulesPolicy(use_labels=not args.classify, prompt_version=_PV,
-                       agree_on=tuple(args.agree_on))
+                       agree_on=tuple(args.agree_on), frontier_on=tuple(args.frontier_on))
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
@@ -245,6 +249,7 @@ def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
         "learned" in tags,
         next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
         "agree" in tags,
+        "pinned" in tags,
     )
 
 
@@ -277,6 +282,13 @@ def _build_parser() -> argparse.ArgumentParser:
             "if they agree; if not, ask the frontier model. Repeatable. "
             "(--strategy router, not with --learned.)"
         ),
+    )
+    parser.add_argument(
+        "--frontier-on",
+        action="append",
+        default=[],
+        metavar="TASK_TYPE",
+        help="Always answer this task type on the frontier model. Repeatable. (As --agree-on.)",
     )
     parser.add_argument(
         "--classify",
