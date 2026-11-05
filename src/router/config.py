@@ -91,9 +91,11 @@ MODELS: dict[str, ModelConfig] = {
         name="deepseek-chat",
         provider="deepseek",
         display_name="DeepSeek Chat",
-        # Approximate public rates.
-        cost_per_1m_input_tokens=0.27,
-        cost_per_1m_output_tokens=1.10,
+        # This name is now answered by deepseek-flash (checked 2026-11-05). Priced at
+        # its peak rate, 01:00-04:00 and 06:00-10:00 UTC on weekdays, so reported
+        # costs never run low. Off-peak is half: $0.15/$0.60.
+        cost_per_1m_input_tokens=0.30,
+        cost_per_1m_output_tokens=1.20,
         context_window_tokens=64_000,
     ),
     "gemini-2.0-flash": ModelConfig(
@@ -120,18 +122,48 @@ MODELS: dict[str, ModelConfig] = {
         context_window_tokens=200_000,
         supports_effort=False,  # predates output_config.effort; 400s if sent
     ),
-    # LIST PRICE, deliberately. Sonnet 5 carries an introductory $2/$10 rate
-    # that expires 2026-08-31. Costing the benchmark at the promo rate would
-    # publish a savings number that silently becomes wrong weeks later, so the
-    # model is priced at list and the promo is a footnote in the report.
+    # Sonnet 5's introductory $2/$10 became its standard price (pricing page,
+    # checked 2026-11-05); the planned rise to $3/$15 was dropped.
     "claude-sonnet-5": ModelConfig(
         name="claude-sonnet-5",
         provider="anthropic",
         display_name="Claude Sonnet 5",
-        cost_per_1m_input_tokens=3.00,
-        cost_per_1m_output_tokens=15.00,
+        cost_per_1m_input_tokens=2.00,
+        cost_per_1m_output_tokens=10.00,
         context_window_tokens=1_000_000,
         supports_effort=True,
+    ),
+    # Thinks by default. effort="off" maps to thinking {"type": "between_tools"} in
+    # the adapter, because this model rejects {"type": "disabled"} with a 400.
+    "claude-sonnet-5-5": ModelConfig(
+        name="claude-sonnet-5-5",
+        provider="anthropic",
+        display_name="Claude Sonnet 5.5",
+        cost_per_1m_input_tokens=2.00,
+        cost_per_1m_output_tokens=10.00,
+        context_window_tokens=1_000_000,
+        supports_effort=True,
+    ),
+    # ponytail: flat rate for prompts up to 100K tokens; longer ones bill $0.50/$2.50.
+    "claude-haiku-5-5": ModelConfig(
+        name="claude-haiku-5-5",
+        provider="anthropic",
+        display_name="Claude Haiku 5.5",
+        cost_per_1m_input_tokens=0.10,
+        cost_per_1m_output_tokens=0.50,
+        context_window_tokens=1_000_000,
+        supports_effort=True,
+    ),
+    # Thinking cannot be turned off on this model, so effort_levels leaves out "off".
+    "claude-opus-5-5": ModelConfig(
+        name="claude-opus-5-5",
+        provider="anthropic",
+        display_name="Claude Opus 5.5",
+        cost_per_1m_input_tokens=4.00,
+        cost_per_1m_output_tokens=20.00,
+        context_window_tokens=1_000_000,
+        supports_effort=True,
+        effort_levels=("low", "medium", "high", "xhigh", "max"),
     ),
     "claude-opus-4-8": ModelConfig(
         name="claude-opus-4-8",
@@ -147,8 +179,8 @@ MODELS: dict[str, ModelConfig] = {
     # no reasoning_effort, which Moonshot treats as its default "max". So the
     # Router defaults Kimi to "low" (default_effort); pass "high"/"max"
     # explicitly to spend more. Offline projection (docs/V5_KIMI_OFFLINE.md):
-    # on short mid-tier answers reasoning dominates the bill. Sticker price
-    # equals Sonnet's, so it competes in the MID slot.
+    # on short mid-tier answers reasoning dominates the bill. Priced above
+    # Sonnet's $2/$10, so it competes in the MID slot.
     "kimi-k3": ModelConfig(
         name="kimi-k3",
         provider="moonshot",
@@ -232,7 +264,7 @@ ROSTERS: dict[str, Roster] = {
         mid="deepseek-chat",
         frontier="claude-opus-4-8",
     ),
-    # Kimi K3 lists at Sonnet's price ($3/$15), so it competes in the MID slot,
+    # Kimi K3 lists at $3/$15, above Sonnet's $2/$10, so it competes in the MID slot,
     # not budget. NOTE effort=None on kimi means Moonshot's default "max" (costly).
     "kimi_mid": Roster(
         name="kimi_mid",
@@ -272,8 +304,11 @@ MODEL_TIER: dict[str, str] = {
     "gpt-4o-mini": "budget",
     "deepseek-chat": "mid",
     "claude-haiku-4-5": "budget",
+    "claude-haiku-5-5": "budget",
     "claude-sonnet-5": "mid",
+    "claude-sonnet-5-5": "mid",
     "claude-opus-4-8": "frontier",
+    "claude-opus-5-5": "frontier",
     "gemini-2.0-flash": "budget",
     "kimi-k3": "mid",
 }

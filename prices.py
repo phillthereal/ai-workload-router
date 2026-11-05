@@ -186,7 +186,7 @@ def render(rows, rc, ladders, threshold, run_group, source, date):
         L.append(f"| {r['model']} | {r['or_id'] or '-'} | {_fmt(r['cfg'])} | {_fmt(r['feed'])} | {pct} | {r['status']}{note} |")
     L += ["", "Caveats: OpenRouter is an aggregator; its price can differ from first-party "
           "(e.g. Kimi K3 is ~$0.24/$11.9 there vs $3/$15 from Moonshot). config.py intentionally "
-          "uses LIST price (e.g. Sonnet 5 at $3/$15 although a promo rate is listed). Drift here is "
+          "uses LIST price, at the peak rate where a provider has two. Drift here is "
           "a prompt to look, not a reason to auto-edit. NOT_FOUND/UNMAPPED/SUSPECT/REJECTED models "
           "keep their config price in the re-cost and ladder check.", ""]
     L += [f"## Re-cost of run_group {run_group}* (non-simulated, {rc['n']} rows, from logged tokens)", "",

@@ -87,7 +87,9 @@ class AnthropicAdapter(Adapter):
             return kwargs
 
         if effort == EFFORT_OFF:
-            kwargs["thinking"] = {"type": "disabled"}
+            # Sonnet 5.5 rejects "disabled"; this is its way to turn thinking off.
+            off = "between_tools" if self.model_name == "claude-sonnet-5-5" else "disabled"
+            kwargs["thinking"] = {"type": off}
             return kwargs
 
         kwargs["thinking"] = {"type": "adaptive"}
