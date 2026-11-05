@@ -273,3 +273,4 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 - [`docs/JEV_CALIBRATION.md`](docs/JEV_CALIBRATION.md) and [`docs/JEV_LOOP.md`](docs/JEV_LOOP.md): a self-improving email classifier. Rulebook rounds raised the share of held-out emails it handled alone from 36% to 60%, and showed where more rounds started to overfit.
 - [`docs/IMPROVEMENT_ROUND_2026-10.md`](docs/IMPROVEMENT_ROUND_2026-10.md): six ideas tested against a bar set in advance, most of which failed.
 - [`docs/DOCKER.md`](docs/DOCKER.md): every environment variable and the Docker limits.
+- [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md): the design trade-offs, what was rejected, and what would change if real users depended on it.
