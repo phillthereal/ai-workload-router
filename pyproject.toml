@@ -19,6 +19,7 @@ dependencies = [
 dev = ["pytest", "ruff==0.17.3", "mypy==2.4.1"]
 mcp = ["mcp>=2.3.0,<3"]
 web = ["fastapi>=0.162,<1", "uvicorn>=0.54,<1"]
+rag = ["fastembed>=0.9,<1", "pypdf>=6.21,<7"]
 
 [project.scripts]
 ai-router-mcp = "router.mcp_server:main"
