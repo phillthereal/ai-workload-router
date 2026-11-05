@@ -36,3 +36,7 @@ data/cascade_threshold_sweep.md
 # OS
 .DS_Store
 .env.local
+
+# RAG demo: downloaded PDFs and the built index
+examples/rag/docs/
+examples/rag/.index.json
