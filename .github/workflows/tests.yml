@@ -43,3 +43,15 @@ jobs:
         env:
           AWR_FORCE_MOCK: "1"
         run: python -m unittest tests.test_web -v
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the app with Docker Compose
+        run: docker compose up --build --detach
+      - name: Smoke test the API and UI
+        run: |
+          curl -fsS --retry 15 --retry-all-errors --retry-delay 1 -o /dev/null http://localhost:8000/
+          curl -fsS -H "Content-Type: application/json" -d '{"prompt":"What is 2+2?"}' \
+            http://localhost:8000/route | grep -q '"simulated":true'

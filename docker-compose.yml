@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"  # localhost only: the app has no login
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      AWR_WEB_ALLOW_PAID: ${AWR_WEB_ALLOW_PAID:-}
+      AWR_WEB_DAILY_BUDGET_USD: ${AWR_WEB_DAILY_BUDGET_USD:-0.50}
