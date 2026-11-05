@@ -10,7 +10,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(ROOT / "experiments")]
 
 from analyze import bootstrap, net_reduction, retention  # noqa: E402
 from cheap_tier_test import BENCH, CLASSIFIER_USD, DEEPSEEK, HAIKU, MINI, OPUS, OUT, SETS, SONNET  # noqa: E402
-from router.scoring import _canonical, committed_answer, final_answer  # noqa: E402
+from router.scoring import committed_answer, final_answer  # noqa: E402
 
 REF = {t["id"]: t["reference"] for f in SETS.values() for t in json.loads((BENCH / f).read_text())["tasks"]}
 

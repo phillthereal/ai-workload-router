@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
 from .api import (
-    CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, RulesPolicy,
+    CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, default_policy,
 )
 from .config import ROSTERS
 from .spend_guard import SpendGuard
@@ -33,8 +33,8 @@ LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
 MAX_BODY = 262_144  # 256 KB
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 SELECTORS: dict[str, Callable[[], Policy]] = {
-    "router": lambda: RulesPolicy(use_labels=False),
-    "auto": lambda: RulesPolicy(use_labels=False),
+    "router": default_policy,
+    "auto": default_policy,
     "router:cascade": CascadePolicy,
     "router:learned": lambda: LearnedPolicy(use_labels=False),
     "router:frontier": FrontierOnlyPolicy,

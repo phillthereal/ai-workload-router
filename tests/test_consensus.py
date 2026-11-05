@@ -6,9 +6,9 @@ from unittest import mock
 
 from router import api
 from router.adapters.base import Adapter, Response
-from router.api import ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, RulesPolicy, Router
+from router.api import ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, RulesPolicy, Router, default_policy
 from router.config import EFFORT_OFF, get_roster
-from router.lookup import BENCHMARK_DIR, LABELLED_FILES, Lookup, public_lookup
+from router.lookup import LABELLED_TASKS, Lookup, public_lookup
 
 RO = get_roster("cross_vendor")
 PROMPT = "Which is right?\nEnd your reply with one final line in exactly this form:\nAnswer: <your answer>"
@@ -18,7 +18,7 @@ def task(task_type):
     return {"id": "t", "prompt": PROMPT, "task_type": task_type, "difficulty": "medium"}
 
 
-def run(task_type, replies):
+def run(task_type, replies, prompt=PROMPT, policy=None):
     """replies: model -> text. Returns the Result and the (model, prompt, effort) calls made."""
     calls = []
 
@@ -31,9 +31,10 @@ def run(task_type, replies):
             return Response(text=replies[self.model], input_tokens=1000, output_tokens=100,
                             latency_ms=1.0, model=self.model, simulated=False, success=True)
 
-    policy = RulesPolicy(True, consensus_on=("reasoning", "extraction"))
+    policy = policy or RulesPolicy(True, consensus_on=("reasoning", "extraction"))
+    labelled = {**task(task_type), "prompt": prompt} if task_type else None
     with mock.patch.object(api, "get_adapter", lambda m, allow_mock_fallback=True: Scripted(m)):
-        return Router(policy, "cross_vendor").complete(PROMPT, task=task(task_type)), calls
+        return Router(policy, "cross_vendor").complete(prompt, task=labelled), calls
 
 
 class TestConsensus(unittest.TestCase):
@@ -64,14 +65,16 @@ class TestConsensus(unittest.TestCase):
         self.assertTrue(all(c[1] == PROMPT + ANSWER_ONLY for c in calls))
         self.assertEqual(r.model, CONSENSUS_LAST)
 
-    def test_answer_only_is_not_added_to_a_prompt_with_no_final_line(self):
-        c = api.Classification("extraction", "easy", 0.0, None, False)
-        seen = []
-        ctx = mock.Mock(roster=RO, cost=lambda r: 0.0)
-        ctx.call.side_effect = lambda m, p, e=None: (seen.append(p), Response(
-            text="same", input_tokens=1, output_tokens=1, latency_ms=1.0, model=m, simulated=False, success=True))[1]
-        RulesPolicy()._consensus("Find the date.", c, ctx)
-        self.assertEqual(set(seen), {"Find the date."})
+    def test_a_prompt_with_no_final_line_stays_on_the_rules_table(self):
+        r, calls = run("reasoning", {RO.frontier: "Because."}, prompt="Why is the sky blue?")
+        self.assertEqual([c[0] for c in calls], [RO.frontier])
+
+    def test_the_default_uses_the_free_lookup_with_no_labels(self):
+        ans = {CONSENSUS_FIRST: "Answer: 4", RO.mid: "Answer: 4"}
+        p = "A shop sells 3 boxes of 4 pens. How many pens?\nEnd your reply with one final line:\nAnswer: <number>"
+        r, calls = run(None, ans, prompt=p, policy=default_policy())
+        self.assertEqual((r.task_type, r.model), ("reasoning", RO.mid))
+        self.assertEqual(r.routing_cost_usd, api.get_model(CONSENSUS_FIRST).cost_for_tokens(1000, 100))
 
     def test_other_types_stay_on_the_rules_table(self):
         r, calls = run("classification", {RO.mid: "Answer: x"})
@@ -100,7 +103,7 @@ class TestLookup(unittest.TestCase):
         self.assertIsNone(c.model)
 
     def test_tested_prompts_never_reach_the_lookup(self):
-        prompts = [t["prompt"] for t in json.loads((BENCHMARK_DIR / LABELLED_FILES[0]).read_text())["tasks"]]
+        prompts = [t["prompt"] for t in json.loads(LABELLED_TASKS.read_text())[:300]]
         self.assertEqual(len(public_lookup(prompts).labels), 900)
 
 

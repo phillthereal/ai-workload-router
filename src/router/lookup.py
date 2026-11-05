@@ -2,6 +2,8 @@
 
 Replaces the paid classifier when `RulesPolicy(lookup=...)` is set. Word overlap is
 weighted by how rare each word is (TF-IDF cosine), standard library only.
+lookup_tasks.json holds the prompts and labels of the four public task sets, inside the
+package so it also ships in the Docker image.
 """
 
 from __future__ import annotations
@@ -10,14 +12,14 @@ import json
 import math
 import re
 from collections import Counter, defaultdict
+from functools import cache
+from heapq import nlargest
 from pathlib import Path
 from typing import Any, Iterable
 
 from .classifier import Classification, heuristic_classify
 
-BENCHMARK_DIR = Path(__file__).resolve().parents[2] / "data" / "public" / "benchmark"
-LABELLED_FILES = ("tasks_public.json", "tasks_public_fresh.json",
-                  "tasks_public_fresh2.json", "tasks_public_fresh3.json")
+LABELLED_TASKS = Path(__file__).with_name("lookup_tasks.json")
 
 
 def _bag(text: str) -> Counter:
@@ -46,11 +48,11 @@ class Lookup:
 
     def classify(self, task: dict[str, Any]) -> Classification:
         """Predict from the neighbours; a prompt sharing no words gets the free heuristic."""
-        scores: Counter = Counter()
+        scores: dict[int, float] = defaultdict(float)
         for word, weight in self._vector(_bag(task["prompt"])).items():
             for i, other in self.index.get(word, ()):
                 scores[i] += weight * other
-        near = [self.labels[i] for i, _ in scores.most_common(self.k)]
+        near = [self.labels[i] for i in nlargest(self.k, scores, key=scores.__getitem__)]
         if not near:
             return heuristic_classify(task["prompt"])
         task_type = Counter(label[0] for label in near).most_common(1)[0][0]
@@ -66,6 +68,10 @@ class Lookup:
 def public_lookup(exclude_prompts: Iterable[str] = ()) -> Lookup:
     """A Lookup over the public labelled tasks, minus any prompts being tested."""
     skip = set(exclude_prompts)
-    return Lookup(t for name in LABELLED_FILES
-                  for t in json.loads((BENCHMARK_DIR / name).read_text())["tasks"]
-                  if t["prompt"] not in skip)
+    return Lookup(t for t in json.loads(LABELLED_TASKS.read_text()) if t["prompt"] not in skip)
+
+
+@cache
+def shared_lookup() -> Lookup:
+    """One Lookup over every labelled task, built once per process for live requests."""
+    return public_lookup()

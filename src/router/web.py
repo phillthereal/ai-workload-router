@@ -30,7 +30,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .adapters import get_adapter
 from .adapters.base import Response
-from .api import ProviderError, Result, Router, RulesPolicy
+from .api import ProviderError, Result, Router, default_policy
 from .cascade import verify_adequacy
 from .config import MODEL_TIER, ROSTERS, get_roster
 from .scoring import rubric_judge
@@ -116,7 +116,7 @@ def create_app() -> FastAPI:
         # budget slightly. Reserve a worst case up front if this ever serves real traffic.
         if paid and guard.over_budget():
             raise HTTPException(429, f"daily budget of ${guard.daily_budget_usd:.2f} reached")
-        router = Router(RulesPolicy(use_labels=False), roster_name=roster, use_cache=False)
+        router = Router(default_policy(), roster_name=roster, use_cache=False)
         try:
             result = router.complete(req.prompt)
         except ProviderError:

@@ -49,7 +49,7 @@ from router import db  # noqa: E402
 from router.adapters import SpendMeter, get_adapter  # noqa: E402
 from router.api import (  # noqa: E402
     CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, ProviderError, Result,
-    Router, RulesPolicy,
+    Router, RulesPolicy, default_policy,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.lookup import public_lookup  # noqa: E402
@@ -259,6 +259,13 @@ def _preflight(roster_name: str) -> None:
             raise RunStopped(f"preflight failed on {model}")
 
 
+def _is_default_run(args: argparse.Namespace) -> bool:
+    """A plain run gets the router's default. Any routing flag keeps that flag's own meaning."""
+    return (args.strategy == "router" and args.roster == DEFAULT_ROSTER and not args.effort_policy
+            and not (args.classic or args.classify or args.learned or args.lookup
+                     or args.agree_on or args.frontier_on or args.consensus_on))
+
+
 def _build_policy(args: argparse.Namespace, tasks: list[dict]):
     """Map CLI flags to the experimental Policy. The lookup never sees the tasks under test."""
     if args.strategy == "cascade":
@@ -267,6 +274,8 @@ def _build_policy(args: argparse.Namespace, tasks: list[dict]):
         return JuryPolicy(mode=args.jury_mode, prompt_version=_PV)
     if args.learned:
         return LearnedPolicy(use_labels=not args.classify, prompt_version=_PV)
+    if _is_default_run(args):
+        return default_policy(_PV, public_lookup(t["prompt"] for t in tasks))
     return RulesPolicy(use_labels=not args.classify, prompt_version=_PV,
                        agree_on=tuple(args.agree_on), frontier_on=tuple(args.frontier_on),
                        consensus_on=tuple(args.consensus_on),
@@ -317,6 +326,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "if they agree; if not, ask the frontier model. Repeatable. "
             "(--strategy router, not with --learned.)"
         ),
+    )
+    parser.add_argument(
+        "--classic",
+        action="store_true",
+        help="Hand labels and the rules table only: the v1 setup behind data/benchmark_report.md.",
     )
     parser.add_argument(
         "--consensus-on",

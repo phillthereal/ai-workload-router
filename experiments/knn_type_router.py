@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Free test: can word-overlap nearest neighbours replace the paid classifier? Each task set is
 predicted from the other sets only. Standard library, no model calls."""
-import collections, json, math, re, sys
+import collections, json, math, re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 FILES = ("tasks_public.json", "tasks_public_fresh.json", "tasks_public_fresh2.json", "tasks_public_fresh3.json")

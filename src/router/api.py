@@ -34,7 +34,7 @@ from .classifier import Classification, classify_task
 from .config import EFFORT_OFF, MODEL_TIER, TIER_ORDER, get_model, get_roster
 from .governors import BudgetPolicy, ShadowPolicy  # noqa: F401  (re-exported)
 from .jury import JuryPolicy  # noqa: F401  (re-exported)
-from .lookup import Lookup
+from .lookup import Lookup, shared_lookup
 from .router import route_task
 from .scoring import committed_answer, final_answer
 from .untrusted import DEFAULT_PROMPT_VERSION, check_version
@@ -244,7 +244,8 @@ class RulesPolicy:
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty,
                        tier_override="frontier" if c.task_type in self.frontier_on else None)
-        if c.task_type in self.consensus_on and not d.gated_models:
+        # Agreement can only be checked on a committed final line. Without one, use the table.
+        if c.task_type in self.consensus_on and not d.gated_models and "Answer:" in prompt:
             return self._consensus(prompt, c, ctx)
         if c.task_type in self.agree_on and not d.gated_models:
             return self._agree_or_frontier(prompt, c, ctx)
@@ -286,20 +287,18 @@ class RulesPolicy:
 
         Never reaches the frontier unless a provider fails. Every discarded call counts as routing cost.
         """
-        # Only where the prompt asks for a final line, or the instruction would make no sense.
-        if c.task_type == "extraction" and "Answer:" in prompt:
+        if c.task_type == "extraction":
             prompt += ANSWER_ONLY
         low = ctx.call(CONSENSUS_FIRST, prompt, EFFORT_OFF)
         mid = ctx.call(ctx.roster.mid, prompt)
         calls, keep, why = [low, mid], mid, f"{low.model} and {mid.model} agree"
         if not _agree(low, mid):
-            keep = None
-            if c.task_type == "reasoning":
-                vote = ctx.call(ctx.roster.budget, prompt)
+            vote = ctx.call(ctx.roster.budget, prompt) if c.task_type == "reasoning" else None
+            if vote:
                 calls.append(vote)
-                if _agree(vote, low) or _agree(vote, mid):
-                    keep, why = vote, f"{vote.model} broke the tie"
-            if keep is None:
+            if vote and (_agree(vote, low) or _agree(vote, mid)):
+                keep, why = vote, f"{vote.model} broke the tie"
+            else:
                 keep = ctx.call(CONSENSUS_LAST, prompt, EFFORT_OFF)
                 calls.append(keep)
                 why = f"no agreement -> {keep.model}"
@@ -312,6 +311,13 @@ class RulesPolicy:
             classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
         )
+
+
+def default_policy(prompt_version: str = DEFAULT_PROMPT_VERSION,
+                   lookup: Optional[Lookup] = None) -> RulesPolicy:
+    """The router's default: free lookup, classification by agreement, the rest by consensus."""
+    return RulesPolicy(use_labels=False, prompt_version=prompt_version, agree_on=("classification",),
+                       consensus_on=("reasoning", "extraction"), lookup=lookup or shared_lookup())
 
 
 class LearnedPolicy(RulesPolicy):
