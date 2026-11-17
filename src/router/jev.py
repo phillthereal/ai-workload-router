@@ -26,6 +26,7 @@ class JevResult(Result):
     jev_probabilities: Optional[dict] = None
     escalated: bool = False
     rulebook_hash: Optional[str] = None
+    jev_confidence: Optional[float] = None  # Jev's top probability; None if its call failed
 
 
 class JevClassifierPolicy:
@@ -58,7 +59,7 @@ class JevClassifierPolicy:
         else:
             d = self.client.decide(fence(state, "email") if self.fence_state else state,
                                    rb.render_instructions(), rb.criteria)
-        common = dict(jev_probabilities=d.probabilities, rulebook_hash=rb.content_hash(),
+        common = dict(jev_probabilities=d.probabilities, jev_confidence=d.top_prob if d.success else None, rulebook_hash=rb.content_hash(),
                       routing_cost_usd=d.cost_usd)
         why = (f"jev {d.choice} p={d.top_prob:.2f}" if d.success else f"jev failed ({d.error})")
         if self.sure(d):
@@ -102,4 +103,5 @@ class JevTierPolicy:
         return JevResult(text=r.text, model=r.model, answer_cost_usd=ctx.cost(r), routing_cost_usd=d.cost_usd,
                          simulated=r.simulated or d.simulated, response=r, choice=tier, escalated=not sure,
                          jev_probabilities=d.probabilities, rulebook_hash=rb.content_hash(),
+                         jev_confidence=d.top_prob if d.success else None,
                          trace=[f"jev tier {d.choice} p={d.top_prob:.2f} -> {tier}"])

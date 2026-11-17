@@ -45,7 +45,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from router import db  # noqa: E402
 from router.api import (  # noqa: E402
-    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, Router, RulesPolicy,
+    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, Router, RulesPolicy, jev_log_fields,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.config import DEFAULT_ROSTER, EFFORT_STATES, ROSTERS  # noqa: E402
@@ -348,6 +348,7 @@ def main(argv: Optional[list[str]] = None) -> None:
                 classifier_agreed=result.classifier_agreed,
                 verifier_scores=result.verifier_scores,
                 learned_evidence=result.learned_evidence,
+                **jev_log_fields(result),
             )
 
     report = build_report(run_group, experimental_strategy=args.strategy)

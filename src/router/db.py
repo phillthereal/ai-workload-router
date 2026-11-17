@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS runs (
     created_at TEXT,
     learned_evidence TEXT,
     quality_source TEXT,
-    prompt_text TEXT
+    prompt_text TEXT,
+    jev_confidence REAL,
+    jev_escalated INTEGER
 )
 """
 
@@ -103,6 +105,8 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN learned_evidence TEXT",
     "ALTER TABLE runs ADD COLUMN quality_source TEXT",
     "ALTER TABLE runs ADD COLUMN prompt_text TEXT",
+    "ALTER TABLE runs ADD COLUMN jev_confidence REAL",
+    "ALTER TABLE runs ADD COLUMN jev_escalated INTEGER",
 ]
 
 # The v4 (online feedback) columns:
@@ -114,6 +118,13 @@ _MIGRATIONS: list[str] = [
 #   prompt_text    — the live request's prompt, so the learned router can bucket
 #                    live rows (benchmark rows resolve prompts via task_id).
 # Live rows use task_id = request_id (a uuid) and strategy 'live:<policy>'.
+#
+# The v5 (Jev) columns, both NULL on every row not routed by a Jev policy and on
+# every row logged before they existed (old rows are never rewritten):
+#   jev_confidence — Jev's top probability for its decision (REAL, 0-1); NULL
+#                    when Jev was not used or its call failed.
+#   jev_escalated  — 1 if the decision went to the bigger fallback model, 0 if
+#                    Jev answered itself; NULL when Jev was not used.
 SOURCE_PENDING = "pending"
 _SOURCE = "COALESCE(quality_source, 'judge')"
 
@@ -174,6 +185,8 @@ def log_run(
     learned_evidence: Optional[dict[str, Any]] = None,
     quality_source: Optional[str] = None,
     prompt_text: Optional[str] = None,
+    jev_confidence: Optional[float] = None,
+    jev_escalated: Optional[bool] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -209,6 +222,10 @@ def log_run(
         learned_evidence: The learned router's decision context for this row
             (JSON-encoded on write) — None unless this run was routed with
             `--learned`. See router.learned.LearnedDecision.
+        jev_confidence: Jev's top probability for this decision, or None when
+            Jev was not used (or its call failed).
+        jev_escalated: True if the Jev decision escalated to the fallback model,
+            False if Jev answered itself, None when Jev was not used.
 
     Returns:
         The auto-generated row id.
@@ -224,8 +241,9 @@ def log_run(
                 input_tokens, output_tokens, cost_usd, latency_ms,
                 quality_score, success, simulated, response_text,
                 effort, roster, routing_cost_usd, classifier_agreed,
-                verifier_scores, created_at, learned_evidence, quality_source, prompt_text
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                verifier_scores, created_at, learned_evidence, quality_source, prompt_text,
+                jev_confidence, jev_escalated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
@@ -237,6 +255,8 @@ def log_run(
                 resolved_created_at,
                 None if learned_evidence is None else json.dumps(learned_evidence),
                 quality_source, prompt_text,
+                None if jev_confidence is None else float(jev_confidence),
+                None if jev_escalated is None else int(jev_escalated),
             ),
         )
         conn.commit()
