@@ -77,7 +77,7 @@ class RulebookTests(unittest.TestCase):
 class ClientTests(unittest.TestCase):
     def test_body_shape(self):
         b = typesafe.build_body("S", "I", {"A": "a", "B": "b"})
-        self.assertEqual(b, {"state": "S", "model": "jev-latest", "questions": {"answer": {
+        self.assertEqual(b, {"state": "S", "model": "jev-1.14.0", "questions": {"answer": {
             "type": "choice", "instructions": "I", "criteria": {"A": "a", "B": "b"}}}})
 
     def test_request_and_parse(self):
@@ -127,7 +127,7 @@ class PolicyTests(unittest.TestCase):
     def test_handled(self):
         pol, c = self.pol("IGNORE", 0.95)
         r, f = run(pol)
-        self.assertEqual((r.choice, r.escalated, r.model, f.calls), ("IGNORE", False, "jev-latest", []))
+        self.assertEqual((r.choice, r.escalated, r.model, f.calls), ("IGNORE", False, "jev-1.14.0", []))
         self.assertGreater(r.routing_cost_usd, 0)
         self.assertEqual(r.answer_cost_usd, 0.0)
         self.assertEqual(r.jev_probabilities["IGNORE"], 0.95)

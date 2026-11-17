@@ -17,7 +17,7 @@ from typing import Optional
 from ..secrets import force_mock, get_api_key
 
 URL = "https://api.typesafe.ai/v1/systemone"
-MODEL = "jev-latest"
+MODEL = "jev-1.14.0"  # pinned: the 0.9 threshold was calibrated on this version (docs/JEV_CALIBRATION.md); an alias can change under us
 COST_PER_1M_INPUT = 0.042  # USD; output is free. Not a ModelConfig (provider Literal is for text models).
 _TIMEOUT_S = 60.0
 
