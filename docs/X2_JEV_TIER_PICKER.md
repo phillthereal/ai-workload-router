@@ -1,5 +1,8 @@
 # X2 - Can Jev pick the model tier cheaply and better?
 
+> **Update, 17 Nov 2026:** a pre-registered replication on 49 fresh tasks found the direction holds but the saving advantage over the
+> Haiku classifier is **not confirmed** (+5.4 points, CI -5.2 to +15.4). See [X2R_REPLICATION.md](X2R_REPLICATION.md).
+
 Offline replay of logged real runs plus one live Jev call per task. Reproduce:
 `python3 experiments/x2_jev_tier_picker.py --db <copy of main data/runs.db>` (Jev decisions are cached in
 `experiments/x2_jev_cache.json`; `--live` only calls Jev for uncached tasks). The worktree's own `data/runs.db`

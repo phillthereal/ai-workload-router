@@ -43,7 +43,7 @@ def key():
 
 
 def call(k, crit, state):
-    body = {"state": state, "model": "jev-latest", "questions": {"category": {
+    body = {"state": state, "model": "jev-1.14.0", "questions": {"category": {
         "type": "choice", "instructions": INSTRUCTIONS, "criteria": crit}}}
     req = urllib.request.Request(URL, json.dumps(body).encode(), {
         "Authorization": f"Bearer {k}", "Content-Type": "application/json"})

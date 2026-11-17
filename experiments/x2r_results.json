@@ -1,0 +1,688 @@
+{
+ "x2r-cls-01": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000406,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.005135,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.003426,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-02": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000429,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00803,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002118,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-03": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000253,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.002215,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002244,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-04": {
+  "claude-haiku-4-5": {
+   "cost_usd": 6.9e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00041,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000246,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-05": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000447,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.006055,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.003033,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-06": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.4e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00045,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.00027,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-07": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.4e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000455,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000273,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-08": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.2e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000465,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000279,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-09": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.8e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000545,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000342,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-10": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.4e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000535,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000321,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-11": {
+  "claude-haiku-4-5": {
+   "cost_usd": 6.9e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00051,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000291,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-12": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000505,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.007185,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002076,
+   "quality": 1.0
+  }
+ },
+ "x2r-cls-13": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000887,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00846,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.007041,
+   "quality": 0.85
+  }
+ },
+ "x2r-cls-14": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000512,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.0083,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.006255,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-01": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000152,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00101,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000516,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-02": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000102,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000725,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000255,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-03": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000136,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00086,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000561,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-04": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000135,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.001135,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000651,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-05": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000108,
+   "quality": 0.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.002055,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001083,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-06": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000102,
+   "quality": 0.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.001835,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001056,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-07": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000101,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00052,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000312,
+   "quality": 0.0
+  }
+ },
+ "x2r-ext-08": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000892,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.004875,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.00876,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-09": {
+  "claude-haiku-4-5": {
+   "cost_usd": 9.6e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.001985,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001131,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-10": {
+  "claude-haiku-4-5": {
+   "cost_usd": 8.7e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000515,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000309,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-11": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000358,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.002925,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.00285,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-12": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000238,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.002715,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001494,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-13": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000369,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.004535,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002421,
+   "quality": 1.0
+  }
+ },
+ "x2r-ext-14": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000423,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.003285,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002166,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-01": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000145,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00125,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.00075,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-02": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000476,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.006685,
+   "quality": 0.95
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001326,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-03": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000129,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.006045,
+   "quality": 0.9
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.003837,
+   "quality": 0.9
+  }
+ },
+ "x2r-gen-04": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000261,
+   "quality": 0.9
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.001585,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001056,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-05": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000357,
+   "quality": 0.9
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.001895,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001242,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-06": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000244,
+   "quality": 0.95
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00139,
+   "quality": 0.9
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000774,
+   "quality": 1.0
+  }
+ },
+ "x2r-gen-07": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.000688,
+   "quality": 0.8
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00324,
+   "quality": 0.95
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.002904,
+   "quality": 0.9
+  }
+ },
+ "x2r-gen-08": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.00043,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00337,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001947,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-01": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.7e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000355,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000693,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-02": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.00107,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.0085,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.005205,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-03": {
+  "claude-haiku-4-5": {
+   "cost_usd": 9e-05,
+   "quality": 0.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00192,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001167,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-04": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.001623,
+   "quality": 0.95
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.01068,
+   "quality": 0.95
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.011823,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-05": {
+  "claude-haiku-4-5": {
+   "cost_usd": 7.1e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00036,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000216,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-06": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.001905,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.009945,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.007422,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-07": {
+  "claude-haiku-4-5": {
+   "cost_usd": 6.6e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00029,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000714,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-08": {
+  "claude-haiku-4-5": {
+   "cost_usd": 9e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000495,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001092,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-09": {
+  "claude-haiku-4-5": {
+   "cost_usd": 8.8e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000445,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000687,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-10": {
+  "claude-haiku-4-5": {
+   "cost_usd": 8.7e-05,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000505,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.004338,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-11": {
+  "claude-haiku-4-5": {
+   "cost_usd": 6.8e-05,
+   "quality": 0.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.00473,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.001488,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-12": {
+  "claude-haiku-4-5": {
+   "cost_usd": 5.3e-05,
+   "quality": 0.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.000315,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.000579,
+   "quality": 1.0
+  }
+ },
+ "x2r-rsn-13": {
+  "claude-haiku-4-5": {
+   "cost_usd": 0.001455,
+   "quality": 1.0
+  },
+  "claude-opus-4-8": {
+   "cost_usd": 0.015125,
+   "quality": 1.0
+  },
+  "claude-sonnet-5": {
+   "cost_usd": 0.015645,
+   "quality": 1.0
+  }
+ }
+}
