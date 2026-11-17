@@ -83,6 +83,14 @@ class Result:
         return self.answer_cost_usd + self.routing_cost_usd
 
 
+def jev_log_fields(result: Result) -> dict:
+    """Run-log columns for a Jev-routed result; empty (so NULLs) for any other policy."""
+    if not hasattr(result, "jev_confidence"):
+        return {}
+    return {"jev_confidence": getattr(result, "jev_confidence", None),
+            "jev_escalated": getattr(result, "escalated", None)}
+
+
 class Ctx:
     """What a policy may use: roster, effort policy, and the failover-aware call."""
 
@@ -458,6 +466,7 @@ class Router:
             verifier_scores=scores, learned_evidence=result.learned_evidence,
             quality_source=db.SOURCE_PENDING if provisional is None else "verifier",
             prompt_text=prompt, db_path=self.log_db,
+            **jev_log_fields(result),
         )
         result.request_id = rid
 

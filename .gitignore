@@ -40,3 +40,6 @@ data/cascade_threshold_sweep.md
 # RAG demo: downloaded PDFs and the built index
 examples/rag/docs/
 examples/rag/.index.json
+
+# X2R replication: mock collector output (fabricated numbers, never commit)
+experiments/x2r_*_simulated.json
