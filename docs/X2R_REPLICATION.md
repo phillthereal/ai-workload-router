@@ -56,5 +56,48 @@ If a classifier or Jev call fails twice, that task is left out of that arm only 
 - Known limits accepted up front: one run per task and tier means some noise; the rubric judge is claude-opus-4-8, the same model as the
   frontier tier (it grades itself, as in X1/X2); 49 tasks give wide CIs, which is why the rule above includes a "not confirmed" outcome.
 
-## Results
-Pending.
+## Results (real run, 17 November 2026)
+
+**Verdict by the rule fixed above: DIRECTION HOLDS, NOT CONFIRMED.**
+
+All 49 tasks got a real answer from all three tiers; no task was dropped. Ground truth: 41 budget, 7 mid, 1 frontier.
+
+| Policy (n = 49) | Tier acc | Quality retention | Net saving | 95% CI | Under-routed |
+|---|---|---|---|---|---|
+| a frontier-only | 0.02 | 1.000 | 0.0% | - | 0 |
+| b hand labels | 0.29 | 1.000 | 26.0% | 13.4-41.9 | 0 |
+| c heuristic (free) | 0.14 | 0.978 | 19.7% | 6.5-34.7 | 2 |
+| **d Haiku classifier (reference)** | 0.47 | 0.996 | 37.9% | 21.0-56.9 | 3 |
+| f Jev t=0.5 | 0.73 | 0.964 | 57.2% | 37.7-78.4 | 3 |
+| f Jev t=0.7 | 0.61 | 0.964 | 50.7% | 33.2-71.0 | 2 |
+| f Jev t=0.9 (secondary) | 0.49 | 1.000 | 33.5% | 17.8-52.8 | 0 |
+| g Jev+safety t=0.0 | 0.57 | 1.000 | 43.3% | 25.9-63.0 | 0 |
+| **g Jev+safety t=0.5 (primary)** | 0.57 | 1.000 | 43.3% | 25.9-63.0 | 0 |
+| g Jev+safety t=0.7 | 0.55 | 1.000 | 42.9% | 25.6-62.7 | 0 |
+
+- **Primary (g at t=0.5 vs d)**: +5.4 percentage points of net saving, 95% CI [-5.2, +15.4]. The difference is positive but the
+  interval includes zero. Under-routed tasks: g 0, d 3.
+- **Secondary (f at t=0.9 vs d)**: -4.4 points, 95% CI [-20.2, +10.2]. No difference shown.
+
+### What this means for the X2 claim
+- X2 reported 50.4% vs 36.2% (+14.2 points, CI +0.8 to +31.8). On fresh tasks the Haiku classifier's figure reproduced closely
+  (36.2% then, 37.9% now), but the Jev + safety figure fell to 43.3% and the advantage shrank to +5.4 points with an interval that
+  includes zero. **The saving advantage over the Haiku classifier is not confirmed.** Part of the original gap was most likely the
+  best-of-7 selection that X2 itself flagged.
+- What held in both experiments: Jev + safety routed **no task too cheaply** and kept quality retention at 1.000, while the Haiku
+  classifier under-routed 1 task in X2 and 3 here (retention 0.996). With counts this small that is a consistent sign, not a proven difference.
+- Both Jev + safety and the classifier clearly beat the free heuristic and hand labels on saving.
+
+### Exploratory only (no verdict may be drawn)
+- Plain Jev at t=0.5 and t=0.7 saved more than the classifier (+19.3 [+7.5, +34.0] and +12.8 [+4.7, +22.0] points) but routed 3 and 2
+  tasks too cheaply, with retention 0.964. These variants were not pre-registered.
+- Jev never chose the frontier tier outright (33 budget, 16 mid), as in X2; all its frontier routing came from the hand-label floor.
+  The classifier sent 21 of 49 tasks to the frontier tier, which is where it gives up saving.
+
+### Data notes
+- The six answers scored 0 were genuinely wrong, not formatting misses: haiku on x2r-ext-05, ext-06, rsn-03, rsn-11, rsn-12 and sonnet on x2r-ext-07.
+- One run per task and tier means noise: sonnet missed x2r-ext-07 that haiku got right, and on four rubric tasks opus scored at or below a cheaper tier.
+- Spend: USD 0.44 in total by the collector's running count (answers 0.290, classifier 0.018, Jev 0.001, the rest rubric-judge calls and the probe), against the 2.00 cap.
+- Reproduce the tables: `python3 experiments/x2r_analyze.py` with the raw run log `data/x2r_runs.db` (local, not in git). The Jev and
+  classifier decisions are committed (`experiments/x2r_jev_cache.json`, `experiments/x2r_classifier_cache.json`), and the per-task quality
+  and cost of every tier's answer is in `experiments/x2r_results.json`.

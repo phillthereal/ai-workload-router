@@ -1,0 +1,541 @@
+{
+ "x2r-cls-01": {
+  "choice": "budget",
+  "cost": 1.7052000000000002e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 406
+ },
+ "x2r-cls-02": {
+  "choice": "budget",
+  "cost": 1.7094000000000003e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 407
+ },
+ "x2r-cls-03": {
+  "choice": "budget",
+  "cost": 1.7304e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 412
+ },
+ "x2r-cls-04": {
+  "choice": "budget",
+  "cost": 1.722e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 410
+ },
+ "x2r-cls-05": {
+  "choice": "budget",
+  "cost": 1.8144e-05,
+  "probs": {
+   "budget": 0.99,
+   "frontier": 0.0,
+   "mid": 0.01
+  },
+  "simulated": false,
+  "tokens": 432
+ },
+ "x2r-cls-06": {
+  "choice": "budget",
+  "cost": 1.7472e-05,
+  "probs": {
+   "budget": 0.99,
+   "frontier": 0.0,
+   "mid": 0.01
+  },
+  "simulated": false,
+  "tokens": 416
+ },
+ "x2r-cls-07": {
+  "choice": "budget",
+  "cost": 1.7766e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 423
+ },
+ "x2r-cls-08": {
+  "choice": "budget",
+  "cost": 1.7304e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 412
+ },
+ "x2r-cls-09": {
+  "choice": "budget",
+  "cost": 1.7766e-05,
+  "probs": {
+   "budget": 0.94,
+   "frontier": 0.0,
+   "mid": 0.06
+  },
+  "simulated": false,
+  "tokens": 423
+ },
+ "x2r-cls-10": {
+  "choice": "budget",
+  "cost": 1.7514000000000002e-05,
+  "probs": {
+   "budget": 0.95,
+   "frontier": 0.0,
+   "mid": 0.05
+  },
+  "simulated": false,
+  "tokens": 417
+ },
+ "x2r-cls-11": {
+  "choice": "budget",
+  "cost": 1.743e-05,
+  "probs": {
+   "budget": 0.79,
+   "frontier": 0.01,
+   "mid": 0.2
+  },
+  "simulated": false,
+  "tokens": 415
+ },
+ "x2r-cls-12": {
+  "choice": "budget",
+  "cost": 1.7472e-05,
+  "probs": {
+   "budget": 0.96,
+   "frontier": 0.0,
+   "mid": 0.04
+  },
+  "simulated": false,
+  "tokens": 416
+ },
+ "x2r-cls-13": {
+  "choice": "budget",
+  "cost": 1.7388e-05,
+  "probs": {
+   "budget": 0.8,
+   "frontier": 0.0,
+   "mid": 0.2
+  },
+  "simulated": false,
+  "tokens": 414
+ },
+ "x2r-cls-14": {
+  "choice": "budget",
+  "cost": 1.785e-05,
+  "probs": {
+   "budget": 0.93,
+   "frontier": 0.0,
+   "mid": 0.07
+  },
+  "simulated": false,
+  "tokens": 425
+ },
+ "x2r-ext-01": {
+  "choice": "budget",
+  "cost": 1.701e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 405
+ },
+ "x2r-ext-02": {
+  "choice": "budget",
+  "cost": 1.6716e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 398
+ },
+ "x2r-ext-03": {
+  "choice": "budget",
+  "cost": 1.6884000000000003e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 402
+ },
+ "x2r-ext-04": {
+  "choice": "budget",
+  "cost": 1.722e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 410
+ },
+ "x2r-ext-05": {
+  "choice": "mid",
+  "cost": 1.932e-05,
+  "probs": {
+   "budget": 0.35,
+   "frontier": 0.0,
+   "mid": 0.65
+  },
+  "simulated": false,
+  "tokens": 460
+ },
+ "x2r-ext-06": {
+  "choice": "budget",
+  "cost": 1.8186000000000002e-05,
+  "probs": {
+   "budget": 0.74,
+   "frontier": 0.0,
+   "mid": 0.26
+  },
+  "simulated": false,
+  "tokens": 433
+ },
+ "x2r-ext-07": {
+  "choice": "budget",
+  "cost": 1.8228e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 434
+ },
+ "x2r-ext-08": {
+  "choice": "mid",
+  "cost": 1.8354e-05,
+  "probs": {
+   "budget": 0.42,
+   "frontier": 0.0,
+   "mid": 0.58
+  },
+  "simulated": false,
+  "tokens": 437
+ },
+ "x2r-ext-09": {
+  "choice": "mid",
+  "cost": 1.8606e-05,
+  "probs": {
+   "budget": 0.2,
+   "frontier": 0.0,
+   "mid": 0.8
+  },
+  "simulated": false,
+  "tokens": 443
+ },
+ "x2r-ext-10": {
+  "choice": "budget",
+  "cost": 1.7682e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 421
+ },
+ "x2r-ext-11": {
+  "choice": "budget",
+  "cost": 1.764e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 420
+ },
+ "x2r-ext-12": {
+  "choice": "budget",
+  "cost": 1.7472e-05,
+  "probs": {
+   "budget": 1.0,
+   "frontier": 0.0,
+   "mid": 0.0
+  },
+  "simulated": false,
+  "tokens": 416
+ },
+ "x2r-ext-13": {
+  "choice": "budget",
+  "cost": 1.9614000000000002e-05,
+  "probs": {
+   "budget": 0.99,
+   "frontier": 0.0,
+   "mid": 0.01
+  },
+  "simulated": false,
+  "tokens": 467
+ },
+ "x2r-ext-14": {
+  "choice": "budget",
+  "cost": 1.8438000000000002e-05,
+  "probs": {
+   "budget": 0.95,
+   "frontier": 0.0,
+   "mid": 0.05
+  },
+  "simulated": false,
+  "tokens": 439
+ },
+ "x2r-gen-01": {
+  "choice": "budget",
+  "cost": 1.6506e-05,
+  "probs": {
+   "budget": 0.81,
+   "frontier": 0.0,
+   "mid": 0.19
+  },
+  "simulated": false,
+  "tokens": 393
+ },
+ "x2r-gen-02": {
+  "choice": "budget",
+  "cost": 1.6716e-05,
+  "probs": {
+   "budget": 0.79,
+   "frontier": 0.0,
+   "mid": 0.21
+  },
+  "simulated": false,
+  "tokens": 398
+ },
+ "x2r-gen-03": {
+  "choice": "budget",
+  "cost": 1.6422000000000003e-05,
+  "probs": {
+   "budget": 0.74,
+   "frontier": 0.0,
+   "mid": 0.26
+  },
+  "simulated": false,
+  "tokens": 391
+ },
+ "x2r-gen-04": {
+  "choice": "mid",
+  "cost": 1.8312000000000004e-05,
+  "probs": {
+   "budget": 0.09,
+   "frontier": 0.0,
+   "mid": 0.91
+  },
+  "simulated": false,
+  "tokens": 436
+ },
+ "x2r-gen-05": {
+  "choice": "mid",
+  "cost": 1.7052000000000002e-05,
+  "probs": {
+   "budget": 0.48,
+   "frontier": 0.0,
+   "mid": 0.52
+  },
+  "simulated": false,
+  "tokens": 406
+ },
+ "x2r-gen-06": {
+  "choice": "mid",
+  "cost": 1.8648000000000002e-05,
+  "probs": {
+   "budget": 0.29,
+   "frontier": 0.0,
+   "mid": 0.71
+  },
+  "simulated": false,
+  "tokens": 444
+ },
+ "x2r-gen-07": {
+  "choice": "mid",
+  "cost": 1.6800000000000002e-05,
+  "probs": {
+   "budget": 0.34,
+   "frontier": 0.0,
+   "mid": 0.66
+  },
+  "simulated": false,
+  "tokens": 400
+ },
+ "x2r-gen-08": {
+  "choice": "budget",
+  "cost": 1.7934e-05,
+  "probs": {
+   "budget": 0.53,
+   "frontier": 0.0,
+   "mid": 0.47
+  },
+  "simulated": false,
+  "tokens": 427
+ },
+ "x2r-rsn-01": {
+  "choice": "mid",
+  "cost": 1.7514000000000002e-05,
+  "probs": {
+   "budget": 0.43,
+   "frontier": 0.0,
+   "mid": 0.57
+  },
+  "simulated": false,
+  "tokens": 417
+ },
+ "x2r-rsn-02": {
+  "choice": "budget",
+  "cost": 1.6968e-05,
+  "probs": {
+   "budget": 0.6,
+   "frontier": 0.0,
+   "mid": 0.4
+  },
+  "simulated": false,
+  "tokens": 404
+ },
+ "x2r-rsn-03": {
+  "choice": "mid",
+  "cost": 1.8144e-05,
+  "probs": {
+   "budget": 0.33,
+   "frontier": 0.0,
+   "mid": 0.67
+  },
+  "simulated": false,
+  "tokens": 432
+ },
+ "x2r-rsn-04": {
+  "choice": "mid",
+  "cost": 1.8774000000000004e-05,
+  "probs": {
+   "budget": 0.5,
+   "frontier": 0.0,
+   "mid": 0.5
+  },
+  "simulated": false,
+  "tokens": 447
+ },
+ "x2r-rsn-05": {
+  "choice": "budget",
+  "cost": 1.7346000000000003e-05,
+  "probs": {
+   "budget": 0.8,
+   "frontier": 0.0,
+   "mid": 0.2
+  },
+  "simulated": false,
+  "tokens": 413
+ },
+ "x2r-rsn-06": {
+  "choice": "mid",
+  "cost": 1.9152000000000002e-05,
+  "probs": {
+   "budget": 0.22,
+   "frontier": 0.07,
+   "mid": 0.71
+  },
+  "simulated": false,
+  "tokens": 456
+ },
+ "x2r-rsn-07": {
+  "choice": "mid",
+  "cost": 1.7094000000000003e-05,
+  "probs": {
+   "budget": 0.43,
+   "frontier": 0.0,
+   "mid": 0.57
+  },
+  "simulated": false,
+  "tokens": 407
+ },
+ "x2r-rsn-08": {
+  "choice": "mid",
+  "cost": 1.827e-05,
+  "probs": {
+   "budget": 0.4,
+   "frontier": 0.0,
+   "mid": 0.6
+  },
+  "simulated": false,
+  "tokens": 435
+ },
+ "x2r-rsn-09": {
+  "choice": "mid",
+  "cost": 1.785e-05,
+  "probs": {
+   "budget": 0.39,
+   "frontier": 0.0,
+   "mid": 0.61
+  },
+  "simulated": false,
+  "tokens": 425
+ },
+ "x2r-rsn-10": {
+  "choice": "budget",
+  "cost": 1.8186000000000002e-05,
+  "probs": {
+   "budget": 0.69,
+   "frontier": 0.01,
+   "mid": 0.3
+  },
+  "simulated": false,
+  "tokens": 433
+ },
+ "x2r-rsn-11": {
+  "choice": "mid",
+  "cost": 1.7178e-05,
+  "probs": {
+   "budget": 0.47,
+   "frontier": 0.0,
+   "mid": 0.53
+  },
+  "simulated": false,
+  "tokens": 409
+ },
+ "x2r-rsn-12": {
+  "choice": "budget",
+  "cost": 1.6884000000000003e-05,
+  "probs": {
+   "budget": 0.82,
+   "frontier": 0.0,
+   "mid": 0.18
+  },
+  "simulated": false,
+  "tokens": 402
+ },
+ "x2r-rsn-13": {
+  "choice": "mid",
+  "cost": 1.8228e-05,
+  "probs": {
+   "budget": 0.17,
+   "frontier": 0.08,
+   "mid": 0.75
+  },
+  "simulated": false,
+  "tokens": 434
+ }
+}

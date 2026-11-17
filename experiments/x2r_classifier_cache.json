@@ -1,0 +1,345 @@
+{
+ "x2r-cls-01": {
+  "cost": 0.00035299999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-02": {
+  "cost": 0.00035099999999999997,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-03": {
+  "cost": 0.00035499999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-04": {
+  "cost": 0.000356,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-05": {
+  "cost": 0.000379,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-06": {
+  "cost": 0.000361,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-07": {
+  "cost": 0.000366,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-08": {
+  "cost": 0.000359,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-09": {
+  "cost": 0.00037,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-cls-10": {
+  "cost": 0.000366,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-cls-11": {
+  "cost": 0.000361,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-cls-12": {
+  "cost": 0.00036199999999999996,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "mid"
+ },
+ "x2r-cls-13": {
+  "cost": 0.000359,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-cls-14": {
+  "cost": 0.00036899999999999997,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "classification",
+  "tier": "budget"
+ },
+ "x2r-ext-01": {
+  "cost": 0.00034899999999999997,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-02": {
+  "cost": 0.00034399999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-03": {
+  "cost": 0.000348,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-04": {
+  "cost": 0.000352,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-05": {
+  "cost": 0.00039999999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-ext-06": {
+  "cost": 0.00038399999999999996,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-ext-07": {
+  "cost": 0.000388,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-08": {
+  "cost": 0.000379,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-ext-09": {
+  "cost": 0.000388,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-ext-10": {
+  "cost": 0.00036399999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-11": {
+  "cost": 0.00037,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-12": {
+  "cost": 0.000365,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-ext-13": {
+  "cost": 0.000416,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "mid"
+ },
+ "x2r-ext-14": {
+  "cost": 0.00039,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "extraction",
+  "tier": "budget"
+ },
+ "x2r-gen-01": {
+  "cost": 0.00034700000000000003,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-02": {
+  "cost": 0.000353,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-03": {
+  "cost": 0.000346,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-04": {
+  "cost": 0.000393,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-05": {
+  "cost": 0.000364,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-06": {
+  "cost": 0.000401,
+  "difficulty": "hard",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "frontier"
+ },
+ "x2r-gen-07": {
+  "cost": 0.000355,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-gen-08": {
+  "cost": 0.000382,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "short_generation",
+  "tier": "budget"
+ },
+ "x2r-rsn-01": {
+  "cost": 0.00036399999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-02": {
+  "cost": 0.000352,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-03": {
+  "cost": 0.000377,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-04": {
+  "cost": 0.000395,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-05": {
+  "cost": 0.000358,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-06": {
+  "cost": 0.00040199999999999996,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-07": {
+  "cost": 0.00035299999999999996,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-08": {
+  "cost": 0.000377,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-09": {
+  "cost": 0.000375,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-10": {
+  "cost": 0.000379,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-11": {
+  "cost": 0.00035499999999999996,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-12": {
+  "cost": 0.000345,
+  "difficulty": "easy",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ },
+ "x2r-rsn-13": {
+  "cost": 0.00038199999999999996,
+  "difficulty": "medium",
+  "simulated": false,
+  "task_type": "reasoning",
+  "tier": "frontier"
+ }
+}
