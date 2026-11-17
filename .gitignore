@@ -35,3 +35,6 @@ data/cascade_threshold_sweep.md
 # OS
 .DS_Store
 .env.local
+
+# X2R replication: mock collector output (fabricated numbers, never commit)
+experiments/x2r_*_simulated.json

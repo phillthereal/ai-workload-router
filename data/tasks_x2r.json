@@ -1,0 +1,398 @@
+{
+  "version": 2,
+  "_comment": "Fresh replication set for X2 (docs/X2R_REPLICATION.md). 49 new tasks written before any model was run, mirroring the (task_type x difficulty x scoring) mix of tasks.json + tasks_hard.json + tasks_v3.json. No prompt or scenario reuses an original. Computable exact_match references are checked in experiments/x2r_verify_refs.py.",
+  "tasks": [
+    {
+      "id": "x2r-cls-01",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Is this restaurant review positive or negative? Review: 'Cold soup, a rude waiter, and we waited an hour for the bill. Never coming back.'",
+      "reference": "negative",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-02",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Classify this text message as spam or not spam: 'Reminder: your dentist appointment is tomorrow at 10:30. See you then.'",
+      "reference": "not spam",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-03",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Classify this news headline into one category: Business, Health, Science, or Travel. Headline: 'New study links daily walking to lower blood pressure in older adults.'",
+      "reference": "health",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-04",
+      "task_type": "classification",
+      "difficulty": "easy",
+      "prompt": "Does this message require an urgent response? Answer yes or no. Message: 'The warehouse alarm is going off and the back door is open. Can someone check right now?'",
+      "reference": "yes",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-05",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "A customer support ticket needs to be routed. Based on the message, classify the priority as Low, Medium, or High. Message: 'There is a typo on the pricing page: it says \"Pro Plain\" instead of \"Pro Plan\". No rush, just letting you know.'",
+      "reference": "low",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-06",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the sentiment of this message as positive or negative. Answer with one word only. Message: 'Oh great, another software update that wipes all my settings. Just what I needed this morning.'",
+      "reference": "negative",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-07",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the intent of this customer message (complaint, inquiry, praise, or request). Answer with one word only. Message: 'Please add a dark mode to the mobile app; I use it at night all the time.'",
+      "reference": "request",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-08",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Is the following sentence a statement of fact or an expression of opinion? Answer with one word only: fact or opinion. Sentence: 'Water boils at a lower temperature at high altitude.'",
+      "reference": "fact",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-09",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Is the following argument logically valid (does the conclusion necessarily follow)? 'If the server is down, the dashboard shows an error. The dashboard shows an error. Therefore the server is down.' Answer with one word only: valid or invalid.",
+      "reference": "invalid",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-10",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Is the following argument logically valid (does the conclusion necessarily follow)? 'No reptiles are mammals. All snakes are reptiles. Therefore no snakes are mammals.' Answer with one word only: valid or invalid.",
+      "reference": "valid",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-11",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Consider: 'At a gathering of exactly seven people, every person shook hands with exactly three other people at the gathering.' Is this possible or impossible? Answer with exactly one word: possible or impossible.",
+      "reference": "impossible",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-cls-12",
+      "task_type": "classification",
+      "difficulty": "hard",
+      "prompt": "Classify the main emotion in this message (anger, sadness, relief, or anxiety). Text: 'The results came back clear, but I keep refreshing the portal in case they made a mistake.'",
+      "reference": "anxiety or relief",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-cls-13",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the tone of this message from a manager and briefly justify your choice: 'Thanks for getting this in. Next time, maybe loop me in before the client call rather than after?'",
+      "reference": "A good answer identifies the tone as polite but mildly critical (constructive criticism / a gentle reprimand), noting that the thanks softens a request that points out the employee should have looped the manager in earlier.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-cls-14",
+      "task_type": "classification",
+      "difficulty": "medium",
+      "prompt": "Classify the customer's main intent (complaint, inquiry, praise, or request) and briefly justify your choice: 'Could someone explain why I was charged twice this month? If it was a mistake I would like the extra charge refunded.'",
+      "reference": "A good answer identifies the main intent as an inquiry (asking why the double charge happened) and notes the conditional refund request; labelling it a complaint or request with that justification is also acceptable if the double charge and the refund ask are both recognised.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-ext-01",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the delivery date from this sentence: 'Your order will arrive on 14 October 2026 between 9am and noon.'",
+      "reference": "14 October 2026",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-02",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the city where the event takes place: 'The annual robotics fair will open its doors in Rotterdam next spring.'",
+      "reference": "Rotterdam",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-03",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the web address from this text: 'Full details are available at https://docs.northwind.com/guide before the call.'",
+      "reference": "https://docs.northwind.com/guide",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-04",
+      "task_type": "extraction",
+      "difficulty": "easy",
+      "prompt": "Extract the sale price of the item: 'The ceramic teapot is on sale this week for $24.50, down from $32.00.'",
+      "reference": "$24.50",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-05",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Three marketing campaigns ran last month. Email: 2,000 messages sent, 150 signups. Social: 5,000 people reached, 200 signups. Search: 800 clicks, 96 signups. Considering signups as a share of the audience each campaign reached, which campaign had the highest signup rate? Answer with the campaign name only.",
+      "reference": "Search",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-06",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Read this and name who is on call on Friday night: 'The rota listed Hana for Friday night and Luis for Saturday night. On Tuesday, Luis and Hana swapped nights. On Wednesday, Omar, who covers Sunday, offered to help but nothing was changed.' Answer with one name only.",
+      "reference": "Luis",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-07",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Count how many people attended in person: 'Attendees: Aiko (remote), Ben (in person), Chloe (in person), Dmitri (remote), Esme (in person), Farid (in person, left early), Gwen (remote).' Answer with just the number.",
+      "reference": "4",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-08",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "A contract was signed on 12 March 2026. The notice period begins the day after signing, and the last day of notice is the 45th day of that period. What is the last day of notice? Answer as day and month only, for example 3 June.",
+      "reference": "26 April",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-09",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "Three suppliers quoted for the same order. Alder: $1,200 with a 15% discount. Birch: $1,100 with an 8% discount. Cedar: $1,000 with no discount. After applying discounts, which supplier is cheapest? Answer with the supplier name only.",
+      "reference": "Cedar",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-10",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract the flight number from this announcement and answer with the flight number only: 'Passengers for the 07:45 service to Lisbon, flight BA-4471, please proceed to gate 12.'",
+      "reference": "BA-4471",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-ext-11",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract all people mentioned and the organization each one works for from: 'Dr. Okafor of Lakeside Clinic met Samira Rahman from Brightway Logistics and her colleague Tom Hale to discuss a joint pilot.'",
+      "reference": "A good answer lists all three people with the correct organizations: Dr. Okafor - Lakeside Clinic; Samira Rahman - Brightway Logistics; Tom Hale - Brightway Logistics (as Samira's colleague).",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-ext-12",
+      "task_type": "extraction",
+      "difficulty": "medium",
+      "prompt": "Extract the product, quantity and requested delivery date from this email: 'Hi, please send 12 boxes of A4 recycled paper to our Leeds office by 3 December. Thanks, Nadia.'",
+      "reference": "A good answer lists all three fields correctly: product = A4 recycled paper, quantity = 12 boxes, delivery date = by 3 December.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-ext-13",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "List every commitment in this note that has a named owner, with the owner and the deadline if one is given: 'Zoe will draft the grant application by the 10th. Karim thinks someone ought to contact the auditor but did not volunteer. Elena promised to send the signed forms back on Monday, and Zoe also agreed to proofread Elena's section once it is done, no date set.' List each as owner: task (deadline).",
+      "reference": "A good answer identifies exactly three owned commitments: (1) Zoe - draft the grant application, by the 10th; (2) Elena - send the signed forms back, Monday; (3) Zoe - proofread Elena's section, no deadline set. It should EXCLUDE contacting the auditor, which has no owner (Karim only suggested it).",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-ext-14",
+      "task_type": "extraction",
+      "difficulty": "hard",
+      "prompt": "From this summary, list the decisions that were actually made and who made them, and separately list anything still open: 'Ines proposed moving the demo to Thursday. Gabe approved it. Later Ines suggested adding a second session, but Gabe said he would think about it. The team agreed to use the smaller room.'",
+      "reference": "A good answer lists two decisions: (1) the demo moves to Thursday (proposed by Ines, approved by Gabe); (2) the smaller room will be used (agreed by the team). It lists the second session as still open or undecided (Gabe has not yet decided), and does not present it as a decision.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-rsn-01",
+      "task_type": "reasoning",
+      "difficulty": "easy",
+      "prompt": "A bakery bakes 36 muffins per tray and has 5 trays. They sell 130 muffins. How many muffins are left? Answer with just the number.",
+      "reference": "50",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-02",
+      "task_type": "reasoning",
+      "difficulty": "easy",
+      "prompt": "A recipe uses 3 eggs to make 12 pancakes. How many eggs are needed to make 36 pancakes? Explain your reasoning.",
+      "reference": "A correct answer says 9 eggs, because 36 pancakes is three times 12 pancakes, so the 3 eggs must be tripled.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-rsn-03",
+      "task_type": "reasoning",
+      "difficulty": "medium",
+      "prompt": "A bus has 52 seats and three quarters of them are taken at the start of the route. At the next stop 6 passengers get off and 11 get on, and every passenger has a seat. How many seats are empty now? Answer with just the number.",
+      "reference": "8",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-04",
+      "task_type": "reasoning",
+      "difficulty": "medium",
+      "prompt": "A cafe has one oven that can bake one item at a time. Bread takes 40 minutes and a cake takes 25 minutes. The cafe starts baking at 8:00 AM and needs both items ready by 9:00 AM. Can it be done? If so, give the order; if not, explain why not.",
+      "reference": "A good answer determines that it cannot be done: the oven handles one item at a time, so the total baking time is 40 + 25 = 65 minutes, which is more than the 60 minutes available, and whichever order is used the second item finishes at 9:05 AM, 5 minutes late. The answer should show this sum.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-rsn-05",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "If 5 machines take 5 minutes to make 5 widgets, how many minutes would 100 machines take to make 100 widgets? Answer with just the number.",
+      "reference": "5",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-06",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Five books stand in a row on a shelf, numbered 1 to 5 from the left. The yellow book is at position 1. The red book is somewhere to the left of the green book. The blue book is immediately to the right of the green book. The black book is not at either end of the shelf. Which colour is at position 5? Answer with one word only.",
+      "reference": "blue",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-07",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "In six years, Priya will be three times as old as she was four years ago. How old is Priya now? Answer with just the number.",
+      "reference": "9",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-08",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A tap fills an empty bath in 12 minutes. The plughole, left open, would empty a full bath in 20 minutes. With the tap on and the plughole open, how many minutes does it take to fill the empty bath? Answer with just the number.",
+      "reference": "30",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-09",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "A cyclist rides 12 km uphill at 6 km/h and then returns the same 12 km downhill at 12 km/h. What is the average speed for the whole trip, in km/h? Answer with just the number.",
+      "reference": "8",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-10",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "On an island, knights always tell the truth and knaves always lie. Person A says: 'B is a knave.' Person B says: 'A and I are both knights.' Is A a knight or a knave? Answer with one word only: knight or knave.",
+      "reference": "knight",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-11",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "How many whole numbers from 1 to 100 inclusive are divisible by 3 or by 5, but not by both? Answer with just the number.",
+      "reference": "41",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-12",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "If today is Wednesday, what day of the week will it be 100 days from today? Answer with one word only.",
+      "reference": "Friday",
+      "scoring": "exact_match"
+    },
+    {
+      "id": "x2r-rsn-13",
+      "task_type": "reasoning",
+      "difficulty": "hard",
+      "prompt": "Three boxes are labelled Apples, Oranges and Mixed, but every label is wrong. You may take out one piece of fruit from one box without looking inside. Which box should you pick from, and how does that single piece of fruit let you correct all three labels? Explain your reasoning.",
+      "reference": "A good answer says to pick from the box labelled Mixed. Because every label is wrong, that box cannot be mixed, so it holds only one kind of fruit and the piece drawn reveals which (say it is an apple, so that box is Apples). The box labelled Oranges is then not oranges (wrong label) and not apples (already identified), so it must be Mixed, and the box labelled Apples must be Oranges. The reasoning should show this elimination.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-01",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Write a one-sentence thank-you note to a colleague who covered your shift yesterday.",
+      "reference": "A good answer is a single sentence that thanks the colleague warmly and mentions or clearly implies that they covered the shift.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-02",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Rewrite this sentence in a friendlier tone: 'Your request has been denied due to insufficient information.'",
+      "reference": "A good answer keeps the meaning (the request could not be approved because information was missing) but in a warm, friendly tone, ideally inviting the person to send the missing details.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-03",
+      "task_type": "short_generation",
+      "difficulty": "easy",
+      "prompt": "Write a short, catchy subject line for a newsletter announcing a spring plant sale.",
+      "reference": "A good answer is concise (under ~10 words), catchy, and communicates that there is a plant sale and that it is happening in spring.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-04",
+      "task_type": "short_generation",
+      "difficulty": "medium",
+      "prompt": "Summarize the following in 1-2 sentences: 'The city council voted to extend the opening hours of public libraries on weekends, citing a rise in students using them as study spaces. The extra hours will be funded by a small reduction in the events budget, and the change begins in January.'",
+      "reference": "A good summary is 1-2 sentences and captures the extended weekend library hours, the reason (more students studying), the funding source (a small cut to the events budget) and the January start.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-05",
+      "task_type": "short_generation",
+      "difficulty": "medium",
+      "prompt": "Write a 2-3 sentence out-of-office reply for an employee who is away until 5 January and whose colleague Hugo Bernard is handling urgent matters.",
+      "reference": "A good answer is 2-3 sentences, states that the person is away until 5 January, says that urgent matters should go to Hugo Bernard, and keeps a professional, courteous tone.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-06",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Rewrite the following in exactly two sentences, under 35 words total, with no jargon, while preserving the 14-day window: 'Pursuant to the terms herein, the subscriber may effect cancellation without penalty provided notice is tendered within fourteen days of activation, after which early termination fees shall accrue.'",
+      "reference": "A good answer is exactly two sentences, under 35 words, uses plain language with no jargon (no 'pursuant', 'subscriber', 'effect cancellation', 'tendered', 'accrue'), and clearly keeps the rule that cancelling within 14 days of starting is free but cancelling later costs a fee.",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-07",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Explain compound interest in 2-3 sentences to a teenager with no finance background, using a simple example with numbers.",
+      "reference": "A good answer is 2-3 sentences, avoids jargon, and correctly explains that interest is earned on both the original money and on previously earned interest, with a numerically correct example (e.g. $100 at 10% becomes $110 after one year and $121 after two).",
+      "scoring": "rubric_judge"
+    },
+    {
+      "id": "x2r-gen-08",
+      "task_type": "short_generation",
+      "difficulty": "hard",
+      "prompt": "Write a polite but firm payment reminder in at most three sentences that includes all of these facts: invoice 8820 is 30 days overdue; a 5% late fee will apply from next Monday; payment can be made by bank transfer.",
+      "reference": "A good answer is at most three sentences, polite but firm in tone, and includes all three facts: invoice 8820 is 30 days overdue, a 5% late fee applies from next Monday, and payment can be made by bank transfer.",
+      "scoring": "rubric_judge"
+    }
+  ]
+}
