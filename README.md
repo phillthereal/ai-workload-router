@@ -237,7 +237,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small.
 - **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. It has not been run through the router on the 40-task hard set.
 - **Agreement is checked on a final `Answer:` line.** On a reasoning or extraction prompt without one, the router now adds an instruction asking the cheap models to end with that line, then runs the agreement check. The live effect of this is unmeasured: no paid re-run was done. Free-form answers may agree less often, so more of these prompts may end at Sonnet 5.5.
-- **The lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus.
+- **By default the lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. The server can opt in to adding live requests that got a good outcome (`--lookup-from-log`); what that does to real traffic is unmeasured.
 
 **The newest parts are untested with real models.**
 
@@ -293,7 +293,7 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 - **Auth:** bearer auth is on by default. `serve.py` prints a generated token once to stderr, or set `AWR_SERVER_TOKEN`.
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
 - **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
-- **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy.
+- **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy. Adding `--lookup-from-log` (needs `--log-db`) also rebuilds the free lookup from logged requests whose outcome was rated good, on start and every `--lookup-rebuild-every` requests.
 
 **MCP server.** `ai-router-mcp` gives any MCP client (Claude Code, Cursor, Claude Desktop) five tools to classify a task, estimate cost and explain a decision. It is free and offline by default. See [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md) and a real session in [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
 
