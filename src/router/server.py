@@ -4,7 +4,11 @@ Point any OpenAI SDK's ``base_url`` at ``http://127.0.0.1:8787/v1``.
 
 Limitations: the chat ``messages`` are flattened into ONE labelled prompt, so
 the routing decision is single-turn (no per-turn routing); no streaming.
-The ``model`` field selects the routing policy, not a vendor model.
+The ``model`` field selects the routing policy, not a vendor model:
+``router``/``auto`` (default rule), ``router:cascade``, ``router:learned``,
+``router:frontier`` and ``router:shadow``. The last two answer on the frontier
+and need ``--allow-frontier``; ``router:shadow`` also returns ``x_router.shadow``,
+what the router would have called and its estimated cost (docs/SHADOW_MODE.md).
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ from .api import (
     CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, default_policy,
 )
 from .config import ROSTERS
+from .shadow import ShadowComparePolicy
 from .spend_guard import SpendGuard, spend_store_from_env
 
 LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
@@ -39,6 +44,7 @@ SELECTORS: dict[str, Callable[[], Policy]] = {
     "router:cascade": CascadePolicy,
     "router:learned": lambda: LearnedPolicy(use_labels=False),
     "router:frontier": FrontierOnlyPolicy,
+    "router:shadow": lambda: ShadowComparePolicy(default_policy()),
 }
 
 
@@ -207,6 +213,9 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 return self._err(400, f"Unknown model; use one of: {', '.join(SELECTORS)}")
             if sel == "router:frontier" and not allow_frontier:
                 return self._err(400, "router:frontier is disabled; start the server with --allow-frontier")
+            if sel == "router:shadow" and not allow_frontier:
+                return self._err(400, "router:shadow answers on the frontier and is disabled; "
+                                      "start the server with --allow-frontier")
             try:
                 prompt = flatten(req.get("messages"))
             except ValueError as e:
@@ -235,18 +244,22 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 add_spend(r.total_cost_usd)
             u = r.response
             pt, ct = (u.input_tokens, u.output_tokens) if u else (0, 0)
+            x_router: dict[str, Any] = {
+                "model_chosen": r.model, "policy": sel,
+                "answer_cost_usd": r.answer_cost_usd,
+                "routing_cost_usd": r.routing_cost_usd,
+                "trace": r.trace, "simulated": r.simulated,
+                "degraded": r.degraded,
+                "request_id": r.request_id}
+            if r.shadow is not None:  # router:shadow only; other selectors' bodies are unchanged
+                x_router["shadow"] = r.shadow
             self._send(200, {
                 "id": "chatcmpl-" + uuid.uuid4().hex[:24], "object": "chat.completion",
                 "created": int(time.time()), "model": r.model,
                 "choices": [{"index": 0, "finish_reason": "stop",
                              "message": {"role": "assistant", "content": r.text}}],
                 "usage": {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
-                "x_router": {"model_chosen": r.model, "policy": sel,
-                             "answer_cost_usd": r.answer_cost_usd,
-                             "routing_cost_usd": r.routing_cost_usd,
-                             "trace": r.trace, "simulated": r.simulated,
-                             "degraded": r.degraded,
-                             "request_id": r.request_id},
+                "x_router": x_router,
             }, {"X-Router-Model": r.model})
 
         @staticmethod
@@ -282,7 +295,7 @@ def make_server(host: str = "127.0.0.1", port: int = 8787, roster: str = "cross_
                 allow_frontier: bool = False, rate_limit_per_min: int = 30,
                 max_concurrent: int = 8) -> ThreadingHTTPServer:
     """token=None means NO authentication (tests/embedding only); the CLI always sets one
-    unless --no-auth. Defaults: $1/day cap, router:frontier off, 30 req/min, 8 in flight."""
+    unless --no-auth. Defaults: $1/day cap, router:frontier and router:shadow off, 30 req/min, 8 in flight."""
     return ThreadingHTTPServer((host, port), make_handler(
         roster, allow_mock, token, log_db, daily_budget_usd, allow_frontier,
         rate_limit_per_min, max_concurrent, host))
@@ -310,7 +323,8 @@ def main(argv: Optional[list[str]] = None) -> None:
     p.add_argument("--no-auth", action="store_true", help="DANGEROUS: disable bearer auth")
     p.add_argument("--daily-budget", type=float, default=1.0, metavar="USD",
                    help="refuse completions (429) once today's (UTC) spend reaches this; default 1.00")
-    p.add_argument("--allow-frontier", action="store_true", help="enable the router:frontier selector")
+    p.add_argument("--allow-frontier", action="store_true", help="enable the router:frontier and router:shadow selectors "
+                        "(both answer on the frontier)")
     p.add_argument("--rate-limit", type=int, default=30, metavar="N", help="max POSTs per minute; default 30")
     a = p.parse_args(argv)
     token, generated = resolve_token(os.environ.get("AWR_SERVER_TOKEN") or None, a.no_auth)

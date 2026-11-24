@@ -19,6 +19,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union, cast
+from urllib.parse import quote
 
 DB_PATH = Path(__file__).resolve().parents[2] / "data" / "runs.db"
 
@@ -49,7 +50,8 @@ CREATE TABLE IF NOT EXISTS runs (
     quality_source TEXT,
     prompt_text TEXT,
     jev_confidence REAL,
-    jev_escalated INTEGER
+    jev_escalated INTEGER,
+    shadow TEXT
 )
 """
 
@@ -107,6 +109,7 @@ _MIGRATIONS: list[str] = [
     "ALTER TABLE runs ADD COLUMN prompt_text TEXT",
     "ALTER TABLE runs ADD COLUMN jev_confidence REAL",
     "ALTER TABLE runs ADD COLUMN jev_escalated INTEGER",
+    "ALTER TABLE runs ADD COLUMN shadow TEXT",
 ]
 
 # The v4 (online feedback) columns:
@@ -125,6 +128,10 @@ _MIGRATIONS: list[str] = [
 #                    when Jev was not used or its call failed.
 #   jev_escalated  — 1 if the decision went to the bigger fallback model, 0 if
 #                    Jev answered itself; NULL when Jev was not used.
+#
+# The v6 (shadow mode) column, NULL on every row not logged by ShadowComparePolicy:
+#   shadow         — JSON of Result.shadow: the router's would-be models and its
+#                    list-price cost estimate next to the frontier's real cost.
 SOURCE_PENDING = "pending"
 _SOURCE = "COALESCE(quality_source, 'judge')"
 
@@ -187,6 +194,7 @@ def log_run(
     prompt_text: Optional[str] = None,
     jev_confidence: Optional[float] = None,
     jev_escalated: Optional[bool] = None,
+    shadow: Optional[dict[str, Any]] = None,
     db_path: Optional[Union[str, Path]] = None,
 ) -> int:
     """
@@ -226,6 +234,8 @@ def log_run(
             Jev was not used (or its call failed).
         jev_escalated: True if the Jev decision escalated to the fallback model,
             False if Jev answered itself, None when Jev was not used.
+        shadow: Shadow mode's estimate (Result.shadow), JSON-encoded on write;
+            None for every other policy.
 
     Returns:
         The auto-generated row id.
@@ -242,8 +252,8 @@ def log_run(
                 quality_score, success, simulated, response_text,
                 effort, roster, routing_cost_usd, classifier_agreed,
                 verifier_scores, created_at, learned_evidence, quality_source, prompt_text,
-                jev_confidence, jev_escalated
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                jev_confidence, jev_escalated, shadow
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_group, strategy, task_id, task_type, difficulty, model,
@@ -257,12 +267,41 @@ def log_run(
                 quality_source, prompt_text,
                 None if jev_confidence is None else float(jev_confidence),
                 None if jev_escalated is None else int(jev_escalated),
+                None if shadow is None else json.dumps(shadow),
             ),
         )
         conn.commit()
         return cast(int, cur.lastrowid)  # only None before an INSERT
     finally:
         conn.close()
+
+
+def shadow_rows(
+    db_path: Optional[Union[str, Path]] = None, include_simulated: bool = False
+) -> list[dict[str, Any]]:
+    """Shadow-mode rows (strategy 'live:shadow' with an estimate), read-only.
+
+    Each dict has task_type, difficulty, cost_usd, simulated, created_at and the
+    parsed `shadow` estimate. Simulated (mock) rows are left out unless
+    include_simulated. A missing db, table or column gives [].
+    """
+    path = _resolve_path(db_path)
+    if not path.exists():
+        return []
+    conn = sqlite3.connect(f"file:{quote(str(path))}?mode=ro", uri=True)  # quote: '?'/'#' in paths
+    try:
+        rows = conn.execute(
+            "SELECT task_type, difficulty, cost_usd, simulated, created_at, shadow FROM runs "
+            "WHERE strategy = 'live:shadow' AND shadow IS NOT NULL"
+            + ("" if include_simulated else " AND simulated = 0")
+            + " ORDER BY id"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []  # no runs table, or a db from before the shadow column
+    finally:
+        conn.close()
+    return [{"task_type": t, "difficulty": d, "cost_usd": c, "simulated": bool(s),
+             "created_at": at, "shadow": json.loads(sh)} for t, d, c, s, at, sh in rows]
 
 
 def set_outcome(

@@ -320,5 +320,36 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(resolve_token("abc", True), (None, False))
 
 
+class ShadowSelectorTests(unittest.TestCase):
+    """router:shadow answers on the frontier, so it is gated like router:frontier."""
+
+    P = "/v1/chat/completions"
+
+    def serve(self, **kw):
+        srv, base = start(**kw)
+        self.addCleanup(srv.server_close)
+        self.addCleanup(srv.shutdown)
+        return base
+
+    def test_gated_without_allow_frontier(self):
+        code, j, _ = call(self.serve(allow_frontier=False), self.P, {"model": "router:shadow", "messages": MSG})
+        self.assertEqual(code, 400)
+        self.assertEqual(j["error"]["message"], "router:shadow answers on the frontier and is disabled; "
+                                                "start the server with --allow-frontier")
+
+    def test_shadow_estimate_in_x_router(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dbp = Path(tmp) / "shadow.db"
+            base = self.serve(allow_frontier=True, log_db=dbp)
+            code, j, _ = call(base, self.P, {"model": "router:shadow", "messages": MSG})
+            self.assertEqual(code, 200)
+            self.assertEqual(j["model"], "claude-opus-4-8")
+            self.assertTrue(j["x_router"]["shadow"]["would_call"])
+            self.assertEqual(db.shadow_rows(dbp, include_simulated=True)[0]["shadow"], j["x_router"]["shadow"])
+            code, j, _ = call(base, self.P, {"model": "router", "messages": MSG})
+            self.assertEqual(code, 200)
+            self.assertNotIn("shadow", j["x_router"])
+
+
 if __name__ == "__main__":
     unittest.main()

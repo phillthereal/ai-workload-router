@@ -50,6 +50,18 @@ FINAL_LINE = "\nEnd with one line of the form 'Answer: <your final answer>'."
 """Added by RulesPolicy.run to consensus prompts that lack an `Answer:` line, so agreement can be checked."""
 
 
+@dataclass
+class ShadowPlan:
+    """What RulesPolicy.run would do for a prompt, worked out without any model call."""
+
+    task_type: str
+    difficulty: str
+    would_call: list[str]
+    """Models run would call in the best case (cheap models agree), in order."""
+    would_keep: str
+    """Whose answer run would return in that best case."""
+
+
 class ProviderError(RuntimeError):
     """Every tier (including the frontier) failed to answer."""
 
@@ -80,6 +92,9 @@ class Result:
     """Summed latency of every provider call the policy made (set by Router.complete)."""
     request_id: Optional[str] = None
     """Set when the Router logs live traffic (log_to); pass to Router.feedback."""
+    shadow: Optional[dict[str, Any]] = None
+    """Shadow mode only (ShadowComparePolicy): what the router WOULD have called and its
+    estimated cost next to the frontier's real cost. None for every other policy."""
 
     @property
     def total_cost_usd(self) -> float:
@@ -271,6 +286,23 @@ class RulesPolicy:
             task_type=c.task_type, difficulty=c.difficulty,
         )
 
+    # dry_run mirrors run's branches: if you change one, change the other in the same commit.
+    def dry_run(self, prompt: str, task: dict[str, Any], ctx: Ctx) -> ShadowPlan:
+        """What run would call in its best case (agreement), with no model call. Needs a lookup."""
+        if self.lookup is None:
+            raise ValueError("dry_run needs a lookup-based policy")
+        c = self.lookup.classify(task)
+        d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
+                       task_type=c.task_type, difficulty=c.difficulty,
+                       tier_override="frontier" if c.task_type in self.frontier_on else None)
+        if c.task_type in self.consensus_on and not d.gated_models:
+            calls, keep = [CONSENSUS_FIRST, ctx.roster.mid], ctx.roster.mid
+        elif c.task_type in self.agree_on and not d.gated_models:
+            calls, keep = [ctx.roster.budget, ctx.roster.mid], ctx.roster.mid
+        else:
+            calls, keep = [d.chosen_model], d.chosen_model
+        return ShadowPlan(task_type=c.task_type, difficulty=c.difficulty,
+                          would_call=calls, would_keep=keep)
 
     def _agree_or_frontier(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
         """Keep the answer if the budget and mid models commit to the same one, else ask the frontier."""
@@ -479,7 +511,7 @@ class Router:
             classifier_agreed=result.classifier_agreed,
             verifier_scores=scores, learned_evidence=result.learned_evidence,
             quality_source=db.SOURCE_PENDING if provisional is None else "verifier",
-            prompt_text=prompt, db_path=self.log_db,
+            prompt_text=prompt, shadow=result.shadow, db_path=self.log_db,
             **jev_log_fields(result),
         )
         result.request_id = rid

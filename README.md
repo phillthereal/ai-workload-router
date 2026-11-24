@@ -245,6 +245,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
 - RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
+- **Shadow mode's saving is an estimate.** It prices the router's best case at list prices on the frontier answer's token counts, and no real request has gone through shadow mode yet.
 
 **Degraded routing is now flagged.** Every result carries `degraded: true` when the LLM classifier fell back to the keyword heuristic or a provider failover happened, and all three entry points (`/route`, the OpenAI-compatible server's `x_router`, the MCP paid result) pass it on, so a caller can tell the routing was not what the policy intended; the web app then shows no quality score. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
 
@@ -284,7 +285,7 @@ r = Router(CascadePolicy(), roster_name="claude_tiers").complete("Summarize: ...
 print(r.model, r.total_cost_usd, r.trace)
 ```
 
-**OpenAI-compatible endpoint** (standard library only). Point any OpenAI SDK at `http://127.0.0.1:8787/v1` and choose a policy with the `model` field: `router`, `router:cascade`, `router:learned` or `router:frontier`. Each response has an `x_router` block showing the decision and its cost. Without the mock flag this makes real calls.
+**OpenAI-compatible endpoint** (standard library only). Point any OpenAI SDK at `http://127.0.0.1:8787/v1` and choose a policy with the `model` field: `router`, `router:cascade`, `router:learned`, `router:frontier` or `router:shadow`. Each response has an `x_router` block showing the decision and its cost. `router:shadow` answers on the frontier and records what the router would have called and an estimate of its cost; see [`docs/SHADOW_MODE.md`](docs/SHADOW_MODE.md). Without the mock flag this makes real calls.
 
 ```bash
 AWR_FORCE_MOCK=1 python serve.py --port 8787
@@ -292,7 +293,7 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 
 - **Auth:** bearer auth is on by default. `serve.py` prints a generated token once to stderr, or set `AWR_SERVER_TOKEN`.
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
-- **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
+- **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` and `router:shadow` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
 - **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy.
 
 **MCP server.** `ai-router-mcp` gives any MCP client (Claude Code, Cursor, Claude Desktop) five tools to classify a task, estimate cost and explain a decision. It is free and offline by default. See [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md) and a real session in [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
