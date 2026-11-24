@@ -34,11 +34,9 @@ breakdown. See src/router/adapters/ and src/router/scoring.py.
 """
 
 import argparse
-import math
 import sys
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
@@ -48,8 +46,12 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from router import db  # noqa: E402
 from router.adapters import SpendMeter, get_adapter  # noqa: E402
 from router.api import (  # noqa: E402
-    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, ProviderError, Result,
+    CascadePolicy, FrontierOnlyPolicy, JuryPolicy, LearnedPolicy, ProviderError,
     Router, RulesPolicy, default_policy, jev_log_fields,
+)
+from router.benchmark import guards  # noqa: E402
+from router.benchmark.guards import (  # noqa: E402,F401  (re-exported: tests reach them through this module)
+    _TASK_RESERVE_USD, RunStopped, _check_real, _spend_cap,
 )
 from router.benchmark.tasks import load_tasks  # noqa: E402
 from router.lookup import public_lookup  # noqa: E402
@@ -165,65 +167,22 @@ def _report_path(
 _PV = "v2"
 
 
-# ponytail: fixed reserve, enough for one worst-case task (a 1,024-token Opus answer
-# plus a judge call). The cap is per process: replays are free, but after a stopped
-# run pass only what is left of the budget.
-_TASK_RESERVE_USD = 0.10
-
-
-def _spend_cap(raw: str) -> float:
-    """argparse type for --max-spend: a finite cap that can cover at least one task."""
-    cap = float(raw)
-    if not (math.isfinite(cap) and cap > _TASK_RESERVE_USD):
-        raise argparse.ArgumentTypeError(f"must be a finite amount above ${_TASK_RESERVE_USD:.2f}")
-    return cap
-
-
-class RunStopped(RuntimeError):
-    """A --max-spend run hit its cap or something that would make its result untrue."""
-
-
-def _check_real(result: Result) -> None:
-    """Stop a --max-spend run on anything that would quietly weaken its result."""
-    if result.simulated:
-        raise RunStopped("an answer was simulated")
-    if result.classifier_fell_back:
-        raise RunStopped("the classifier failed and the free heuristic picked the route")
-    if any("provider error" in line for line in result.trace):
-        raise RunStopped("a provider call failed")
-
-
+# The guard rails (_TASK_RESERVE_USD, _spend_cap, RunStopped, _check_real and the two
+# below) live in router.benchmark.guards so `awr bench` can share them. These two thin
+# wrappers pass this module's `score` and `get_adapter`, so patching either name here
+# still reaches the run, as it did before the move.
 def _run_tasks(router, tasks, workers: int, max_spend: Optional[float]):
     """Yield (task, result, quality) in task order, answering `workers` tasks at a time.
 
     The spend check runs before each batch and reserves room for the whole
     batch, so a parallel run stops under the cap just as a serial one does.
     """
-    capped = max_spend is not None
-
-    def answer(task):
-        result = router.complete(task["prompt"], task=task)
-        if capped:
-            _check_real(result)
-        return task, result, score(task, result.response, strict=capped)
-
-    with ThreadPoolExecutor(workers) as pool:
-        for start in range(0, len(tasks), workers):
-            if capped and SpendMeter.usd + _TASK_RESERVE_USD * workers >= max_spend:
-                raise RunStopped(f"spend cap of ${max_spend:.2f} reached")
-            yield from pool.map(answer, tasks[start:start + workers])
+    return guards._run_tasks(router, tasks, workers, max_spend, scorer=score)
 
 
 def _preflight(roster_name: str) -> None:
     """One tiny real call per roster model, so a bad key or empty account stops the run first."""
-    roster = ROSTERS[roster_name]
-    for model in (roster.budget, roster.mid, roster.frontier):
-        try:
-            ok = get_adapter(model, False, use_cache=False).complete("Reply with OK.", max_tokens=16).success
-        except Exception as exc:  # noqa: BLE001 - name only: provider text can hold account details
-            raise RunStopped(f"preflight failed on {model} ({type(exc).__name__})") from None
-        if not ok:
-            raise RunStopped(f"preflight failed on {model}")
+    guards._preflight(roster_name, adapter_factory=get_adapter)
 
 
 def _is_default_run(args: argparse.Namespace) -> bool:
