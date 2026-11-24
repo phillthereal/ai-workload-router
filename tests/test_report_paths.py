@@ -19,12 +19,12 @@ import run_benchmark as rb  # noqa: E402
 
 class TestPublishedShapeGuard(unittest.TestCase):
     def test_only_the_exact_published_shape_claims_the_canonical_file(self):
-        path = rb._report_path("cross_vendor", all_real=True, classify=False,
+        path = rb._report_path("cross_vendor", all_real=True, tags=[],
                                effort_policy=None, strategy="router", tasks=None)
         self.assertEqual(path.name, "benchmark_report.md")
 
     def test_simulated_never_claims_canonical(self):
-        path = rb._report_path("cross_vendor", all_real=False, classify=False,
+        path = rb._report_path("cross_vendor", all_real=False, tags=[],
                                effort_policy=None, strategy="router", tasks=None)
         self.assertIn("simulated", path.name)
         self.assertNotEqual(path.name, "benchmark_report.md")
@@ -32,27 +32,27 @@ class TestPublishedShapeGuard(unittest.TestCase):
     def test_classify_on_default_roster_does_not_claim_canonical(self):
         """cross_vendor --classify is the default roster and live, but a
         DIFFERENT experiment — it must not overwrite the published labels run."""
-        path = rb._report_path("cross_vendor", all_real=True, classify=True,
+        path = rb._report_path("cross_vendor", all_real=True, tags=["classified"],
                                effort_policy=None, strategy="router", tasks=None)
         self.assertNotEqual(path.name, "benchmark_report.md")
         self.assertIn("classified", path.name)
 
     def test_cascade_gets_its_own_name(self):
-        path = rb._report_path("claude_tiers", all_real=True, classify=False,
+        path = rb._report_path("claude_tiers", all_real=True, tags=[],
                                effort_policy=None, strategy="cascade", tasks=None)
         self.assertIn("cascade", path.name)
 
     def test_hard_task_run_does_not_collide_with_easy(self):
-        easy = rb._report_path("claude_tiers", all_real=True, classify=True,
+        easy = rb._report_path("claude_tiers", all_real=True, tags=["classified"],
                                effort_policy=None, strategy="router", tasks=None)
-        hard = rb._report_path("claude_tiers", all_real=True, classify=True,
+        hard = rb._report_path("claude_tiers", all_real=True, tags=["classified"],
                                effort_policy=None, strategy="router",
                                tasks="data/tasks_hard.json")
         self.assertNotEqual(easy.name, hard.name)
         self.assertIn("hard", hard.name)
 
     def test_effort_policy_run_does_not_claim_canonical(self):
-        path = rb._report_path("cross_vendor", all_real=True, classify=False,
+        path = rb._report_path("cross_vendor", all_real=True, tags=[],
                                effort_policy={"frontier": "low"}, strategy="router", tasks=None)
         self.assertNotEqual(path.name, "benchmark_report.md")
         self.assertIn("effort", path.name)
@@ -101,15 +101,40 @@ class TestVerifierFlag(unittest.TestCase):
         default-verifier report (this collision actually happened once; see
         docs/V2_FINDINGS.md's verifier-economics note)."""
         default_verifier = rb._report_path(
-            "claude_tiers", all_real=True, classify=False, effort_policy=None,
-            strategy="cascade", tasks=None, verifier=None,
+            "claude_tiers", all_real=True, tags=[], effort_policy=None,
+            strategy="cascade", tasks=None,
         )
         haiku_verifier = rb._report_path(
-            "claude_tiers", all_real=True, classify=False, effort_policy=None,
-            strategy="cascade", tasks=None, verifier="claude-haiku-4-5",
+            "claude_tiers", all_real=True, tags=["verifier-claude-haiku-4-5"],
+            effort_policy=None, strategy="cascade", tasks=None,
         )
         self.assertNotEqual(default_verifier.name, haiku_verifier.name)
         self.assertIn("verifier-claude-haiku-4-5", haiku_verifier.name)
+
+
+class TestTagDrivenNames(unittest.TestCase):
+    def test_unknown_policy_tag_lands_in_policy_order(self):
+        """A tag no code knows about lands in the filename at the position the
+        policy gave it, and the name never claims the canonical file."""
+        class FakePolicy:
+            name = "router"
+
+            def report_tags(self):
+                return ["classified", "future"]
+
+        path = rb._policy_report_path("cross_vendor", True, FakePolicy(), None, None)
+        self.assertEqual(path.name, "benchmark_report_cross_vendor_classified_future.md")
+        self.assertNotEqual(path.name, "benchmark_report.md")
+
+    def test_jury_name_keeps_published_filename(self):
+        path = rb._report_path("cross_vendor", True, ["jury-majority"], strategy="jury")
+        self.assertEqual(path.name, "benchmark_report_cross_vendor_jury_majority.md")
+
+    def test_cascade_with_effort_uses_effort_after_policy_tags(self):
+        path = rb._report_path("cross_vendor", True, ["verifier-claude-haiku-4-5"],
+                               effort_policy={"frontier": "low"}, strategy="cascade")
+        self.assertEqual(path.name,
+                         "benchmark_report_cross_vendor_cascade_verifier-claude-haiku-4-5_effort.md")
 
 
 if __name__ == "__main__":

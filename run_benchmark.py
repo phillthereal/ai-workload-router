@@ -100,17 +100,10 @@ def _tasks_tag(tasks: Optional[str]) -> Optional[str]:
 def _report_path(
     roster: str,
     all_real: bool,
-    classify: bool,
-    effort_policy: Optional[dict[str, Optional[str]]],
+    tags: list[str],
+    effort_policy: Optional[dict[str, Optional[str]]] = None,
     strategy: str = "router",
     tasks: Optional[str] = None,
-    verifier: Optional[str] = None,
-    learned_flag: bool = False,
-    jury_mode: Optional[str] = None,
-    agree: bool = False,
-    pinned: bool = False,
-    consensus: bool = False,
-    lookup: bool = False,
 ) -> Path:
     """
     Pick an output path that cannot clobber a published result.
@@ -124,45 +117,31 @@ def _report_path(
     for "the default roster, live" — but a `cross_vendor --classify` run is the
     default roster and live, and it is a DIFFERENT experiment (it pays for a
     classifier and reports a different number). Letting it claim the canonical
-    filename would overwrite the published 53.6% labels result with a
-    same-roster-but-not-the-same-experiment number. So the guard keys on the
-    full run shape, not just the roster.
+    filename would overwrite the published 53.6% labels result. So the guard
+    keys on the full run shape, not just the roster.
+
+    `tags` is the run shape: the policy's own report_tags(), in the order the
+    policy gives them. The filename is built from those tags, so a tag that no
+    code knows about still lands in the name, and a new experiment cannot reuse
+    an old filename by accident. A policy's own name is dropped from its tags
+    ("jury-majority" under strategy "jury" becomes "majority"), which keeps the
+    published jury filenames unchanged.
 
     A partially-simulated run can only ever write to a `_simulated_` name, so
     fabricated mock numbers can never land on any published path.
-
-    `verifier` (cascade only) is likewise part of the run shape: a cascade run
-    with an explicit `--verifier` overriding run_cascade's default is a
-    DIFFERENT experiment from the same roster/strategy/tasks with the default
-    verifier — same as --classify above, it must not silently overwrite the
-    default-verifier report under the same filename. (This guard exists
-    because a live `--verifier claude-haiku-4-5` run once did exactly that
-    clobber before the tag was added — see git history / docs/V2_FINDINGS.md's
-    verifier-economics note.)
-
-    `learned_flag` (v3) is part of the run shape for the same reason: a
-    `--learned` run consults outcome history and can route differently from
-    the identical flags without it, so it must not overwrite the
-    no-history report — and it must never claim the canonical v1 filename.
     """
     data_dir = Path(__file__).parent / "data"
-    tag = _tasks_tag(tasks)
+    tasks_tag = _tasks_tag(tasks)
     if not all_real:
-        suffix = f"_{tag}" if tag else ""
+        suffix = f"_{tasks_tag}" if tasks_tag else ""
         return data_dir / f"benchmark_report_simulated_{roster}{suffix}.md"
 
     is_published_shape = (
         roster == DEFAULT_ROSTER
         and strategy == "router"
-        and not classify
+        and not tags
         and not effort_policy
-        and tag is None
-        and verifier is None
-        and not learned_flag
-        and not agree
-        and not pinned
-        and not consensus
-        and not lookup
+        and tasks_tag is None
     )
     if is_published_shape:
         return data_dir / "benchmark_report.md"
@@ -170,26 +149,14 @@ def _report_path(
     parts = [roster]
     if strategy != "router":
         parts.append(strategy)
-    if classify:
-        parts.append("classified")
-    if learned_flag:
-        parts.append("learned")
-    if agree:
-        parts.append("agree")
-    if pinned:
-        parts.append("pinned")
-    if consensus:
-        parts.append("consensus")
-    if lookup:
-        parts.append("lookup")
+    own_prefix = f"{strategy}-"
+    for tag in tags:
+        parts.append(tag[len(own_prefix):] if tag.startswith(own_prefix) else tag)
+    # Effort is not a policy tag, so it always comes after the policy tags.
     if effort_policy:
         parts.append("effort")
-    if verifier:
-        parts.append(f"verifier-{verifier}")
-    if jury_mode:
-        parts.append(jury_mode)
-    if tag:
-        parts.append(tag)
+    if tasks_tag:
+        parts.append(tasks_tag)
     return data_dir / f"benchmark_report_{'_'.join(parts)}.md"
 
 
@@ -283,18 +250,8 @@ def _build_policy(args: argparse.Namespace, tasks: list[dict]):
 
 
 def _policy_report_path(roster, all_real, policy, effort_policy, tasks) -> Path:
-    """_report_path with the run-shape tags derived from the policy's config."""
-    tags = policy.report_tags()
-    return _report_path(
-        roster, all_real, "classified" in tags, effort_policy, policy.name, tasks,
-        next((t[len("verifier-"):] for t in tags if t.startswith("verifier-")), None),
-        "learned" in tags,
-        next((t[len("jury-"):] for t in tags if t.startswith("jury-")), None),
-        "agree" in tags,
-        "pinned" in tags,
-        "consensus" in tags,
-        "lookup" in tags,
-    )
+    """_report_path with the run-shape tags taken from the policy's report_tags()."""
+    return _report_path(roster, all_real, policy.report_tags(), effort_policy, policy.name, tasks)
 
 
 def _build_parser() -> argparse.ArgumentParser:
