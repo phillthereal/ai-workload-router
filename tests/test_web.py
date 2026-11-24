@@ -72,6 +72,22 @@ class DemoMode(unittest.TestCase):
         self.assertEqual(r.status_code, 422)
 
 
+    def test_cross_origin_post_is_refused(self):
+        r = self.c.post("/route", json={"prompt": "x"}, headers={"Origin": "https://evil.example"})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json(), {"detail": "Forbidden: cross-origin browser requests are not allowed"})
+
+    def test_same_origin_post_is_allowed(self):
+        r = self.c.post("/route", json={"prompt": "What is 2+2?"}, headers={"Origin": "http://localhost"})
+        self.assertEqual(r.status_code, 200)
+
+    def test_healthz_needs_no_auth_or_origin(self):
+        for headers in ({}, {"Origin": "https://evil.example"}):
+            r = self.c.get("/healthz", headers=headers)
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.json(), {"status": "ok"})
+
+
 @unittest.skipIf(web is None, "fastapi not installed")
 class PaidMode(unittest.TestCase):
     def setUp(self):
