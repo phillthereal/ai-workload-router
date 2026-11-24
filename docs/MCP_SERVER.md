@@ -58,7 +58,7 @@ When paid calls are on:
 
 | Control | Setting | Default |
 |---|---|---|
-| Daily budget (UTC day, in-process, resets on restart) | `AI_ROUTER_MCP_DAILY_BUDGET_USD` | 0.50 |
+| Daily budget (UTC day, kept in `data/spend.db`, shared with the web app and the HTTP server on this machine; `AWR_SPEND_STORE` overrides the path) | `AI_ROUTER_MCP_DAILY_BUDGET_USD` | 0.50 |
 | Per-call output cap (calls above it are rejected) | `AI_ROUTER_MCP_MAX_TOKENS` | 1000 |
 | Frontier model allowed | `AI_ROUTER_MCP_ALLOW_FRONTIER=1` | off |
 | Rate limit | fixed | 10 calls a minute |
@@ -79,7 +79,7 @@ Before each call the server checks that today's spend plus the worst case for th
 
 - The free classifier is a length and keyword heuristic. It cannot tell an easy long prompt from a hard one, and `docs/REAL_TRAFFIC_ASSESSMENT.md` measured it saving nothing on real email. The tools do not use the LLM classifier, cascade or jury, so none of the cheap-first savings measured elsewhere in this repo appear here.
 - Cost figures are estimates from list prices in `config.py`, which can go stale, and a character-based token guess.
-- The daily budget and rate limit are per process. Two server processes sharing one API key each get their own allowance, and a restart resets the total.
+- The daily budget total is shared through `data/spend.db` by every server on this machine that uses the default store, and survives restarts; each server still compares it with its own cap, so set the same cap everywhere. The rate limit is per process.
 - Single-turn only: one prompt in, one routing decision out. No streaming, no conversation history, no feedback tool, no learned or cascade policy.
 - A paid call goes to whichever roster model the heuristic picks. There is no quality check on the answer.
 - stdio only. There is no authentication because the client launches the process itself; do not wrap it in a network transport without adding it.

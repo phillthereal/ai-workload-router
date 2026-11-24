@@ -1,6 +1,7 @@
 """Tests for router.server (mock mode, real socket on port 0)."""
 
 import json
+import os
 import sys
 import threading
 import tempfile
@@ -8,11 +9,24 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from router import db  # noqa: E402
+from router.adapters.base import Adapter, Response  # noqa: E402
 from router.server import MAX_BODY, SELECTORS, make_server, resolve_token  # noqa: E402
+from router.spend_guard import SpendGuard  # noqa: E402
+
+
+class StubAdapter(Adapter):
+    """Answers everything as a real (non-simulated) model, so the answer is charged."""
+
+    def __init__(self, model):
+        self.model = model
+
+    def complete(self, prompt, effort=None, max_tokens=None):
+        return Response("4", 1000, 1000, 1.0, self.model, False)
 
 
 def start(token=None, **kw):
@@ -191,11 +205,28 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(call(base, "/v1/models", headers={"Authorization": "Bearer tok"})[0], 200)
 
     def test_daily_budget(self):
+        # Mock answers are not charged, so spend through a stubbed real (non-simulated) model.
+        stub = lambda m, *a, **k: StubAdapter(m)  # noqa: E731
+        for target in ("router.api.get_adapter", "router.adapters.get_adapter"):
+            p = mock.patch(target, stub)
+            p.start()
+            self.addCleanup(p.stop)
         _, base = self.serve(daily_budget_usd=1e-9)
         self.assertEqual(call(base, self.P, self.BODY)[0], 200)  # spent 0 < budget
         code, j, _ = call(base, self.P, self.BODY)
         self.assertEqual(code, 429)
         self.assertIn("budget", j["error"]["message"])
+
+    def test_mock_answers_are_not_charged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "spend.db"
+            with mock.patch.dict(os.environ, {"AWR_SPEND_STORE": str(store)}):
+                _, base = self.serve(daily_budget_usd=1e-9)
+                for _ in range(2):  # a charged mock would hit the budget on the second call
+                    code, j, _ = call(base, self.P, self.BODY)
+                    self.assertEqual(code, 200)
+                    self.assertTrue(j["x_router"]["simulated"])
+            self.assertEqual(SpendGuard(store=store).spent_today(), 0.0)
 
     def test_frontier_gated(self):
         body = {"model": "router:frontier", "messages": MSG}

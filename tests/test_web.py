@@ -2,6 +2,7 @@
 
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -16,6 +17,7 @@ except ImportError:  # the CI test job runs with nothing installed
     web = None
 
 from router.adapters.base import Adapter, Response  # noqa: E402
+from router.spend_guard import SpendGuard  # noqa: E402
 
 
 class StubAdapter(Adapter):
@@ -100,6 +102,19 @@ class PaidMode(unittest.TestCase):
         c = TestClient(web.create_app(), base_url="http://localhost")
         self.assertEqual(c.post("/route", json={"prompt": "x"}).status_code, 200)
         self.assertEqual(c.post("/route", json={"prompt": "x"}).status_code, 429)
+
+    def test_real_spend_lands_in_the_spend_store(self):
+        self.stub(lambda m, *a, **k: StubAdapter(m))
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        store = Path(tmp.name) / "spend.db"
+        os.environ["AWR_SPEND_STORE"] = str(store)  # restored by the patch.dict in setUp
+        os.environ["AWR_WEB_DAILY_BUDGET_USD"] = "100"
+        c = TestClient(web.create_app(), base_url="http://localhost")
+        b = c.post("/route", json={"prompt": "What is 2+2?"}).json()
+        self.assertFalse(b["simulated"])
+        self.assertGreater(b["cost_usd"], 0)
+        self.assertAlmostEqual(SpendGuard(store=store).spent_today(), b["cost_usd"], delta=1e-9)
 
     def test_provider_failure_is_a_502(self):
         self.stub(lambda m, *a, **k: StubAdapter(m, success=False))
