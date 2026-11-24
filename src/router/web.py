@@ -37,7 +37,7 @@ from .cascade import verify_adequacy
 from .config import MODEL_TIER, ROSTERS, get_roster
 from .scoring import rubric_judge
 from .secrets import force_mock
-from .spend_guard import SpendGuard
+from .spend_guard import SpendGuard, spend_store_from_env
 
 MAX_PROMPT_CHARS = 32_000
 DEFAULT_DAILY_BUDGET_USD = 0.50
@@ -102,7 +102,8 @@ def create_app() -> FastAPI:
     """Build the app. Without AWR_WEB_ALLOW_PAID=1 this process stays in demo mode."""
     if os.environ.get("AWR_WEB_ALLOW_PAID") != "1":
         os.environ["AWR_FORCE_MOCK"] = "1"
-    guard = SpendGuard(float(os.environ.get("AWR_WEB_DAILY_BUDGET_USD", DEFAULT_DAILY_BUDGET_USD)))
+    guard = SpendGuard(float(os.environ.get("AWR_WEB_DAILY_BUDGET_USD", DEFAULT_DAILY_BUDGET_USD)),
+                       store=spend_store_from_env())
 
     app = FastAPI(title="AI Workload Router", docs_url=None, redoc_url=None)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)

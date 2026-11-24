@@ -32,7 +32,7 @@ from .classifier import heuristic_classify, keyword_signal_groups, strip_meta_cl
 from .config import MODEL_TIER, MODELS, ROSTERS, TIER_ORDER, get_model, get_roster
 from .router import DEFAULT_ROUTING_RULES, route_task
 from .secrets import get_api_key
-from .spend_guard import SpendGuard
+from .spend_guard import SpendGuard, spend_store_from_env
 from .untrusted import fence
 
 if TYPE_CHECKING:
@@ -108,6 +108,7 @@ def configure() -> SpendGuard:
         daily_budget_usd=_num("AI_ROUTER_MCP_DAILY_BUDGET_USD", DEFAULT_DAILY_BUDGET_USD),
         rate_limit_per_min=MCP_RATE_LIMIT_PER_MIN,
         allow_frontier=frontier_enabled(),
+        store=spend_store_from_env(),
     )
     return _guard
 
@@ -366,7 +367,8 @@ def _paid_call(prompt: str, roster: str, x: dict, in_tokens: int, max_tokens: in
     except ProviderError:
         raise ToolInputError("All allowed providers failed (no key set, or the call errored). "
                              "No retry was made and nothing was charged.") from None
-    g.add_spend(res.total_cost_usd)
+    if not res.simulated:  # mock answers cost nothing and must not eat the shared budget
+        g.add_spend(res.total_cost_usd)
     u = res.response
     return {
         "dry_run": False, "model": res.model, "tier": MODEL_TIER[res.model], "roster": roster,

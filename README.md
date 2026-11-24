@@ -260,7 +260,7 @@ None of the following is evidence of anything. It exists so the project runs for
 **It is not ready to serve real users.**
 
 - The web app has no login, so it only accepts localhost.
-- Spend limits are held in memory and reset on restart.
+- The daily spend total is kept in `data/spend.db` (override the path with `AWR_SPEND_STORE`; set it empty to keep it in memory). It survives restarts and is shared by the web app, the OpenAI-compatible server and the MCP server on one machine. Each server compares that shared total with its own cap, so set the same cap on all three. The budget is checked before each call, so requests in flight, now across all three servers, can still overshoot it slightly. The per-minute rate limit is still held in memory per process.
 - Docker uses an editable install, as a workaround for paths that depend on the source tree.
 - `.cache/` and `--log-db` store prompts and responses in plain text. Both are gitignored, but treat them as sensitive.
 
@@ -272,7 +272,7 @@ None of the following is evidence of anything. It exists so the project runs for
 4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
 5. **Grow the eval:** more tasks from one real workload, human scores against the judges, and the hard set on the three-vendor roster.
 6. **Fix the source-relative paths,** so a normal install works and Docker can drop the workaround.
-7. **For real users:** add authentication, per-client limits, and a shared store for spend, so limits survive restarts and work across instances.
+7. **For real users:** add authentication, per-client limits, and a spend store that works across machines (today's `data/spend.db` is shared only on one machine).
 
 ## Other ways to use it
 

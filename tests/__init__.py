@@ -13,3 +13,5 @@ setting the env var here is early enough.
 import os
 
 os.environ.setdefault("AWR_FORCE_MOCK", "1")
+# Keep SpendGuard totals in memory during tests so the suite never writes data/spend.db.
+os.environ.setdefault("AWR_SPEND_STORE", "")

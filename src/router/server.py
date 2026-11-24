@@ -26,7 +26,7 @@ from .api import (
     CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, default_policy,
 )
 from .config import ROSTERS
-from .spend_guard import SpendGuard
+from .spend_guard import SpendGuard, spend_store_from_env
 
 LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
 
@@ -64,7 +64,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                  host: str = "127.0.0.1") -> type[BaseHTTPRequestHandler]:
     """Build the request handler class, closing over this server's limits and guard."""
     slots = threading.BoundedSemaphore(max_concurrent)
-    guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier)
+    guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier, store=spend_store_from_env())
     rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
 
     class Handler(BaseHTTPRequestHandler):
@@ -204,7 +204,8 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 return self._err(502, "Upstream providers failed", "api_error")
             except Exception:
                 return self._err(500, "Internal error", "api_error")
-            add_spend(r.total_cost_usd)
+            if not r.simulated:  # mock answers cost nothing and must not eat the shared budget
+                add_spend(r.total_cost_usd)
             u = r.response
             pt, ct = (u.input_tokens, u.output_tokens) if u else (0, 0)
             self._send(200, {

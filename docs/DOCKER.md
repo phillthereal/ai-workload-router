@@ -13,7 +13,7 @@ This needs no API keys and costs nothing. It starts in demo mode, where the answ
 | Variable | Needed for | Default | Meaning |
 |---|---|---|---|
 | `AWR_WEB_ALLOW_PAID` | Real calls | unset | Set to `1` to make real, billed model calls. Anything else stays in demo mode, even with keys set. |
-| `AWR_WEB_DAILY_BUDGET_USD` | Real calls | `0.50` | Refuse requests once today's spend reaches this. Resets at 00:00 UTC and on restart. |
+| `AWR_WEB_DAILY_BUDGET_USD` | Real calls | `0.50` | Refuse requests once today's spend reaches this. Resets at 00:00 UTC. The total is kept in `data/spend.db` inside the container (see `AWR_SPEND_STORE` in the README). |
 | `OPENAI_API_KEY` | Real calls | unset | `gpt-4o-mini`, the budget tier of the default roster. |
 | `DEEPSEEK_API_KEY` | Real calls | unset | `deepseek-chat`, the mid tier of the default roster. |
 | `ANTHROPIC_API_KEY` | Real calls | unset | `claude-opus-4-8`, the frontier tier of the default roster. |
@@ -25,4 +25,4 @@ Put these in a `.env` file (copy `.env.example`). Compose passes them to the con
 ## Limits
 
 - **Local use only.** The app has no login, so the port is published on `127.0.0.1` and the app rejects other `Host` headers. Do not publish it more widely without adding authentication.
-- **Nothing is persisted.** The daily spend total lives in memory and the classifier's cache lives in the container, so both are lost when the container is recreated.
+- **Nothing is persisted outside the container.** The daily spend total (`data/spend.db`) and the classifier's cache live in the container, so both are lost when the container is recreated unless `data/` is mounted as a volume.
