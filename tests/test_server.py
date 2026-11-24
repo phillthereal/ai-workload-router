@@ -80,6 +80,7 @@ class ServerTests(unittest.TestCase):
         x = j["x_router"]
         self.assertEqual(x["model_chosen"], j["model"])
         self.assertTrue(x["simulated"])
+        self.assertIs(x["degraded"], False)
         self.assertIn("trace", x)
         self.assertEqual(h["X-Router-Model"], j["model"])
 

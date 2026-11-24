@@ -218,6 +218,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                              "answer_cost_usd": r.answer_cost_usd,
                              "routing_cost_usd": r.routing_cost_usd,
                              "trace": r.trace, "simulated": r.simulated,
+                             "degraded": r.degraded,
                              "request_id": r.request_id},
             }, {"X-Router-Model": r.model})
 

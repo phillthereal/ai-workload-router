@@ -49,6 +49,7 @@ class DemoMode(unittest.TestCase):
         self.assertEqual(b["quality_source"], "simulated")
         self.assertTrue(0.0 < b["quality_score"] <= 1.0)
         self.assertEqual(b["roster"], "cross_vendor")
+        self.assertIs(b["degraded"], False)
         self.assertGreater(b["cost_usd"], 0)
         self.assertEqual(os.environ["AWR_FORCE_MOCK"], "1")
 
@@ -120,6 +121,24 @@ class PaidMode(unittest.TestCase):
         self.stub(lambda m, *a, **k: StubAdapter(m, success=False))
         c = TestClient(web.create_app(), base_url="http://localhost")
         self.assertEqual(c.post("/route", json={"prompt": "x"}).status_code, 502)
+
+    def test_degraded_result_is_answered_without_a_quality_score(self):
+        self.stub(lambda m, *a, **k: StubAdapter(m))
+        orig = web.Router.complete
+
+        def degraded_complete(self, *a, **k):
+            res = orig(self, *a, **k)
+            res.degraded = True
+            return res
+        p = mock.patch.object(web.Router, "complete", degraded_complete)
+        p.start()
+        self.addCleanup(p.stop)
+        c = TestClient(web.create_app(), base_url="http://localhost")
+        b = c.post("/route", json={"prompt": "x"}).json()
+        self.assertEqual(b["answer"], "0.9")
+        self.assertTrue(b["degraded"])
+        self.assertIsNone(b["quality_score"])
+        self.assertEqual(b["quality_source"], "unavailable")
 
     def test_failed_verifier_keeps_the_answer_without_a_score(self):
         self.stub(lambda m, *a, **k: StubAdapter(m))

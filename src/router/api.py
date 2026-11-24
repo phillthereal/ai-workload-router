@@ -68,6 +68,8 @@ class Result:
     classifier_agreed: Optional[bool] = None
     classifier_fell_back: bool = False
     """The classifying model failed, so the free heuristic picked the route."""
+    degraded: bool = False
+    """True when the classifier fell back to the heuristic or any provider failover happened on this request."""
     verifier_scores: Optional[list[float]] = None
     learned_evidence: Optional[dict] = None
     task_type: Optional[str] = None
@@ -435,6 +437,8 @@ class Router:
         start = time.monotonic()
         result = self.policy.run(prompt, task, ctx)
         result.trace.extend(ctx.events)
+        result.degraded = result.classifier_fell_back or any(
+            e.startswith("failover:") or "provider error" in e for e in ctx.events)
         if not result.latency_ms:
             result.latency_ms = ctx.latency_ms  # same measure for every policy
         if self.log_db:

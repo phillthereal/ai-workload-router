@@ -67,6 +67,7 @@ class RouteResponse(BaseModel):
     quality_score: Optional[float]
     quality_source: str
     simulated: bool
+    degraded: bool
     latency_ms: float
     trace: list[str]
 
@@ -129,7 +130,10 @@ def create_app() -> FastAPI:
             result = router.complete(req.prompt)
         except ProviderError:
             raise HTTPException(502, "all providers failed") from None
-        score, source, extra = _score(req.prompt, result, roster)
+        if paid and result.degraded:
+            score, source, extra = None, "unavailable", 0.0
+        else:
+            score, source, extra = _score(req.prompt, result, roster)
         result.routing_cost_usd += extra
         if paid:
             guard.add_spend(result.total_cost_usd)
@@ -138,7 +142,7 @@ def create_app() -> FastAPI:
             task_type=result.task_type, difficulty=result.difficulty,
             cost_usd=result.total_cost_usd, answer_cost_usd=result.answer_cost_usd,
             routing_cost_usd=result.routing_cost_usd, quality_score=score, quality_source=source,
-            simulated=result.simulated, latency_ms=result.latency_ms, trace=result.trace,
+            simulated=result.simulated, degraded=result.degraded, latency_ms=result.latency_ms, trace=result.trace,
         )
         return RouteResponse(**fields)
 
