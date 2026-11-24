@@ -46,6 +46,8 @@ CONSENSUS_LAST = "claude-sonnet-5-5"
 """Decides when the cheaper models in RulesPolicy._consensus cannot agree."""
 ANSWER_ONLY = "\nReply with only that final line, with no explanation."
 """Added to extraction prompts in _consensus: a passage answer needs no working."""
+FINAL_LINE = "\nEnd with one line of the form 'Answer: <your final answer>'."
+"""Added by RulesPolicy.run to consensus prompts that lack an `Answer:` line, so agreement can be checked."""
 
 
 class ProviderError(RuntimeError):
@@ -252,9 +254,11 @@ class RulesPolicy:
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty,
                        tier_override="frontier" if c.task_type in self.frontier_on else None)
-        # Agreement can only be checked on a committed final line. Without one, use the table.
-        if c.task_type in self.consensus_on and not d.gated_models and "Answer:" in prompt:
-            return self._consensus(prompt, c, ctx)
+        # Agreement is checked on a committed final line. Ask for one if the prompt has none.
+        if c.task_type in self.consensus_on and not d.gated_models:
+            if "Answer:" in prompt:
+                return self._consensus(prompt, c, ctx)
+            return self._consensus(prompt + FINAL_LINE, c, ctx)
         if c.task_type in self.agree_on and not d.gated_models:
             return self._agree_or_frontier(prompt, c, ctx)
         return _answer(

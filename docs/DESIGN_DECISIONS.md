@@ -63,13 +63,23 @@ I built this because the first public test lost quality where a single cheap mod
 
 **Trade-off.** Most tasks now pay for at least two cheap answers. Discarded answers count as routing cost, which came to 1.7% of savings [R15]. The rule also has limits:
 
-- It compares a committed final line. A prompt without `Answer:` skips the reasoning and extraction rule and uses the rules table, so everyday prompts save less than the benchmark shows.
+- It compares a committed final line. A reasoning or extraction prompt without `Answer:` now gets an instruction to end with one (24 Nov 2026, below).
 - Agreement is not correctness. I rejected a jury of cheap models as a default for exactly that reason (section 1.3). Hard tasks are the real gap: 95.2% on 24 tasks, with a low end of 80.0% [R15]. The rule has not been run on the 40-task hard set.
 - The lookup only knows the 1,200 labelled public tasks. It got the type right on 1,190 of them when each set was predicted from the other three (#14), but real prompts may look nothing like them. A prompt sharing no words with them gets the keyword heuristic.
 - The red-team results in 1.2 predate the lookup, so it has not been attacked.
 - No real paid request has gone through the server or web app with this rule, only stubbed tests (#14).
 
 **Rejected.** The LLM classifier as the default. It costs a call on every task, and the first public test missed the target with it [R13].
+
+**24 Nov 2026: ask for the final line instead of skipping the rule.** Until now the reasoning and extraction rule only ran when the prompt already contained `Answer:`. Ordinary prompts through `/route` and the OpenAI-compatible server usually do not (the MCP server uses its own free policy without this rule), so they fell back to the rules table and reasoning went to the frontier. Live callers did not get the published behaviour. The router now appends one line (`FINAL_LINE` in `src/router/api.py`) asking for a final `Answer:` line, then runs the same agreement check. Prompts that already contain `Answer:` are sent exactly as before.
+
+Trade-off:
+
+- The cheap models must now produce a final line on free-form prompts, and the caller sees that extra line in the answer.
+- Agreement uses `final_answer` matching (2.4), which may be stricter than the user wants for free-form answers.
+- Free-form answers agree less often, so more live prompts will end at Sonnet 5.5 (`CONSENSUS_LAST`).
+- A prompt the lookup mislabels as reasoning or extraction (a writing task with its own format rules, say) now gets a format instruction it did not ask for, and the extraction path cuts the reply to the final line. Before, such a prompt went to the rules table unchanged.
+- All of this is unmeasured until a live re-run.
 
 **At production scale.** Label real traffic for the lookup, and track how often it is unsure. Watch the disagreement rate per task type, since a rise means the cheap models are struggling. Add a way to compare free-form answers that have no `Answer:` line.
 
@@ -191,7 +201,7 @@ The first public test added two stronger checks on short writing (`BENCHMARK_PLA
 
 ### 3.2 Reasoning no longer always goes to the frontier
 
-**Choice.** In the rules table, any task classified as reasoning goes to the top tier. The default rule overrides that when the prompt has a final `Answer:` line: cheap models answer, and the frontier is only reached if a provider fails.
+**Choice.** In the rules table, any task classified as reasoning goes to the top tier. The default rule overrides that for every reasoning prompt (since 24 Nov 2026 it asks for a final `Answer:` line when the prompt has none, see 1.1): cheap models answer, and the frontier is only reached if a provider fails.
 
 **Trade-off.** The table protected quality but capped the saving. Reasoning is 16% of tasks and 33% of the baseline bill in the easy set (README). In the first public test it kept 97.8% of quality but saved only 29.9% (`CASE_STUDY.md`). The default rule saved 84.1% at 97.8% [90.9, 100.0] on 48 tasks [R15]. The risk moved rather than went away: the low end of that range is below 95%, and hard tasks are the weak spot.
 

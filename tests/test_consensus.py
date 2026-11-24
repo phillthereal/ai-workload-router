@@ -6,7 +6,8 @@ from unittest import mock
 
 from router import api
 from router.adapters.base import Adapter, Response
-from router.api import ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, RulesPolicy, Router, default_policy
+from router.api import (ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, FINAL_LINE, RulesPolicy, Router,
+                        default_policy)
 from router.config import EFFORT_OFF, get_roster
 from router.lookup import LABELLED_TASKS, Lookup, public_lookup
 
@@ -65,9 +66,36 @@ class TestConsensus(unittest.TestCase):
         self.assertTrue(all(c[1] == PROMPT + ANSWER_ONLY for c in calls))
         self.assertEqual(r.model, CONSENSUS_LAST)
 
-    def test_a_prompt_with_no_final_line_stays_on_the_rules_table(self):
-        r, calls = run("reasoning", {RO.frontier: "Because."}, prompt="Why is the sky blue?")
-        self.assertEqual([c[0] for c in calls], [RO.frontier])
+    def test_a_prompt_with_no_final_line_is_asked_for_one_and_checked(self):
+        r, calls = run("reasoning", {CONSENSUS_FIRST: "Because.\nAnswer: scattering",
+                                     RO.mid: "Rayleigh.\nAnswer: scattering"}, prompt="Why is the sky blue?")
+        self.assertEqual([c[0] for c in calls], [CONSENSUS_FIRST, RO.mid])
+        self.assertTrue(all(c[1] == "Why is the sky blue?" + FINAL_LINE for c in calls))
+        self.assertNotIn(RO.frontier, [c[0] for c in calls])
+        self.assertEqual(r.text, "Rayleigh.\nAnswer: scattering")
+
+    def test_extraction_with_no_final_line_gets_both_instructions(self):
+        r, calls = run("extraction", {CONSENSUS_FIRST: "Answer: Paris", RO.mid: "Answer: Paris"},
+                       prompt="What city is named in the passage?")
+        self.assertTrue(all(c[1] == "What city is named in the passage?" + FINAL_LINE + ANSWER_ONLY
+                            for c in calls))
+        self.assertEqual(r.model, RO.mid)
+
+    def test_the_default_runs_consensus_on_a_prompt_with_no_final_line(self):
+        p = "A shop sells 3 boxes of 4 pens. How many pens?"
+        ans = {CONSENSUS_FIRST: "Answer: 12", RO.mid: "3 x 4.\nAnswer: 12"}
+        r, calls = run(None, ans, prompt=p, policy=default_policy())
+        self.assertEqual((r.task_type, r.model), ("reasoning", RO.mid))
+        self.assertEqual(r.trace[-1], f"{CONSENSUS_FIRST} and {RO.mid} agree")
+        self.assertEqual([c[1] for c in calls], [p + FINAL_LINE] * 2)
+        self.assertEqual(r.text, "3 x 4.\nAnswer: 12")
+
+    def test_the_default_leaves_a_prompt_with_a_final_line_unchanged(self):
+        p = "A shop sells 3 boxes of 4 pens. How many pens?\nEnd your reply with one final line:\nAnswer: <number>"
+        r, calls = run(None, {CONSENSUS_FIRST: "Answer: 12", RO.mid: "Answer: 12"}, prompt=p,
+                       policy=default_policy())
+        self.assertEqual([(c[0], c[1]) for c in calls], [(CONSENSUS_FIRST, p), (RO.mid, p)])
+        self.assertEqual((r.model, r.trace[-1]), (RO.mid, f"{CONSENSUS_FIRST} and {RO.mid} agree"))
 
     def test_the_default_uses_the_free_lookup_with_no_labels(self):
         ans = {CONSENSUS_FIRST: "Answer: 4", RO.mid: "Answer: 4"}

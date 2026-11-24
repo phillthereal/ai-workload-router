@@ -236,7 +236,7 @@ None of the following is evidence of anything. It exists so the project runs for
 
 - **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small.
 - **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. It has not been run through the router on the 40-task hard set.
-- **It needs a final `Answer:` line.** Agreement is checked on that line. A prompt without one skips the cheap-model check for reasoning and extraction and follows the rules table, so everyday prompts save less than the benchmark shows.
+- **Agreement is checked on a final `Answer:` line.** On a reasoning or extraction prompt without one, the router now adds an instruction asking the cheap models to end with that line, then runs the agreement check. The live effect of this is unmeasured: no paid re-run was done. Free-form answers may agree less often, so more of these prompts may end at Sonnet 5.5.
 - **The lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus.
 
 **The newest parts are untested with real models.**
