@@ -6,10 +6,11 @@ COPY src ./src
 
 # Editable on purpose: the router finds .cache/ and data/ relative to its source
 # files, so they must stay under /app rather than move to site-packages.
+# data/ holds the spend store (data/spend.db) the web app opens at startup.
 RUN pip install --no-cache-dir -e ".[web]" \
     && useradd --create-home app \
-    && mkdir .cache \
-    && chown app .cache
+    && mkdir .cache data \
+    && chown app .cache data
 USER app
 
 EXPOSE 8000
