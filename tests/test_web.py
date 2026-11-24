@@ -118,5 +118,56 @@ class PaidMode(unittest.TestCase):
         self.assertEqual(b["quality_source"], "unavailable")
 
 
+@unittest.skipIf(web is None, "fastapi not installed")
+class VerifierChoice(unittest.TestCase):
+    """_score must not let the answering model grade its own answer."""
+
+    def run_score(self, answered_by, roster=None):
+        from types import SimpleNamespace
+
+        result = SimpleNamespace(response=Response("a", 1, 1, 1.0, answered_by, False),
+                                 model=answered_by, simulated=False)
+        seen = []
+
+        def fake_verify(task, response, model, complete=None):
+            seen.append(model)
+            return 0.8, 0.001
+
+        with mock.patch("router.web.verify_adequacy", fake_verify):
+            if roster is None:
+                out = web._score("p", result, "cross_vendor")
+            else:
+                with mock.patch("router.web.get_roster", lambda name=None: roster):
+                    out = web._score("p", result, "cross_vendor")
+        return seen[0], out
+
+    def test_mid_answer_is_not_graded_by_the_mid_model(self):
+        mid = web.get_roster("cross_vendor").mid
+        verifier, (score, source, _) = self.run_score(mid)
+        self.assertNotEqual(verifier, mid)
+        self.assertEqual(source, "verifier")
+        self.assertEqual(score, 0.8)
+
+    def test_budget_answer_is_not_graded_by_the_budget_model(self):
+        budget = web.get_roster("cross_vendor").budget
+        verifier, (_, source, _) = self.run_score(budget)
+        self.assertNotEqual(verifier, budget)
+        self.assertEqual(source, "verifier")
+
+    def test_self_check_when_every_candidate_wrote_the_answer(self):
+        from types import SimpleNamespace
+
+        from router.api import CONSENSUS_FIRST
+
+        same = SimpleNamespace(budget=CONSENSUS_FIRST, mid=CONSENSUS_FIRST, frontier="f")
+        verifier, (_, source, _) = self.run_score(CONSENSUS_FIRST, roster=same)
+        self.assertEqual(verifier, CONSENSUS_FIRST)
+        self.assertEqual(source, "self-check")
+
+    def test_ui_has_the_self_check_label(self):
+        text = web.UI_PATH.read_text(encoding="utf-8")
+        self.assertIn("Self-check (the same model graded its own answer)", text)
+
+
 if __name__ == "__main__":
     unittest.main()
