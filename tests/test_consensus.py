@@ -6,7 +6,8 @@ from unittest import mock
 
 from router import api
 from router.adapters.base import Adapter, Response
-from router.api import ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, RulesPolicy, Router, default_policy
+from router.api import (ANSWER_ONLY, CONSENSUS_FIRST, CONSENSUS_LAST, FINAL_LINE, RulesPolicy, Router,
+                        default_policy)
 from router.config import EFFORT_OFF, get_roster
 from router.lookup import LABELLED_TASKS, Lookup, public_lookup
 
@@ -18,8 +19,10 @@ def task(task_type):
     return {"id": "t", "prompt": PROMPT, "task_type": task_type, "difficulty": "medium"}
 
 
-def run(task_type, replies, prompt=PROMPT, policy=None):
-    """replies: model -> text. Returns the Result and the (model, prompt, effort) calls made."""
+def run(task_type, replies, prompt=PROMPT, policy=None, down=()):
+    """replies: model -> text. Models in `down` raise, so Ctx.call fails over.
+
+    Returns the Result and the (model, prompt, effort) calls that were answered."""
     calls = []
 
     class Scripted(Adapter):
@@ -27,6 +30,8 @@ def run(task_type, replies, prompt=PROMPT, policy=None):
             self.model = model
 
         def complete(self, prompt, effort=None, max_tokens=None):
+            if self.model in down:
+                raise ConnectionError("provider down")
             calls.append((self.model, prompt, effort))
             return Response(text=replies[self.model], input_tokens=1000, output_tokens=100,
                             latency_ms=1.0, model=self.model, simulated=False, success=True)
@@ -65,9 +70,36 @@ class TestConsensus(unittest.TestCase):
         self.assertTrue(all(c[1] == PROMPT + ANSWER_ONLY for c in calls))
         self.assertEqual(r.model, CONSENSUS_LAST)
 
-    def test_a_prompt_with_no_final_line_stays_on_the_rules_table(self):
-        r, calls = run("reasoning", {RO.frontier: "Because."}, prompt="Why is the sky blue?")
-        self.assertEqual([c[0] for c in calls], [RO.frontier])
+    def test_a_prompt_with_no_final_line_is_asked_for_one_and_checked(self):
+        r, calls = run("reasoning", {CONSENSUS_FIRST: "Because.\nAnswer: scattering",
+                                     RO.mid: "Rayleigh.\nAnswer: scattering"}, prompt="Why is the sky blue?")
+        self.assertEqual([c[0] for c in calls], [CONSENSUS_FIRST, RO.mid])
+        self.assertTrue(all(c[1] == "Why is the sky blue?" + FINAL_LINE for c in calls))
+        self.assertNotIn(RO.frontier, [c[0] for c in calls])
+        self.assertEqual(r.text, "Rayleigh.\nAnswer: scattering")
+
+    def test_extraction_with_no_final_line_gets_both_instructions(self):
+        r, calls = run("extraction", {CONSENSUS_FIRST: "Answer: Paris", RO.mid: "Answer: Paris"},
+                       prompt="What city is named in the passage?")
+        self.assertTrue(all(c[1] == "What city is named in the passage?" + FINAL_LINE + ANSWER_ONLY
+                            for c in calls))
+        self.assertEqual(r.model, RO.mid)
+
+    def test_the_default_runs_consensus_on_a_prompt_with_no_final_line(self):
+        p = "A shop sells 3 boxes of 4 pens. How many pens?"
+        ans = {CONSENSUS_FIRST: "Answer: 12", RO.mid: "3 x 4.\nAnswer: 12"}
+        r, calls = run(None, ans, prompt=p, policy=default_policy())
+        self.assertEqual((r.task_type, r.model), ("reasoning", RO.mid))
+        self.assertEqual(r.trace[-1], f"{CONSENSUS_FIRST} and {RO.mid} agree")
+        self.assertEqual([c[1] for c in calls], [p + FINAL_LINE] * 2)
+        self.assertEqual(r.text, "3 x 4.\nAnswer: 12")
+
+    def test_the_default_leaves_a_prompt_with_a_final_line_unchanged(self):
+        p = "A shop sells 3 boxes of 4 pens. How many pens?\nEnd your reply with one final line:\nAnswer: <number>"
+        r, calls = run(None, {CONSENSUS_FIRST: "Answer: 12", RO.mid: "Answer: 12"}, prompt=p,
+                       policy=default_policy())
+        self.assertEqual([(c[0], c[1]) for c in calls], [(CONSENSUS_FIRST, p), (RO.mid, p)])
+        self.assertEqual((r.model, r.trace[-1]), (RO.mid, f"{CONSENSUS_FIRST} and {RO.mid} agree"))
 
     def test_the_default_uses_the_free_lookup_with_no_labels(self):
         ans = {CONSENSUS_FIRST: "Answer: 4", RO.mid: "Answer: 4"}
@@ -75,6 +107,45 @@ class TestConsensus(unittest.TestCase):
         r, calls = run(None, ans, prompt=p, policy=default_policy())
         self.assertEqual((r.task_type, r.model), ("reasoning", RO.mid))
         self.assertEqual(r.routing_cost_usd, api.get_model(CONSENSUS_FIRST).cost_for_tokens(1000, 100))
+
+    def test_a_failover_onto_the_mid_model_is_not_an_agreement(self):
+        # Haiku is down, so the first call fails over to the mid model, which then answers twice.
+        r, calls = run("extraction", {RO.mid: "Answer: 4", CONSENSUS_LAST: "Answer: 4"}, down=(CONSENSUS_FIRST,))
+        self.assertEqual([c[0] for c in calls], [RO.mid, RO.mid, CONSENSUS_LAST])
+        self.assertEqual(r.model, CONSENSUS_LAST)
+        self.assertIn(f"{RO.mid} answered twice after a failover: no cross-check", r.trace)
+        self.assertNotIn(f"{RO.mid} and {RO.mid} agree", r.trace)
+        self.assertIn(f"no agreement -> {CONSENSUS_LAST}", r.trace)
+
+    def test_a_failover_onto_the_mid_model_still_gets_the_reasoning_vote(self):
+        r, calls = run("reasoning", {RO.mid: "Answer: 4", RO.budget: "Answer: 5", CONSENSUS_LAST: "Answer: 6"},
+                       down=(CONSENSUS_FIRST,))
+        self.assertEqual([c[0] for c in calls], [RO.mid, RO.mid, RO.budget, CONSENSUS_LAST])
+        self.assertIn(f"{RO.mid} answered twice after a failover: no cross-check", r.trace)
+        self.assertEqual(r.model, CONSENSUS_LAST)
+
+    def test_a_vote_from_a_model_that_already_answered_does_not_break_the_tie(self):
+        # The vote model is down and fails over to the mid model, which already answered.
+        r, calls = run("reasoning", {CONSENSUS_FIRST: "Answer: 4", RO.mid: "Answer: 5", CONSENSUS_LAST: "Answer: 6"},
+                       down=(RO.budget,))
+        self.assertEqual([c[0] for c in calls], [CONSENSUS_FIRST, RO.mid, RO.mid, CONSENSUS_LAST])
+        self.assertEqual(r.model, CONSENSUS_LAST)
+        self.assertIn(f"no agreement -> {CONSENSUS_LAST}", r.trace)
+        self.assertNotIn(f"{RO.mid} broke the tie", r.trace)
+
+    def test_agree_or_frontier_does_not_accept_one_model_agreeing_with_itself(self):
+        r, calls = run("classification", {RO.mid: "Answer: x", RO.frontier: "Answer: x"}, down=(RO.budget,),
+                       policy=RulesPolicy(True, agree_on=("classification",)))
+        self.assertEqual([c[0] for c in calls], [RO.mid, RO.mid, RO.frontier])
+        self.assertEqual(r.model, RO.frontier)
+        self.assertIn(f"{RO.mid} answered twice after a failover: no cross-check", r.trace)
+        self.assertIn(f"{RO.mid} and {RO.mid} differ -> frontier", r.trace)
+
+    def test_agree_or_frontier_still_agrees_across_two_models(self):
+        r, calls = run("classification", {RO.budget: "Answer: x", RO.mid: "Answer: x"},
+                       policy=RulesPolicy(True, agree_on=("classification",)))
+        self.assertEqual([c[0] for c in calls], [RO.budget, RO.mid])
+        self.assertEqual(r.trace[-1], f"{RO.budget} and {RO.mid} agree")
 
     def test_other_types_stay_on_the_rules_table(self):
         r, calls = run("classification", {RO.mid: "Answer: x"})

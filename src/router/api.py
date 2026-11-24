@@ -46,6 +46,8 @@ CONSENSUS_LAST = "claude-sonnet-5-5"
 """Decides when the cheaper models in RulesPolicy._consensus cannot agree."""
 ANSWER_ONLY = "\nReply with only that final line, with no explanation."
 """Added to extraction prompts in _consensus: a passage answer needs no working."""
+FINAL_LINE = "\nEnd with one line of the form 'Answer: <your final answer>'."
+"""Added by RulesPolicy.run to consensus prompts that lack an `Answer:` line, so agreement can be checked."""
 
 
 class ProviderError(RuntimeError):
@@ -254,9 +256,11 @@ class RulesPolicy:
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty,
                        tier_override="frontier" if c.task_type in self.frontier_on else None)
-        # Agreement can only be checked on a committed final line. Without one, use the table.
-        if c.task_type in self.consensus_on and not d.gated_models and "Answer:" in prompt:
-            return self._consensus(prompt, c, ctx)
+        # Agreement is checked on a committed final line. Ask for one if the prompt has none.
+        if c.task_type in self.consensus_on and not d.gated_models:
+            if "Answer:" in prompt:
+                return self._consensus(prompt, c, ctx)
+            return self._consensus(prompt + FINAL_LINE, c, ctx)
         if c.task_type in self.agree_on and not d.gated_models:
             return self._agree_or_frontier(prompt, c, ctx)
         return _answer(
@@ -277,7 +281,8 @@ class RulesPolicy:
             task_type=c.task_type, difficulty=c.difficulty,
         )
         trace = [f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
-        if _agree(low, mid):
+        twice = low.model == mid.model  # a failover made one model answer both calls
+        if not twice and _agree(low, mid):
             return Result(
                 text=mid.text, model=mid.model, answer_cost_usd=ctx.cost(mid),
                 routing_cost_usd=c.cost_usd + ctx.cost(low),
@@ -289,7 +294,8 @@ class RulesPolicy:
         return _answer(
             prompt, ctx.roster.frontier, effort, ctx,
             routing_cost=c.cost_usd + ctx.cost(low) + ctx.cost(mid),
-            trace=trace + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
+            trace=trace + ([f"{mid.model} answered twice after a failover: no cross-check"] if twice else [])
+            + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
         )
 
     def _consensus(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
@@ -301,12 +307,15 @@ class RulesPolicy:
             prompt += ANSWER_ONLY
         low = ctx.call(CONSENSUS_FIRST, prompt, EFFORT_OFF)
         mid = ctx.call(ctx.roster.mid, prompt)
+        twice = low.model == mid.model  # a failover made one model answer both calls
         calls, keep, why = [low, mid], mid, f"{low.model} and {mid.model} agree"
-        if not _agree(low, mid):
+        if twice or not _agree(low, mid):
             vote = ctx.call(ctx.roster.budget, prompt) if c.task_type == "reasoning" else None
             if vote:
                 calls.append(vote)
-            if vote and (_agree(vote, low) or _agree(vote, mid)):
+            # A vote from a model that already answered is no independent vote.
+            if (vote and vote.model not in (low.model, mid.model)
+                    and (_agree(vote, low) or _agree(vote, mid))):
                 keep, why = vote, f"{vote.model} broke the tie"
             else:
                 keep = ctx.call(CONSENSUS_LAST, prompt, EFFORT_OFF)
@@ -316,7 +325,8 @@ class RulesPolicy:
             text=keep.text, model=keep.model, answer_cost_usd=ctx.cost(keep),
             routing_cost_usd=c.cost_usd + sum(ctx.cost(r) for r in calls if r is not keep),
             simulated=any(r.simulated for r in calls),
-            trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})", why],
+            trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
+            + ([f"{mid.model} answered twice after a failover: no cross-check"] if twice else []) + [why],
             response=keep, effort=keep.effort,
             classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
