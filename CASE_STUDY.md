@@ -10,7 +10,7 @@
 
 Teams building on LLMs overpay by sending every request to one premium model "to be safe." The **AI Workload Router** classifies each task and routes it to the cheapest model that can still do it well, logging cost and quality on every call so routing improves over time.
 
-**On 300 public tasks, the router's default rule cut cost 86.4% and kept 98.7% of quality, so it met both targets.** With 99% certainty it saves at least 80.8% and keeps at least 95.1%. The first version missed the quality target on public tasks, at 84.1% cheaper and 91.8% of quality, and that miss drove the changes described below. An earlier 25-task benchmark that I wrote myself had looked good too, at 53.6% cheaper with my hand labels, but those tasks were too easy to show the problem. Quality on hard tasks alone is still not proven. Every number is from live API calls. A hand check and a code check only partly confirmed the judge on the public run, and the target is still missed when code replaces the judge wherever it can.
+**On 300 public tasks, the router's default rule cut cost 86.4% and kept 98.7% of quality, so it met both targets.** With 99% certainty it saves at least 80.8% and keeps at least 95.1%. The first version missed the quality target on public tasks, at 84.1% cheaper and 91.8% of quality, and that miss drove the changes described below. An earlier 25-task benchmark that I wrote myself had looked good too, at 53.6% cheaper with my hand labels, but those tasks were too easy to show the problem. On the 40-task hard set alone it kept 90.8% of quality, so it misses the bar on hard work. Every number is from live API calls. A hand check and a code check only partly confirmed the judge on the public run, and the target is still missed when code replaces the judge wherever it can.
 
 The most useful finding wasn't the headline number — it was *why* the savings stopped where they did. That's the part a good PM cares about, and it's below.
 
@@ -37,6 +37,7 @@ Only the last two rows use the same tasks, and I updated model prices before the
 | Classification | 96 | 71.0% | 59.2% to 81.9% | 98.7% | 90.9% to 106.8% |
 | Short writing | 72 | 94.8% | 87.8% to 97.3% | 99.3% | 94.3% to 104.2% |
 | Hard | 24 | 80.0% | 56.7% to 92.9% | 95.2% | 80.0% to 100.0% |
+| Hard set, 40 tasks (separate run) | 40 | 83.5% | 70.0% to 93.8% | 90.8% | 75.0% to 105.7% |
 
 **How the default works.** A free lookup compares each prompt with similar labelled tasks to pick its type, so the paid classifier is gone. On reasoning and extraction, Haiku 5.5 and DeepSeek both answer, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to Opus when the two cheap models differ. The cost of every discarded answer is included.
 
@@ -44,7 +45,7 @@ Only the last two rows use the same tasks, and I updated model prices before the
 
 **An idea I left out.** Chain of Draft asks models to keep their working very short. On 96 reasoning tasks it saved more, 92.0% against 80.4%, but quality fell from 98.9% to 95.6%, and to 90.5% on 48 hard tasks.
 
-**What is not proven.** Reasoning, extraction and hard tasks each fall below 95% at the worst end of their ranges, because the groups are small. Hard tasks are the real gap, at 80.0% on 24 tasks. These 300 tasks had already been used to confirm the rule, though not to pick it.
+**What is not proven.** Reasoning, extraction and hard tasks each fall below 95% at the worst end of their ranges, because the groups are small. Hard tasks are the real gap, at 80.0% on 24 tasks, and a separate run on the 40-task hard set kept 90.8% of quality, below the 95% bar. These 300 tasks had already been used to confirm the rule, though not to pick it.
 
 ## The first public test: the quality target was missed
 
