@@ -14,9 +14,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 os.environ.setdefault("AWR_FORCE_MOCK", "1")
 
-from router import db  # noqa: E402
+from router import db, gates  # noqa: E402
+from router.adapters.base import Response  # noqa: E402
 from router.api import Ctx, Router, RulesPolicy, default_policy  # noqa: E402
 from router.lookup import LABELLED_TASKS, Lookup  # noqa: E402
+from router.router import route_task  # noqa: E402
 from router.shadow import ShadowComparePolicy  # noqa: E402
 
 TYPES = ("classification", "extraction", "short_generation", "reasoning")
@@ -67,24 +69,51 @@ class DryRunMirrorsRunTests(unittest.TestCase):
         # k=1 over these tasks only: a task's own prompt is its nearest neighbour, so the label is known.
         self.policy = default_policy(lookup=Lookup(self.tasks, k=1))
 
-    def test_would_call_is_the_prefix_run_actually_called(self):
+    def assert_mirrors(self, policy, prompt):
+        """dry_run's would_call must be the first models run actually asks Ctx.call for."""
         real_call = Ctx.call
+        called: list[str] = []
+
+        def spy(ctx_self, model, p, *a, **kw):
+            called.append(model)
+            return real_call(ctx_self, model, p, *a, **kw)
+
+        router = Router(policy, allow_mock_fallback=True, use_cache=False)
+        plan = policy.dry_run(prompt, {"id": "adhoc", "prompt": prompt}, Ctx(router))
+        with mock.patch.object(Ctx, "call", spy):
+            router.complete(prompt)
+        self.assertTrue(plan.would_call)
+        self.assertEqual(called[:len(plan.would_call)], plan.would_call)
+        self.assertIn(plan.would_keep, plan.would_call)
+        return plan
+
+    def test_would_call_is_the_prefix_run_actually_called(self):
         for task in self.tasks:
-            called: list[str] = []
-
-            def spy(ctx_self, model, prompt, *a, _called=called, **kw):
-                _called.append(model)
-                return real_call(ctx_self, model, prompt, *a, **kw)
-
-            router = Router(self.policy, allow_mock_fallback=True)
-            with self.subTest(task_type=task["task_type"]), mock.patch.object(Ctx, "call", spy):
-                plan = self.policy.dry_run(task["prompt"], {"id": "t", "prompt": task["prompt"]},
-                                           Ctx(router))
+            with self.subTest(task_type=task["task_type"]):
+                plan = self.assert_mirrors(self.policy, task["prompt"])
                 self.assertEqual(plan.task_type, task["task_type"])
-                router.complete(task["prompt"])
-                self.assertTrue(plan.would_call)
-                self.assertEqual(called[:len(plan.would_call)], plan.would_call)
-                self.assertIn(plan.would_keep, plan.would_call)
+
+    def test_context_gated_prompt(self):
+        # Grow a prompt until the budget model's context gate refuses it (limits from gates/config).
+        task = next(t for t in self.tasks if t["task_type"] == "extraction")
+        budget = Router(self.policy).roster.budget
+        prompt = task["prompt"]
+        while gates.fits_context(budget, prompt):
+            prompt += "\n" + task["prompt"]
+        plan = self.assert_mirrors(self.policy, prompt)
+        d = route_task({"id": "adhoc", "prompt": prompt}, task_type=plan.task_type,
+                       difficulty=plan.difficulty)
+        self.assertIn(budget, d.gated_models)
+        self.assertFalse(plan.consensus)
+        self.assertEqual(plan.would_call, [d.chosen_model])
+
+    def test_type_in_frontier_on_and_consensus_on(self):
+        task = next(t for t in self.tasks if t["task_type"] == "reasoning")
+        policy = RulesPolicy(use_labels=False, frontier_on=("reasoning",), consensus_on=("reasoning",),
+                             lookup=Lookup(self.tasks, k=1))
+        plan = self.assert_mirrors(policy, task["prompt"])
+        self.assertEqual(plan.task_type, "reasoning")
+        self.assertTrue(plan.consensus)
 
     def test_dry_run_makes_no_model_call(self):
         router = Router(self.policy, allow_mock_fallback=True)
@@ -125,6 +154,20 @@ class ShadowComparePolicyTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["shadow"], r.shadow)
         self.assertTrue(rows[0]["simulated"])
+
+    def test_estimate_counts_the_routers_suffix_tokens(self):
+        tasks = one_task_per_type()
+        policy = ShadowComparePolicy(default_policy(lookup=Lookup(tasks, k=1)))
+        base = next(t for t in tasks if t["task_type"] == "extraction")["prompt"].replace("Answer:", "")
+        fixed = Response("x", 400, 60, 1.0, "claude-opus-4-8", True)  # same frontier token counts
+        shadows = {}
+        with mock.patch.object(Ctx, "call", return_value=fixed):
+            for name, prompt in (("bare", base), ("with_answer", base + "\nAnswer:")):
+                shadows[name] = Router(policy, allow_mock_fallback=True).complete(prompt).shadow
+        for sh in shadows.values():
+            self.assertEqual(sh["task_type"], "extraction")
+            self.assertEqual(sh["frontier_cost_usd"], shadows["bare"]["frontier_cost_usd"])
+        self.assertGreater(shadows["bare"]["estimated_cost_usd"], shadows["with_answer"]["estimated_cost_usd"])
 
     def test_estimate_failure_still_returns_the_frontier_answer(self):
         inner = default_policy()
@@ -190,6 +233,36 @@ class ShadowMigrationTests(unittest.TestCase):
     def test_missing_db_gives_no_rows(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(db.shadow_rows(Path(tmp) / "nope.db"), [])
+
+    def test_directory_or_non_sqlite_path_gives_no_rows(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(db.shadow_rows(tmp, include_simulated=True), [])
+            junk = Path(tmp) / "junk.db"
+            junk.write_text("not a database\n" * 100)
+            self.assertEqual(db.shadow_rows(junk, include_simulated=True), [])
+
+
+class UnreadableEstimateTests(unittest.TestCase):
+    def test_malformed_shadow_values_are_skipped_and_counted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dbp = Path(tmp) / "shadow.db"
+            r = Router(ShadowComparePolicy(), allow_mock_fallback=True, log_to=dbp).complete("hello")
+            base = dict(run_group="live", strategy="live:shadow", task_type="x", difficulty="y",
+                        model="m", input_tokens=1, output_tokens=1, cost_usd=0.1, latency_ms=1.0,
+                        quality_score=0.0, success=True, simulated=True, db_path=dbp)
+            db.log_run(task_id="no-keys", shadow={"would_call": ["m"]}, **base)
+            db.log_run(task_id="bad-json", shadow={}, **base)
+            conn = sqlite3.connect(dbp)
+            conn.execute("UPDATE runs SET shadow = '{not json' WHERE task_id = 'bad-json'")
+            conn.commit()
+            conn.close()
+            rows, skipped = db.shadow_rows_counted(dbp, include_simulated=True)
+            self.assertEqual([row["shadow"] for row in rows], [r.shadow])
+            self.assertEqual(skipped, 2)
+            res = subprocess.run([sys.executable, str(ShadowReportScriptTests.SCRIPT), str(dbp),
+                                  "--include-simulated"], capture_output=True, text=True, timeout=60)
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertIn("2 rows skipped: unreadable estimate", res.stdout)
 
 
 if __name__ == "__main__":

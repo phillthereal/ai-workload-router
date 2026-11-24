@@ -21,8 +21,12 @@ CAVEAT = ("Estimate only: list prices on the frontier answer's token counts, che
           "to agree. The router's answers were never produced, so their quality is unknown.")
 
 
-def _cheaper(frontier: float, estimate: float) -> str:
-    return f"{100 * (frontier - estimate) / frontier:.1f}%" if frontier else "n/a"
+def _pct(frontier: float, estimate: float) -> str:
+    """Net change against the frontier: 'X% cheaper', or 'X% dearer' when the estimate is higher."""
+    if not frontier:
+        return "n/a"
+    pct = 100 * (frontier - estimate) / frontier
+    return f"{pct:.1f}% cheaper" if pct >= 0 else f"{-pct:.1f}% dearer"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -31,9 +35,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--include-simulated", action="store_true",
                    help="also count mock (simulated) rows; their numbers are not results")
     a = p.parse_args(argv)
-    rows = db.shadow_rows(a.db, include_simulated=a.include_simulated)
+    rows, skipped = db.shadow_rows_counted(a.db, include_simulated=a.include_simulated)
     if not rows:
         print(f"no shadow rows in {a.db}", file=sys.stderr)
+        if skipped:
+            print(f"{skipped} rows skipped: unreadable estimate", file=sys.stderr)
         return 1
     pre = "SIMULATED " if a.include_simulated else ""
     out: list[str] = []
@@ -49,11 +55,13 @@ def main(argv: list[str] | None = None) -> int:
     front = sum(b[1] for b in by_type.values())
     est = sum(b[2] for b in by_type.values())
     out.append(f"{len(rows)} requests, frontier spend ${front:.4f}, router would have spent "
-               f"${est:.4f} (estimate), {_cheaper(front, est)} cheaper")
-    out.append(f"{'task type':<18} {'requests':>8} {'frontier $':>12} {'est. router $':>14} {'% cheaper':>10}")
+               f"${est:.4f} (estimate), {_pct(front, est)} (net)")
+    out.append(f"{'task type':<18} {'requests':>8} {'frontier $':>12} {'est. router $':>14} {'% cheaper (net)':>16}")
     for t in sorted(by_type):
         n, f, e = by_type[t]
-        out.append(f"{t:<18} {int(n):>8} {f:>12.4f} {e:>14.4f} {_cheaper(f, e):>10}")
+        out.append(f"{t:<18} {int(n):>8} {f:>12.4f} {e:>14.4f} {_pct(f, e):>16}")
+    if skipped:
+        out.append(f"{skipped} rows skipped: unreadable estimate")
     out.append(CAVEAT)
     for line in out:
         print(pre + line)

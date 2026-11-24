@@ -283,25 +283,49 @@ def shadow_rows(
 
     Each dict has task_type, difficulty, cost_usd, simulated, created_at and the
     parsed `shadow` estimate. Simulated (mock) rows are left out unless
-    include_simulated. A missing db, table or column gives [].
+    include_simulated. A missing or unreadable db, table or column gives [];
+    rows with an unreadable estimate are skipped (see shadow_rows_counted).
     """
+    return shadow_rows_counted(db_path, include_simulated)[0]
+
+
+def shadow_rows_counted(
+    db_path: Optional[Union[str, Path]] = None, include_simulated: bool = False
+) -> tuple[list[dict[str, Any]], int]:
+    """shadow_rows plus how many rows were skipped because their estimate was unreadable."""
     path = _resolve_path(db_path)
     if not path.exists():
-        return []
-    conn = sqlite3.connect(f"file:{quote(str(path))}?mode=ro", uri=True)  # quote: '?'/'#' in paths
+        return [], 0
+    conn: Optional[sqlite3.Connection] = None
     try:
+        conn = sqlite3.connect(f"file:{quote(str(path))}?mode=ro", uri=True)  # quote: '?'/'#' in paths
         rows = conn.execute(
             "SELECT task_type, difficulty, cost_usd, simulated, created_at, shadow FROM runs "
             "WHERE strategy = 'live:shadow' AND shadow IS NOT NULL"
             + ("" if include_simulated else " AND simulated = 0")
             + " ORDER BY id"
         ).fetchall()
-    except sqlite3.OperationalError:
-        return []  # no runs table, or a db from before the shadow column
+    except sqlite3.Error:
+        return [], 0  # a directory, not SQLite, no runs table, or a db from before the shadow column
     finally:
-        conn.close()
-    return [{"task_type": t, "difficulty": d, "cost_usd": c, "simulated": bool(s),
-             "created_at": at, "shadow": json.loads(sh)} for t, d, c, s, at, sh in rows]
+        if conn is not None:
+            conn.close()
+    out: list[dict[str, Any]] = []
+    skipped = 0
+    for t, d, c, s, at, sh in rows:
+        try:
+            est = json.loads(sh)
+            ok = (isinstance(est, dict)
+                  and all(isinstance(est.get(k), (int, float)) and not isinstance(est.get(k), bool)
+                          for k in ("estimated_cost_usd", "frontier_cost_usd")))
+        except (TypeError, ValueError):
+            ok = False
+        if not ok:
+            skipped += 1
+            continue
+        out.append({"task_type": t, "difficulty": d, "cost_usd": c, "simulated": bool(s),
+                    "created_at": at, "shadow": est})
+    return out, skipped
 
 
 def set_outcome(

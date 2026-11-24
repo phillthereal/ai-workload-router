@@ -60,6 +60,8 @@ class ShadowPlan:
     """Models run would call in the best case (cheap models agree), in order."""
     would_keep: str
     """Whose answer run would return in that best case."""
+    consensus: bool = False
+    """True when run would take the _consensus branch (it adds its own prompt suffixes there)."""
 
 
 class ProviderError(RuntimeError):
@@ -295,14 +297,16 @@ class RulesPolicy:
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty,
                        tier_override="frontier" if c.task_type in self.frontier_on else None)
+        consensus = False
         if c.task_type in self.consensus_on and not d.gated_models:
             calls, keep = [CONSENSUS_FIRST, ctx.roster.mid], ctx.roster.mid
+            consensus = True
         elif c.task_type in self.agree_on and not d.gated_models:
             calls, keep = [ctx.roster.budget, ctx.roster.mid], ctx.roster.mid
         else:
             calls, keep = [d.chosen_model], d.chosen_model
         return ShadowPlan(task_type=c.task_type, difficulty=c.difficulty,
-                          would_call=calls, would_keep=keep)
+                          would_call=calls, would_keep=keep, consensus=consensus)
 
     def _agree_or_frontier(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
         """Keep the answer if the budget and mid models commit to the same one, else ask the frontier."""

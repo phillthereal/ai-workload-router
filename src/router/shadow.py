@@ -13,11 +13,24 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .api import Ctx, Result, RulesPolicy, _answer, default_policy
+from . import gates
+from .api import ANSWER_ONLY, FINAL_LINE, Ctx, Result, RulesPolicy, ShadowPlan, _answer, default_policy
 from .config import get_model
 
-BASIS = "list prices on the frontier answer's token counts; cheap models assumed to agree (router best case)"
+BASIS = ("list prices on the frontier answer's token counts plus the router's own suffix tokens; "
+         "cheap models assumed to agree (router best case)")
 """Stored with every estimate, so a logged row says how its number was made."""
+
+
+def router_suffix(prompt: str, plan: ShadowPlan) -> str:
+    """Text the router would append to the prompt for its own calls.
+
+    Mirrors RulesPolicy.run (FINAL_LINE when a consensus prompt has no `Answer:` line)
+    and RulesPolicy._consensus (ANSWER_ONLY for extraction): change them together.
+    """
+    if not plan.consensus:
+        return ""
+    return ("" if "Answer:" in prompt else FINAL_LINE) + (ANSWER_ONLY if plan.task_type == "extraction" else "")
 
 
 class ShadowComparePolicy:
@@ -46,7 +59,9 @@ class ShadowComparePolicy:
             if resp is None:  # _answer always sets it; keeps the estimate honest if that changes
                 raise ValueError("no frontier response to price")
             plan = self.inner.dry_run(prompt, task, ctx)
-            estimated = sum(get_model(m).cost_for_tokens(resp.input_tokens, resp.output_tokens)
+            suffix = router_suffix(prompt, plan)
+            in_tokens = resp.input_tokens + (gates.estimate_prompt_tokens(suffix) if suffix else 0)
+            estimated = sum(get_model(m).cost_for_tokens(in_tokens, resp.output_tokens)
                             for m in plan.would_call)
         except Exception as exc:  # noqa: BLE001 - the frontier answer must still be returned
             result.trace.append(f"shadow: no estimate ({type(exc).__name__})")
