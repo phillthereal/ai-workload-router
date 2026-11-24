@@ -66,17 +66,6 @@ I built this because the first public test lost quality where a single cheap mod
 - It compares a committed final line. A reasoning or extraction prompt without `Answer:` now gets an instruction to end with one (24 Nov 2026, below).
 - Agreement is not correctness. I rejected a jury of cheap models as a default for exactly that reason (section 1.3). Hard tasks are the real gap: 95.2% on 24 tasks, with a low end of 80.0% [R15]. The rule has not been run on the 40-task hard set.
 - By default the lookup only knows the 1,200 labelled public tasks. It got the type right on 1,190 of them when each set was predicted from the other three (#14), but real prompts may look nothing like them. A prompt sharing no words with them gets the keyword heuristic.
-
-**24 Nov 2026: the lookup can learn from the run log (opt-in).** `serve.py --log-db live.db --lookup-from-log` rebuilds the server's lookup from the public tasks plus live rows in that log, on start and then every `--lookup-rebuild-every` requests (100 by default). A live row is used only when it is a real (not mock) request with its prompt text logged, its outcome has been set (by `POST /v1/feedback`, the cascade verifier or a judge) and scores at least 0.7, the bar the cascade already uses for a good enough answer. The label it adds is the label the router acted on for that request; it is kept because the outcome was good. A low score is dropped rather than relabelled, because it says the route failed, not what the right label was. A prompt logged more than once counts once, with its latest label. Below 50 such rows the lookup stays public-only. The code is `from_log` and `RefreshingLookup` in `src/router/lookup.py`. Limits:
-
-- The live label is the lookup's own earlier guess, confirmed only by a good outcome, so the index can entrench its own mistakes: a wrong label on a prompt that a cheap model still answered well is learned as right.
-- Outcomes come from user feedback (sparse, and biased toward people who bother to rate), from the cascade verifier, or from a judge. None of them is an answer key.
-- A workload whose prompts repeat is dominated by its own rows.
-- The 0.7 bar and the 50-row minimum are chosen, not measured.
-- Prompt text is read from the log, which is sensitive.
-- The benchmark's lookup is unchanged and never sees live rows.
-- The effect on real traffic is unmeasured.
-
 - The red-team results in 1.2 predate the lookup, so it has not been attacked.
 - No real paid request has gone through the server or web app with this rule, only stubbed tests (#14).
 
@@ -91,6 +80,17 @@ Trade-off:
 - Free-form answers agree less often, so more live prompts will end at Sonnet 5.5 (`CONSENSUS_LAST`).
 - A prompt the lookup mislabels as reasoning or extraction (a writing task with its own format rules, say) now gets a format instruction it did not ask for, and the extraction path cuts the reply to the final line. Before, such a prompt went to the rules table unchanged.
 - All of this is unmeasured until a live re-run.
+
+**24 Nov 2026: the lookup can learn from the run log (opt-in).** `serve.py --log-db live.db --lookup-from-log` rebuilds the server's lookup from the public tasks plus live rows in that log, on start and then after every `--lookup-rebuild-every` `router`/`auto` requests (100 by default). A live row is used only when its strategy is exactly `live:router`, it is a real (not mock) request with its prompt text logged, and its outcome has been set and scores at least 0.7, the bar the cascade already uses for a good enough answer. In the server only `POST /v1/feedback` (source `user`) and a caller of `Router.feedback(source="judge")` produce such rows. Cascade rows never qualify: `CascadePolicy` sets no labels, so they are logged as `unknown`, and with them every `verifier` outcome. The label a row adds is the label the router acted on for that request: the free lookup's guess for `router`/`auto`, the classifier's guess (or its keyword fallback's, when the classifier call failed) for `router:learned`, which shares the strategy name. The row does not record which one it was. It is kept because the outcome was good. A low score is dropped rather than relabelled, because it says the route failed, not what the right label was. The score filter runs before deduplication, so a later low-score or pending row for the same prompt does not hide an earlier good one: a prompt logged more than once counts once, with the label of its latest qualifying row. A live prompt identical to a public task is dropped and the public label stands. Below 50 such rows the lookup stays public-only. The code is `from_log` and `RefreshingLookup` in `src/router/lookup.py`. Limits:
+
+- The live label is the router's own earlier guess, confirmed only by a good outcome, so the index can entrench its own mistakes: a wrong label on a prompt that a cheap model still answered well is learned as right.
+- Outcomes come from user feedback (sparse, and biased toward people who bother to rate) or from a judge. Neither is an answer key.
+- Anyone holding the server's bearer token can shape the lookup by sending 50 or more prompts and rating them 1.0 through `/v1/feedback`, which changes routing for every later caller. This is one more reason the flag is off by default.
+- A workload whose prompts repeat is dominated by its own rows.
+- The 0.7 bar and the 50-row minimum are chosen, not measured.
+- Prompt text is read from the log, which is sensitive.
+- The benchmark's lookup is unchanged and never sees live rows.
+- The effect on real traffic is unmeasured.
 
 **At production scale.** Label real traffic for the lookup, and track how often it is unsure. Watch the disagreement rate per task type, since a rise means the cheap models are struggling. Add a way to compare free-form answers that have no `Answer:` line.
 

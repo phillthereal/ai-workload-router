@@ -85,20 +85,26 @@ def from_log(db_path: Union[str, Path], min_rows: int = 50, min_score: float = 0
              k: int = 7) -> Lookup:
     """A Lookup over every public labelled task plus live rows from the run log with a good outcome.
 
-    A live row's label is the label the router ACTED ON for that request (the lookup's own
-    prediction at the time; live traffic has no ground truth). It is kept only because the
-    outcome was good (quality_score >= min_score, from user feedback, the cascade verifier
-    or a judge). Rows with a low score are dropped, not relabelled: a low score says the
-    route failed, not what the right label was.
+    Only 'live:router' rows are read. A live row's label is the label the router ACTED ON
+    for that request (live traffic has no ground truth): the free lookup's guess for
+    router/auto, the classifier's guess (or its keyword fallback's, when the classifier call
+    failed) for router:learned, which shares the strategy name. The row does not record
+    which one it was. It is kept only because the outcome was good (quality_score >=
+    min_score, from POST /v1/feedback or a judge; cascade rows are logged with task_type
+    'unknown', so verifier outcomes never qualify). Rows with a low score are dropped, not
+    relabelled: a low score says the route failed, not what the right label was.
 
-    The same prompt logged more than once counts once, with its latest row's label. If
-    fewer than `min_rows` live rows qualify after that, the result is public-only
-    (`live_rows == 0`). The db is read-only here and never created. The benchmark does not
+    The score filter runs before deduplication: a later low-score or pending row for the
+    same prompt does not hide an earlier good one, and the latest QUALIFYING row's label
+    wins. A live prompt identical to a public task is dropped; the public label stands. If
+    fewer than `min_rows` live rows remain, the result is public-only (`live_rows == 0`). The db is read-only here and never created. The benchmark does not
     use this: its lookup (`public_lookup(exclude_prompts)`) never sees live rows.
     """
     public = json.loads(LABELLED_TASKS.read_text())
     rows = db.live_labelled_rows(db_path, min_score, task_types=TASK_TYPES, difficulties=DIFFICULTIES)
-    latest = {r["prompt"]: r for r in rows}  # rows come oldest first, so the latest wins
+    known = {t["prompt"] for t in public}
+    # rows come oldest first and are already filtered, so the latest qualifying row wins
+    latest = {r["prompt"]: r for r in rows if r["prompt"] not in known}
     if len(latest) < min_rows:
         return Lookup(public, k=k)
     live = [{"prompt": p, "task_type": r["task_type"], "difficulty": r["difficulty"]}
@@ -119,7 +125,9 @@ class RefreshingLookup:
     def __init__(self, db_path: Union[str, Path], every: int = 100, min_rows: int = 50,
                  build: Callable[..., Lookup] = from_log) -> None:
         self.db_path = db_path
-        self.every = max(1, every)
+        if every < 1:
+            raise ValueError(f"every must be >= 1, got {every}")
+        self.every = every
         self.min_rows = min_rows
         self.builds = 0
         self.lookup: Optional[Lookup] = None

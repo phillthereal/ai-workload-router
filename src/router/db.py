@@ -549,14 +549,17 @@ def live_labelled_rows(
     """
     Live rows whose route was rated good, for router.lookup.from_log.
 
-    A row qualifies when it is a real (non-simulated) live request
-    (strategy 'live:<policy>') with its prompt text logged, an outcome set by
+    A row qualifies when it is a real (non-simulated) live request routed by
+    the default policy (strategy exactly 'live:router', which router:learned
+    shares; cascade, frontier-only and other policies are left out) with its
+    prompt text logged, an outcome set by
     Router.feedback (source not 'pending'), quality_score >= min_score, and a
     task_type/difficulty from the allowed sets (passed in by the caller so this
     module keeps no router imports). Ordered by id, oldest first.
 
     The db is opened READ-ONLY and never created: a missing file, table or
-    column (an old db that predates prompt_text) returns [].
+    column (an old db that predates prompt_text), or a file that is not a
+    SQLite db, returns [].
 
     Returns:
         Dicts with prompt, task_type, difficulty, quality_score,
@@ -568,7 +571,7 @@ def live_labelled_rows(
     uri = Path(db_path).resolve().as_uri() + "?mode=ro"
     try:
         conn = sqlite3.connect(uri, uri=True)
-    except sqlite3.OperationalError:
+    except sqlite3.DatabaseError:
         return []  # no such file: nothing learned, and nothing created
     conn.row_factory = sqlite3.Row
     try:
@@ -577,7 +580,7 @@ def live_labelled_rows(
             SELECT prompt_text AS prompt, task_type, difficulty, quality_score,
                    quality_source, created_at
             FROM runs
-            WHERE strategy LIKE 'live:%' AND simulated = 0
+            WHERE strategy = 'live:router' AND simulated = 0
                   AND prompt_text IS NOT NULL AND prompt_text != ''
                   AND quality_source IS NOT NULL AND quality_source != ?
                   AND quality_score >= ?
@@ -586,8 +589,8 @@ def live_labelled_rows(
             """.format(t=",".join("?" * len(types)), d=",".join("?" * len(levels))),
             (SOURCE_PENDING, min_score, *types, *levels),
         ).fetchall()
-    except sqlite3.OperationalError:
-        return []  # no runs table, or an old schema without prompt_text
+    except sqlite3.DatabaseError:
+        return []  # no runs table, an old schema without prompt_text, or not a SQLite file
     finally:
         conn.close()
     return [dict(row) for row in rows]

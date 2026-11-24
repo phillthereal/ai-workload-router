@@ -66,15 +66,18 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                  host: str = "127.0.0.1", lookup_from_log: bool = False,
                  lookup_rebuild_every: int = 100) -> type[BaseHTTPRequestHandler]:
     """Build the request handler class, closing over this server's limits and guard."""
-    selectors = dict(SELECTORS)
     holder: Optional[RefreshingLookup] = None
     if lookup_from_log:
         if not log_db or log_db is True:
             raise ValueError("lookup_from_log needs a log_db path")
         holder = RefreshingLookup(log_db, every=lookup_rebuild_every)
         holder.rebuild()  # on start, so the operator sees what was learned before any request
-        live = holder
-        selectors["router"] = selectors["auto"] = lambda: default_policy(lookup=live.get())
+
+    def _policy(sel: str) -> Policy:
+        """Resolve the selector at request time; router/auto use the live lookup when it is on."""
+        if holder is not None and sel in ("router", "auto"):
+            return default_policy(lookup=holder.get())
+        return SELECTORS[sel]()
     slots = _slots = threading.BoundedSemaphore(max_concurrent)
     guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier, store=spend_store_from_env())
     rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
@@ -158,7 +161,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
         def _get(self, path: str) -> None:
             if path == "/v1/models":
                 data = [{"id": s, "object": "model", "created": 0, "owned_by": "ai-workload-router"}
-                        for s in selectors]
+                        for s in SELECTORS]
                 return self._send(200, {"object": "list", "data": data})
             self._err(404, "Not found")
 
@@ -215,8 +218,8 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
             if req.get("stream"):
                 return self._err(400, "stream=true is not supported")
             sel = req.get("model")
-            if sel not in selectors:
-                return self._err(400, f"Unknown model; use one of: {', '.join(selectors)}")
+            if sel not in SELECTORS:
+                return self._err(400, f"Unknown model; use one of: {', '.join(SELECTORS)}")
             if sel == "router:frontier" and not allow_frontier:
                 return self._err(400, "router:frontier is disabled; start the server with --allow-frontier")
             try:
@@ -237,7 +240,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 return self._err(429, f"Daily budget of ${daily_budget_usd:.2f} reached (resets 00:00 UTC)",
                                  "insufficient_quota")
             try:
-                r = Router(selectors[sel](), roster_name=roster,
+                r = Router(_policy(sel), roster_name=roster,
                            allow_mock_fallback=allow_mock, log_to=log_db).complete(prompt)
             except ProviderError:
                 return self._err(502, "Upstream providers failed", "api_error")
@@ -330,10 +333,12 @@ def main(argv: Optional[list[str]] = None) -> None:
                    help="rebuild the free lookup from --log-db rows that have a good outcome, on start "
                         "and every --lookup-rebuild-every requests; off by default")
     p.add_argument("--lookup-rebuild-every", type=int, default=100, metavar="N",
-                   help="with --lookup-from-log: rebuild after every N requests; default 100")
+                   help="with --lookup-from-log: rebuild after every N router/auto requests; default 100")
     a = p.parse_args(argv)
     if a.lookup_from_log and not a.log_db:
         p.error("--lookup-from-log needs --log-db")
+    if a.lookup_rebuild_every < 1:
+        p.error("--lookup-rebuild-every must be >= 1")
     token, generated = resolve_token(os.environ.get("AWR_SERVER_TOKEN") or None, a.no_auth)
     if a.no_auth:
         print("WARNING: --no-auth: anyone who can reach this port can spend your API budget",
