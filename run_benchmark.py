@@ -169,15 +169,16 @@ _PV = "v2"
 
 # The guard rails (_TASK_RESERVE_USD, _spend_cap, RunStopped, _check_real and the two
 # below) live in router.benchmark.guards so `awr bench` can share them. These two thin
-# wrappers pass this module's `score` and `get_adapter`, so patching either name here
-# still reaches the run, as it did before the move.
+# wrappers pass this module's `score`, `_check_real`, `_TASK_RESERVE_USD` and `get_adapter`,
+# so patching any of those names here still reaches the run, as it did before the move.
 def _run_tasks(router, tasks, workers: int, max_spend: Optional[float]):
     """Yield (task, result, quality) in task order, answering `workers` tasks at a time.
 
     The spend check runs before each batch and reserves room for the whole
     batch, so a parallel run stops under the cap just as a serial one does.
     """
-    return guards._run_tasks(router, tasks, workers, max_spend, scorer=score)
+    return guards._run_tasks(router, tasks, workers, max_spend, reserve=_TASK_RESERVE_USD,
+                             scorer=score, checker=_check_real)
 
 
 def _preflight(roster_name: str) -> None:

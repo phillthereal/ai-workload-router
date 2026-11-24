@@ -69,27 +69,44 @@ def _bench(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
         parser.error(str(exc))
     input_name = Path(args.tasks).name
     est = byo.estimate(tasks, args.roster)
-    print(byo.format_dry_run(est, input_name, mock))
+    print(byo.format_dry_run(est, input_name, mock, args.workers))
     if args.dry_run:
+        print(byo.STUBBED_ONLY_NOTE)
         return 0
     live = args.max_spend is not None
     if not (mock or live):
         print(NEITHER_MODE, file=sys.stderr)
         return 2
-    if live and est.total_usd > args.max_spend:
-        print(f"REFUSED: the worst case ${est.total_usd:.4f} is above --max-spend ${args.max_spend:.2f}. "
-              "Nothing was called.", file=sys.stderr)
-        return 1
+    if live:
+        need = est.required_cap(args.workers)
+        if need > args.max_spend:
+            print(f"REFUSED: this run needs --max-spend of at least ${need:.4f} (worst case "
+                  f"${est.total_usd:.4f} + reserve ${est.reserve_usd:.4f} x {args.workers} workers + "
+                  f"preflight ${est.preflight_usd:.4f}); you gave ${args.max_spend:.2f}. Nothing was called.",
+                  file=sys.stderr)
+            return 1
+    # Claim the report path before any call: an unwritable path stops the run while it is free.
+    run_group = byo.new_run_group()
+    path = out or byo.default_report_path(byo.report_stem(args.tasks), run_group, simulated=not live)
+    try:
+        byo.claim_report_path(path)
+    except byo.BYOError as exc:
+        parser.error(str(exc))
     print()
     try:
         result = byo.run(tasks, roster=args.roster, input_name=input_name, live=live,
-                         max_spend=args.max_spend, est=est, workers=args.workers)
+                         max_spend=args.max_spend, est=est, workers=args.workers, run_group=run_group)
     except (RunStopped, JudgeError, ProviderError) as exc:
+        byo.release_report_path(path)
         raise SystemExit(f"STOPPED: {exc}. Real spend ${byo.spent():.4f}. No report written.") from None
-    path = byo.write_report(result, byo.report_stem(args.tasks), out)
-    print(byo.format_byo_markdown(result))
+    except BaseException:
+        byo.release_report_path(path)
+        raise
+    text = byo.write_report(result, path)
+    print(text.rstrip("\n").removesuffix(byo.STUBBED_ONLY_NOTE).rstrip("\n"))
     print(f"Report written to {path}")
     print(f"Real spend ${byo.spent():.4f}")
+    print(byo.STUBBED_ONLY_NOTE)
     return 0
 
 

@@ -10,6 +10,7 @@ to the report. Errors name a line and a key, never a value.
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 import uuid
@@ -48,6 +49,12 @@ NO_REFERENCE_RUBRIC = (
     "No reference answer was given. Score how correct, complete and suited to the "
     "task the candidate answer is."
 )  # (chosen) section 2
+# Remove STUBBED_ONLY_NOTE after the first approved paid run of `awr bench`.
+STUBBED_ONLY_NOTE = ("The live path of awr bench has been exercised by stubbed tests only; "
+                     "no paid run has been made with it.")
+PREFLIGHT_PROMPT, PREFLIGHT_OUTPUT_TOKENS = "Reply with OK.", 16
+"""What guards._preflight sends to every model it tests."""
+PLACEHOLDER_TEXT = "run in progress\n"
 CLOSING_LINE = (
     "A small file gives wide ranges; judged rows are a model's opinion; prices are list prices "
     "from `config.py`, not your bill; the frontier answer is the quality baseline, not the truth; "
@@ -89,7 +96,9 @@ def load_rows(path: str | Path, roster: str) -> list[dict[str, Any]]:
 
     rows: list[dict[str, Any]] = []
     seen_ids: dict[str, int] = {}
-    for lineno, line in enumerate(text.splitlines(), 1):
+    # Split on "\n" only: splitlines() also breaks on U+2028 and friends, which JSON allows inside strings.
+    for lineno, line in enumerate(text.split("\n"), 1):
+        line = line.removesuffix("\r")
         if not line.strip():
             continue
         if len(rows) == MAX_ROWS:
@@ -126,7 +135,7 @@ def load_rows(path: str | Path, roster: str) -> list[dict[str, Any]]:
 def _parse_line(line: str, lineno: int) -> dict[str, Any]:
     try:
         obj = json.loads(line)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise BYOError(f"line {lineno}: not valid JSON") from None
     if not isinstance(obj, dict):
         raise BYOError(f"line {lineno}: not a JSON object")
@@ -215,8 +224,18 @@ def _call_list(task: dict[str, Any], roster_name: str) -> list[tuple[str, str]]:
     return calls
 
 
+def estimate_tokens(text: str) -> int:
+    """Pessimistic token count for the worst case: ASCII at 3.5 characters a token, any other
+    character at 1.5 tokens (CJK and emoji tokenise near one token per character), rounded up.
+
+    gates.estimate_prompt_tokens stays as it is, since it gates routing everywhere.
+    """
+    non_ascii = sum(1 for ch in text if ord(ch) > 127)
+    return math.ceil((len(text) - non_ascii) / 3.5 + 1.5 * non_ascii)
+
+
 def _cost(model: str, text: str, extra_input: int = 0) -> float:
-    tokens = gates.estimate_prompt_tokens(text) + extra_input
+    tokens = estimate_tokens(text) + extra_input
     return get_model(model).cost_for_tokens(tokens, OUTPUT_TOKENS)
 
 
@@ -252,6 +271,7 @@ class Estimate:
     max_frontier_call_usd: float
     planned: dict[str, int]
     user_rubrics: int
+    preflight_usd: float = 0.0
 
     @property
     def total_usd(self) -> float:
@@ -262,6 +282,28 @@ class Estimate:
     def reserve_usd(self) -> float:
         """Per-batch reserve: the largest row worst case plus one frontier call (a failover's extra call)."""
         return self.max_row_usd + self.max_frontier_call_usd
+
+    def required_cap(self, workers: int) -> float:
+        """The smallest --max-spend that a live run with `workers` may start with.
+
+        Below this the in-run reserve check could stop a run the refusal let start:
+        the worst case, plus the reserve kept for each worker, plus the preflight calls.
+        """
+        return self.total_usd + self.reserve_usd * workers + self.preflight_usd
+
+
+def preflight_models(roster_name: str) -> tuple[str, ...]:
+    """Every model guards._preflight tests on a live run: roster tiers, then the fixed models and the judge."""
+    r = ROSTERS[roster_name]
+    tiers = (r.budget, r.mid, r.frontier)
+    extra = tuple(dict.fromkeys(m for m in (CONSENSUS_FIRST, CONSENSUS_LAST, JUDGE_MODEL) if m not in tiers))
+    return tiers + extra
+
+
+def preflight_cost(roster_name: str) -> float:
+    """List-price cost of the preflight calls."""
+    tokens = estimate_tokens(PREFLIGHT_PROMPT)
+    return sum(get_model(m).cost_for_tokens(tokens, PREFLIGHT_OUTPUT_TOKENS) for m in preflight_models(roster_name))
 
 
 def estimate(tasks: Sequence[dict[str, Any]], roster_name: str) -> Estimate:
@@ -275,10 +317,10 @@ def estimate(tasks: Sequence[dict[str, Any]], roster_name: str) -> Estimate:
     for t in tasks:
         planned[t["source"]] += 1
     return Estimate(len(tasks), roster_name, router, frontier, judge, biggest, biggest_frontier, planned,
-                    sum(t["user_rubric"] for t in tasks))
+                    sum(t["user_rubric"] for t in tasks), preflight_cost(roster_name))
 
 
-def format_dry_run(est: Estimate, input_name: str, mock: bool) -> str:
+def format_dry_run(est: Estimate, input_name: str, mock: bool, workers: int = 1) -> str:
     """The dry run text, printed before any call."""
     lines = [
         f"Dry run: {est.rows} rows from {input_name}, roster {est.roster}. No calls made.",
@@ -287,6 +329,9 @@ def format_dry_run(est: Estimate, input_name: str, mock: bool) -> str:
         f"  frontier_only arm                  ${est.frontier_usd:.4f}",
         f"  judge ({JUDGE_MODEL}, 2 calls per judged row)  ${est.judge_usd:.4f}",
         f"  total                              ${est.total_usd:.4f}",
+        f"  preflight ({len(preflight_models(est.roster))} models, live only)".ljust(37) + f"${est.preflight_usd:.4f}",
+        f"  reserve kept per worker            ${est.reserve_usd:.4f}",
+        f"A live run with --workers {workers} needs --max-spend of at least ${est.required_cap(workers):.4f}.",
         f"Planned score sources for a live run: {est.planned[SOURCE_REFERENCE]} reference, "
         f"{est.planned[SOURCE_JUDGE]} judge ({est.user_rubrics} with your rubric).",
     ]
@@ -308,17 +353,65 @@ def default_report_path(stem: str, run_group: str, simulated: bool) -> Path:
     return BYO_DIR / f"benchmark_report_{kind}_{stem}_{run_group}.md"
 
 
+def _under(target: Path, folder: Path) -> bool:
+    """True if an existing ancestor of `target` is the same directory as `folder` (by inode).
+
+    Comparing identity rather than spelling handles case-insensitive file systems and symlinks.
+    """
+    try:
+        want = folder.stat()
+    except OSError:
+        return False
+    for ancestor in (target, *target.parents):
+        try:
+            st = ancestor.stat()
+        except OSError:
+            continue
+        if (st.st_ino, st.st_dev) == (want.st_ino, want.st_dev):
+            return True
+    return False
+
+
 def check_out_path(raw: str) -> Path:
     """--out must end in .md, must not exist, and stays out of data/ except data/byo/."""
     out = Path(raw).expanduser().resolve()
-    if out.suffix != ".md":
+    if out.suffix.lower() != ".md":
         raise BYOError("--out must end in .md")
     if out.exists():
         raise BYOError("--out already exists")
-    data, byo = DATA_DIR.resolve(), BYO_DIR.resolve()
-    if out.is_relative_to(data) and not out.is_relative_to(byo):
-        raise BYOError("--out may not point inside the repo's data/ folder, except data/byo/")
+    if _under(out, DATA_DIR):
+        BYO_DIR.mkdir(parents=True, exist_ok=True)  # so identity can be checked; the default path makes it anyway
+        if not _under(out, BYO_DIR):
+            raise BYOError("--out may not point inside the repo's data/ folder, except data/byo/")
     return out
+
+
+def new_run_group() -> str:
+    """byo-<timestamp>-<hex8>."""
+    return f"byo-{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+
+def claim_report_path(path: Path) -> Path:
+    """Create the folder and a placeholder report before any call, so an unwritable path stops
+    the run while it is still free. Never overwrites an existing file. Raises BYOError."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x", encoding="utf-8") as fh:
+            fh.write(PLACEHOLDER_TEXT)
+    except FileExistsError:
+        raise BYOError("the report path already exists") from None
+    except OSError as exc:
+        raise BYOError(f"cannot write the report ({type(exc).__name__})") from None
+    return path
+
+
+def release_report_path(path: Path) -> None:
+    """Delete the placeholder after a stop, so 'no report written' stays true."""
+    try:
+        if path.read_text(encoding="utf-8") == PLACEHOLDER_TEXT:
+            path.unlink()
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------- run
@@ -378,17 +471,14 @@ def row_source(task: dict[str, Any], response: Response) -> str:
 
 def run(tasks: list[dict[str, Any]], *, roster: str, input_name: str, live: bool,
         max_spend: Optional[float], est: Estimate, workers: int = 1,
-        db_path: Optional[Path] = None,
+        db_path: Optional[Path] = None, run_group: Optional[str] = None,
         scorer: Callable[..., float] = score_row) -> ByoRun:
     """Answer every row on both arms, log to the BYO run log, and build the report numbers."""
     db_path = db_path or BYO_DIR / RUNS_DB_NAME
     db.init_db(db_path)
-    run_group = f"byo-{time.strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:8]}"
-    r = ROSTERS[roster]
+    run_group = run_group or new_run_group()
     if live:
-        extra = tuple(dict.fromkeys(m for m in (CONSENSUS_FIRST, CONSENSUS_LAST, JUDGE_MODEL)
-                                    if m not in (r.budget, r.mid, r.frontier)))
-        guards._preflight(roster, extra_models=extra)
+        guards._preflight(roster, extra_models=preflight_models(roster)[3:])
     outcomes = {t["id"]: RowOutcome(t) for t in tasks}
     result = ByoRun(run_group, roster, input_name, list(outcomes.values()))
     for pol in (default_policy(), FrontierOnlyPolicy()):
@@ -532,19 +622,16 @@ def format_byo_markdown(run_: ByoRun) -> str:
               "| Model | Status |", "|---|---|"]
     for model, sim in sorted(report.model_simulated.items()):
         lines.append(f"| `{model}` | {'SIMULATED' if sim else 'LIVE'} |")
-    lines += ["", CLOSING_LINE, ""]
+    lines += ["", CLOSING_LINE, "", STUBBED_ONLY_NOTE, ""]
     return "\n".join(lines)
 
 
-def write_report(run_: ByoRun, stem: str, out: Optional[Path] = None) -> Path:
-    """Write the report to --out or its data/byo/ name; never overwrites a file."""
-    assert run_.report is not None
-    path = out or default_report_path(stem, run_.run_group, not run_.report.all_real)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("x", encoding="utf-8") as fh:
-        fh.write(format_byo_markdown(run_))
+def write_report(run_: ByoRun, path: Path) -> str:
+    """Replace the placeholder at `path` (from claim_report_path) with the report; returns the text."""
+    text = format_byo_markdown(run_)
+    path.write_text(text, encoding="utf-8")
     run_.out_path = path
-    return path
+    return text
 
 
 def spent() -> float:

@@ -6,7 +6,9 @@ The live path is covered by these stubbed tests only; no paid call is made.
 import contextlib
 import io
 import json
+import math
 import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -148,6 +150,20 @@ class Loader(unittest.TestCase):
         self.assertEqual((labelled["task_type"], labelled["difficulty"]), ("support_email", "easy"))
         self.assertTrue(plain["task_type"].endswith(" (predicted)"))
 
+    def test_lines_split_on_newline_only(self):
+        lines = [json.dumps({"prompt": "first\u2028still the first row"}, ensure_ascii=False),
+                 json.dumps({"prompt": "second"}) + "\r", json.dumps({"prompt": SENTINEL, "nope": 1})]
+        msg = self.refused(lines, 3, "'nope'")
+        self.assertNotIn("line 4", msg)
+        with tempfile.TemporaryDirectory() as tmp:
+            rows = byo.load_rows(write_jsonl(tmp, lines[:2]), "cross_vendor")
+        self.assertEqual(len(rows), 2)
+        self.assertIn("\u2028", rows[0]["prompt"])
+        self.assertEqual(rows[1]["prompt"], "second")
+
+    def test_deeply_nested_json_is_refused_as_invalid(self):
+        self.refused([self.ok(), "[" * 200_000], 2, "not valid JSON")
+
     def test_ids_are_generated_by_line_order_and_a_prompt_with_an_answer_line_keeps_it(self):
         with tempfile.TemporaryDirectory() as tmp:
             rows = byo.load_rows(write_jsonl(tmp, [
@@ -160,7 +176,7 @@ class Loader(unittest.TestCase):
 
 class Estimator(unittest.TestCase):
     def test_matches_a_hand_worked_row(self):
-        prompt = "x" * 35  # 35 / 3.5 + 1 = 11 tokens as sent
+        prompt = "x" * 35  # 35 / 3.5 = 10 tokens as sent
         task = {"id": "t", "prompt": prompt, "reference": "r", "scoring": "exact_match",
                 "source": "reference", "user_rubric": False}
         roster = ROSTERS["cross_vendor"]
@@ -169,22 +185,35 @@ class Estimator(unittest.TestCase):
             m = get_model(model)
             return (tokens * m.cost_per_1m_input_tokens + 1024 * m.cost_per_1m_output_tokens) / 1e6
 
-        tokens = lambda text: int(len(text) / 3.5) + 1
+        def tokens(text):
+            wide = sum(ord(ch) > 127 for ch in text)
+            return math.ceil((len(text) - wide) / 3.5 + 1.5 * wide)
         c = prompt + FINAL_LINE
         e = c + "\nReply with only that final line, with no explanation."
-        classification = usd(roster.budget, 11) + usd(roster.mid, 11) + usd(roster.frontier, 11)
+        classification = usd(roster.budget, 10) + usd(roster.mid, 10) + usd(roster.frontier, 10)
         reasoning = (usd("claude-haiku-5-5", tokens(c)) + usd(roster.mid, tokens(c))
                      + usd(roster.budget, tokens(c)) + usd("claude-sonnet-5-5", tokens(c)))
         extraction = usd("claude-haiku-5-5", tokens(e)) + usd(roster.mid, tokens(e)) + usd("claude-sonnet-5-5", tokens(e))
         router, frontier, judge = byo.row_worst_case(task, "cross_vendor")
-        self.assertAlmostEqual(router, max(classification, reasoning, extraction, usd(roster.frontier, 11)))
-        self.assertAlmostEqual(frontier, usd(roster.frontier, 11))
+        self.assertAlmostEqual(router, max(classification, reasoning, extraction, usd(roster.frontier, 10)))
+        self.assertAlmostEqual(frontier, usd(roster.frontier, 10))
         self.assertEqual(judge, 0.0)
 
         judged = {**task, "source": "judge", "scoring": "rubric_judge"}
         judge_in = scoring._JUDGE_PROMPT_TEMPLATE.format(task_prompt=prompt, reference="r", candidate="")
         self.assertAlmostEqual(byo.row_worst_case(judged, "cross_vendor")[2],
                                2 * usd("claude-opus-4-8", tokens(judge_in) + 1024))
+
+    def test_cjk_and_emoji_count_at_least_one_token_per_character(self):
+        text = "退款金额是多少？请说明原因。" * 50 + "\U0001F600" * 20
+        self.assertGreaterEqual(byo.estimate_tokens(text), len(text))
+        self.assertEqual(byo.estimate_tokens("x" * 35), 10)
+
+    def test_the_required_cap_adds_the_reserve_per_worker_and_the_preflight(self):
+        est = byo.estimate(byo.load_rows(FIXTURE, "cross_vendor"), "cross_vendor")
+        self.assertGreater(est.preflight_usd, 0)
+        self.assertEqual(len(byo.preflight_models("cross_vendor")), 5)
+        self.assertAlmostEqual(est.required_cap(4), est.total_usd + 4 * est.reserve_usd + est.preflight_usd)
 
     def test_the_fixture_estimate_plans_two_reference_and_three_judge_rows(self):
         est = byo.estimate(byo.load_rows(FIXTURE, "cross_vendor"), "cross_vendor")
@@ -281,6 +310,26 @@ class Paths(unittest.TestCase):
                 byo.check_out_path(str(Path(tmp) / "r.txt"))
             self.assertEqual(byo.check_out_path(str(Path(tmp) / "new.md")), (Path(tmp) / "new.md").resolve())
         self.assertTrue(byo.check_out_path(str(ROOT / "data" / "byo" / "mine-unused-name.md")))
+        with self.assertRaises(byo.BYOError):
+            byo.check_out_path(str(ROOT / "data" / "byo" / ".." / "x.md"))
+
+    def test_out_is_compared_by_identity_not_spelling(self):
+        data = ROOT / "data"
+        upper = ROOT / "DATA"
+        if not upper.exists():
+            self.skipTest("case-sensitive file system: DATA/ is a different folder from data/")
+        self.assertTrue(os.path.samefile(upper, data))
+        for spelled in (upper / "x.md", ROOT / "Data" / "byo" / ".." / "x.md"):
+            with self.assertRaises(byo.BYOError, msg=str(spelled)):
+                byo.check_out_path(str(spelled))
+        self.assertTrue(byo.check_out_path(str(ROOT / "Data" / "BYO" / "mine-unused-name.md")))
+
+    def test_a_symlink_into_data_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            link = Path(tmp) / "link"
+            link.symlink_to(ROOT / "data")
+            with self.assertRaises(byo.BYOError):
+                byo.check_out_path(str(link / "x.md"))
 
     def test_no_byo_name_equals_any_benchmark_report_path(self):
         published = set()
@@ -342,11 +391,15 @@ class MockRun(Isolated):
                      "| support_email |", "(predicted)", "too few rows for a verdict", byo.CLOSING_LINE):
             self.assertIn(text, report)
         self.assertNotIn("Hypothesis", report)
+        self.assertEqual(out.rstrip("\n").splitlines()[-1], byo.STUBBED_ONLY_NOTE)
+        self.assertEqual(out.count(byo.STUBBED_ONLY_NOTE), 1)
+        self.assertIn("preflight (5 models, live only)", dry)
         written = self.reports()
         self.assertEqual(len(written), 1)
         self.assertIn("_byo_simulated_byo_mixed_byo-", written[0].name)
         self.assertTrue((self.byo_dir / byo.RUNS_DB_NAME).exists())
         saved = written[0].read_text()
+        self.assertEqual(saved.rstrip("\n").splitlines()[-1], byo.STUBBED_ONLY_NOTE)
         for line in FIXTURE.read_text().splitlines():
             for field in ("prompt", "reference"):
                 value = json.loads(line).get(field)
@@ -400,12 +453,13 @@ class LivePath(Isolated):
                 mock.patch.object(guards, "get_adapter", never):
             code, out, err = run_cli(["bench", str(FIXTURE), "--max-spend", "0.11"])
         self.assertEqual(code, 1)
-        self.assertIn("REFUSED", err)
+        self.assertIn("REFUSED: this run needs --max-spend of at least $", err)
+        self.assertIn("you gave $0.11. Nothing was called.", err)
         self.assertEqual(never.calls, 0)
         self.assertEqual(self.reports(), [])
         self.assert_untouched()
 
-    def stopped(self, answer_factory, judge_factory=None):
+    def stopped(self, answer_factory, judge_factory=None, extra=()):
         preflight_models = []
 
         def preflight(model, *a, **k):
@@ -416,7 +470,7 @@ class LivePath(Isolated):
                 mock.patch("router.api.get_adapter", answer_factory), \
                 mock.patch.object(adapters, "get_adapter", judge_factory or Never()), \
                 mock.patch.object(scoring, "_real_judge_available", return_value=True):
-            code, out, err = run_cli(["bench", str(FIXTURE), "--max-spend", "5"])
+            code, out, err = run_cli(["bench", str(FIXTURE), "--max-spend", "5", *extra])
         self.assertIn("STOPPED:", str(code))
         self.assertIn("No report written.", str(code))
         self.assertEqual(self.reports(), [])
@@ -444,9 +498,95 @@ class LivePath(Isolated):
         msg, _ = self.stopped(answer, judge)
         self.assertIn("no real judge score", msg)
 
+    def test_a_stop_removes_the_out_placeholder(self):
+        target = self.tmp / "mine.md"
+        answer = lambda model, *a, **k: Stub(response("Answer: 12", simulated=True, model=model))
+        self.stopped(answer, extra=("--out", str(target)))
+        self.assertFalse(target.exists())
+
+    def test_an_unwritable_report_folder_is_refused_before_any_call(self):
+        locked = self.tmp / "locked"
+        locked.mkdir()
+        locked.chmod(stat.S_IRUSR | stat.S_IXUSR)
+        self.addCleanup(locked.chmod, stat.S_IRWXU)
+        if os.access(locked, os.W_OK):
+            self.skipTest("running with rights that ignore folder permissions")
+        never = Never()
+        with live_env(), mock.patch("router.api.get_adapter", never), \
+                mock.patch.object(adapters, "get_adapter", never), mock.patch.object(guards, "get_adapter", never):
+            code, out, err = run_cli(["bench", str(FIXTURE), "--max-spend", "50", "--out", str(locked / "r.md")])
+        self.assertEqual(code, 2)
+        self.assertIn("cannot write the report", err)
+        self.assertEqual(never.calls, 0)
+
     def test_judge_error_and_run_stopped_are_the_shared_types(self):
         self.assertIs(cli.RunStopped, run_benchmark.RunStopped)
         self.assertIs(cli.JudgeError, JudgeError)
+
+
+class Billing(Adapter):
+    """Bills SpendMeter exactly the worst case of each call: estimated input, full output."""
+
+    def __init__(self, model):
+        self.model = model
+
+    def complete(self, prompt, effort=None, max_tokens=None):
+        judge = prompt.startswith("You are grading")
+        tokens_in = byo.estimate_tokens(prompt) + (byo.OUTPUT_TOKENS if judge else 0)
+        tokens_out = max_tokens or byo.OUTPUT_TOKENS
+        adapters.SpendMeter.usd += get_model(self.model).cost_for_tokens(tokens_in, tokens_out)
+        # Every model gives a different answer, so the default rule takes its longest path.
+        text = "0.8" if judge else f"Answer: {self.model}"
+        return Response(text=text, input_tokens=tokens_in, output_tokens=tokens_out, latency_ms=1.0,
+                        model=self.model, simulated=False, success=True)
+
+
+class CapAtTheMinimum(Isolated):
+    def test_a_run_billed_at_the_worst_case_completes_under_the_minimum_cap(self):
+        factory = lambda model, *a, **k: Billing(model)
+        est = byo.estimate(byo.load_rows(FIXTURE, "cross_vendor"), "cross_vendor")
+        for workers in (1, 4):
+            with self.subTest(workers=workers):
+                adapters.SpendMeter.usd = 0.0
+                cap = est.required_cap(workers)
+                with live_env(), mock.patch.object(guards, "get_adapter", factory), \
+                        mock.patch("router.api.get_adapter", factory), \
+                        mock.patch.object(adapters, "get_adapter", factory), \
+                        mock.patch.object(scoring, "_real_judge_available", return_value=True):
+                    code, out, err = run_cli(["bench", str(FIXTURE), "--max-spend", repr(cap),
+                                              "--workers", str(workers)])
+                self.assertEqual(code, 0, f"{code} {err}")
+                self.assertIn("**LIVE**", out)
+                self.assertGreater(adapters.SpendMeter.usd, est.preflight_usd)
+                self.assertLessEqual(adapters.SpendMeter.usd, cap)
+                with live_env(), mock.patch.object(guards, "get_adapter", Never()):
+                    code, _, err = run_cli(["bench", str(FIXTURE), "--max-spend", repr(cap - 0.0001),
+                                            "--workers", str(workers)])
+                self.assertEqual(code, 1)
+        self.assertEqual(len(self.reports()), 2)
+        self.assert_untouched()
+
+
+class RunBenchmarkSeams(unittest.TestCase):
+    def setUp(self):
+        self.result = mock.Mock(simulated=False, classifier_fell_back=False, trace=[])
+        self.router = mock.Mock()
+        self.router.complete.return_value = self.result
+        for patcher in (mock.patch.object(run_benchmark, "score", return_value=1.0),
+                        mock.patch.object(adapters.SpendMeter, "usd", 0.0)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_patching_check_real_on_run_benchmark_reaches_a_capped_run(self):
+        with mock.patch.object(run_benchmark, "_check_real") as spy:
+            list(run_benchmark._run_tasks(self.router, [{"id": "1", "prompt": "1"}], 1, 5.0))
+        spy.assert_called_once_with(self.result)
+
+    def test_patching_the_reserve_on_run_benchmark_reaches_a_capped_run(self):
+        with mock.patch.object(run_benchmark, "_TASK_RESERVE_USD", 10.0), \
+                self.assertRaises(run_benchmark.RunStopped):
+            list(run_benchmark._run_tasks(self.router, [{"id": "1", "prompt": "1"}], 1, 5.0))
+        self.router.complete.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@
 # Free demo: every answer is simulated and nothing is paid.
 AWR_FORCE_MOCK=1 awr bench tests/fixtures/byo_mixed.jsonl
 
-# Live run: refused before any call if the list-price worst case is above the cap.
+# Live run: refused before any call if the cap is below the printed minimum
+# (list-price worst case + reserve per worker + preflight).
 awr bench my_prompts.jsonl --max-spend 2.00
 
 # Print the worst-case estimate only, with no calls.
@@ -19,17 +20,21 @@ Without an install (`pip install -e .` provides the `awr` command), use `PYTHONP
 
 **What has been run.** `awr bench` has only been run in mock mode. The live path is covered by stubbed tests only; no paid run has been made with it, so no live result from it exists.
 
-The dry run on the fixture, as printed by the tool (every dollar figure below is the list-price worst case it computes for that fixture, not a cost anyone paid):
+The dry run on the fixture, as printed by the tool (every dollar figure below is the list-price worst case, reserve or minimum cap it computes for that fixture, not a cost anyone paid):
 
 ```text
 Dry run: 5 rows from byo_mixed.jsonl, roster cross_vendor. No calls made.
 List-price worst case (every call writes 1,024 output tokens, prices from config.py):
   router arm (default rule)          $0.1380
   frontier_only arm                  $0.1288
-  judge (claude-opus-4-8, 2 calls per judged row)  $0.1890
+  judge (claude-opus-4-8, 2 calls per judged row)  $0.1891
   total                              $0.4558
+  preflight (5 models, live only)    $0.0006
+  reserve kept per worker            $0.1422
+A live run with --workers 1 needs --max-spend of at least $0.5987.
 Planned score sources for a live run: 2 reference, 3 judge (1 with your rubric).
 Mode: mock (AWR_FORCE_MOCK=1). Every answer is simulated and scored by the offline mock judge, so every row will be 'simulated'. Nothing is paid.
+The live path of awr bench has been exercised by stubbed tests only; no paid run has been made with it.
 ```
 
 Sections 1 to 8 are the reference for what the command does.
@@ -65,15 +70,18 @@ Sections 1 to 8 are the reference for what the command does.
 
 ## 4. Guard rails and spend
 - Two modes only. Mock: `AWR_FORCE_MOCK=1`. Live: `--max-spend USD` (type `_spend_cap`), refused under `AWR_FORCE_MOCK`. With neither, the dry run prints and the command exits non-zero, saying which to set. No partially simulated mode: on a user's own data it would only confuse.
-- A dry run is always printed first, with no calls. `--dry-run` prints it and exits. Per row: input tokens = `gates.estimate_prompt_tokens` of the prompt as sent (with any suffix); output = 1,024 tokens per call *(chosen: the adapters' `_MAX_TOKENS` ceiling, so it is a true upper bound while no effort config is sent)*; priced with `ModelConfig.cost_for_tokens` at list prices.
+- A dry run is always printed first, with no calls. `--dry-run` prints it and exits. Per row: input tokens = `byo.estimate_tokens` of the prompt as sent (with any suffix): ASCII characters at 3.5 per token plus 1.5 tokens for every other character, rounded up, because CJK text and emoji tokenise near one token per character and the routing gate's flat 3.5-characters estimate would undercount them (`gates.estimate_prompt_tokens` itself is unchanged, since it gates routing everywhere); output = 1,024 tokens per call *(chosen: the adapters' `_MAX_TOKENS` ceiling, so it is a true upper bound while no effort config is sent)*; priced with `ModelConfig.cost_for_tokens` at list prices.
 - Router arm worst case per row = the most expensive path the default rule can take, whatever the lookup predicts: classification (budget + mid + frontier), reasoning (Haiku 5.5 + mid + budget vote + Sonnet 5.5, per `_consensus`), extraction (Haiku 5.5 + mid + Sonnet 5.5), short writing (frontier, the rules table's top). Frontier arm: one frontier call per row. Judge: two Opus calls per judged row (one per arm), input = the judge template + prompt + reference + 1,024 candidate tokens.
-- The dry run prints the worst case per arm, judge cost, total, and planned `score_source` counts as a live run would assign them.
-- Rule: if the worst-case total exceeds `--max-spend`, refuse to start. No `--yes`. A stopped run writes no report, so money spent before a stop buys nothing; refusing up front is the only rule that never wastes it.
+- The dry run prints the worst case per arm, judge cost, total, the preflight cost (one call per preflighted model: "Reply with OK.", 16 output tokens, list price), the reserve kept per worker, the smallest `--max-spend` a live run with the given `--workers` may start with, and planned `score_source` counts as a live run would assign them.
+- Rule: refuse to start when worst-case total + reserve x workers + preflight cost exceeds `--max-spend`, printing that minimum (`REFUSED: this run needs --max-spend of at least $X ...`). With that margin the in-run reserve check can never stop a run the refusal let start, as long as every call bills no more than its worst case. No `--yes`. A stopped run writes no report, so money spent before a stop buys nothing; refusing up front is the only rule that never wastes it.
 - During the run: `_preflight` on every model the run can call (roster tiers plus Haiku 5.5 and Sonnet 5.5), `_check_real` on every answer, `strict=True` scoring, `RunStopped` at the cap. The per-batch reserve passed to `_run_tasks` is the largest row worst case plus one frontier call, because a failover makes one extra paid call before `_check_real` stops the row. A stop prints `STOPPED: ... No report written.` as `run_benchmark.main` does.
+- Failover overshoot: the reserve is not a hard ceiling. A provider failover during a row makes extra paid calls (the next tier up) before `_check_real` stops the run, so the cap can be overshot by up to one row's worst case per worker. `--workers` defaults to 1, which keeps that to one row.
 
 ## 5. Output
 - Report: `data/byo/benchmark_report_byo_<stem>_<run_group>.md`, or `..._byo_simulated_<stem>_<run_group>.md` for a mock run. `<stem>` is the input name cut to `[A-Za-z0-9_-]{1,40}`. A subfolder can never equal a `run_benchmark._report_path` result, and the run group means a rerun never overwrites an earlier report. `data/byo/` is in `.gitignore` so a private workload is not committed by accident.
-- `--out PATH`: must end in `.md`, must not exist, and must not resolve inside the repo's `data/` folder except under `data/byo/`.
+- `--out PATH`: must end in `.md`, must not exist, and must not resolve inside the repo's `data/` folder except under `data/byo/`. The path is resolved, then its existing ancestors are compared with `data/` and `data/byo/` by inode, so a different spelling on a case-insensitive file system (`DATA/x.md`), `..` or a symlink cannot get round the check.
+- Before any call the report path is claimed: the folder is created and the file opened with mode `x` holding the line `run in progress`. An unwritable or taken path is refused while the run is still free. A stop deletes the placeholder, so "No report written" stays true; a finished run replaces it with the report.
+- Every report and the console output end with: "The live path of awr bench has been exercised by stubbed tests only; no paid run has been made with it." (`byo.STUBBED_ONLY_NOTE`, to be removed after the first approved paid run).
 - Run log: a separate SQLite file, `data/byo/runs_byo.db` *(chosen)*, never `data/runs.db`, so BYO rows cannot become learned-policy evidence or enter `analyze.py` and the published tables. `run_group` is `byo-<timestamp>-<hex8>`; strategy names stay `router` / `frontier_only` so `build_report(run_group, db_path=...)` works unchanged.
 - `prompt_text` is not stored and `response_text` is stored empty, since answers can quote the prompt. Both arms use `Router(use_cache=False)` and the judge gets a `use_cache` keyword (default `True`, threaded through `score` to `get_adapter`), so nothing from the file lands in `.cache/`.
 
@@ -82,10 +90,11 @@ Sections 1 to 8 are the reference for what the command does.
 - Files over 5 MB or 1,000 rows *(chosen: keeps the worst-case estimate readable and the run within one sitting)*.
 - No `--judge` flag. Rows without a reference are judged automatically, and `"scoring": "judge"` on a row covers "judge this row even though it has a reference". A per-row field keeps the choice next to the reference it changes.
 - Other policies (cascade, jury, learned, effort dial, `--classic`) are not offered: the command measures the default rule only.
+- Paths are source-relative (`data/byo/` is found from the source tree, an editable install), like the rest of the repo. The planned `AWR_HOME` work covers this.
 
 ## 7. CLI shape
 - `awr bench tasks.jsonl [--max-spend 2.00] [--roster cross_vendor] [--workers N] [--out PATH] [--dry-run]`, in `src/router/cli.py` with one `bench` subcommand, and `awr = "router.cli:main"` in `[project.scripts]`. `--roster` swaps budget, mid and frontier; Haiku 5.5 and Sonnet 5.5 stay fixed in the default rule, and the help says so. `--workers` keeps the benchmark's latency caveat.
-- `run_benchmark.py` is a root script, not importable from the installed package. So `_TASK_RESERVE_USD`, `_spend_cap`, `RunStopped`, `_check_real`, `_run_tasks` and `_preflight` live in `src/router/benchmark/guards.py`, and `run_benchmark.py` imports them back under the same names. `_run_tasks` has `reserve=_TASK_RESERVE_USD` and a `scorer` keyword, and `_preflight` has `extra_models=()` and an `adapter_factory` keyword; the defaults keep the benchmark's behaviour. `run_benchmark._run_tasks` and `run_benchmark._preflight` are two-line wrappers that pass that module's own `score` and `get_adapter`, so tests that patch those names on `run_benchmark` still reach the run.
+- `run_benchmark.py` is a root script, not importable from the installed package. So `_TASK_RESERVE_USD`, `_spend_cap`, `RunStopped`, `_check_real`, `_run_tasks` and `_preflight` live in `src/router/benchmark/guards.py`, and `run_benchmark.py` imports them back under the same names. `_run_tasks` has `reserve=_TASK_RESERVE_USD`, `scorer` and `checker` keywords, and `_preflight` has `extra_models=()` and an `adapter_factory` keyword; the defaults keep the benchmark's behaviour. `run_benchmark._run_tasks` and `run_benchmark._preflight` are thin wrappers that pass that module's own `score`, `_check_real`, `_TASK_RESERVE_USD` and `get_adapter`, so tests that patch those names on `run_benchmark` still reach the run.
 - Must stay byte-identical in `run_benchmark.py`: argparse help and messages, the `STOPPED:` text, `_report_path` filenames (`tests/test_report_paths.py`), and the attributes tests reach through the module (`run_benchmark._run_tasks`, `_check_real`, `RunStopped`, `SpendMeter`, `main`, `db`, `_build_parser`).
 - New loading, estimating, scoring and formatting code lives in `src/router/benchmark/byo.py`; `cli.py` only parses arguments.
 
@@ -93,10 +102,11 @@ Sections 1 to 8 are the reference for what the command does.
 - Fixture `tests/fixtures/byo_mixed.jsonl`, 5 rows: a reference with default `final_answer`; a reference with `exact_match`; a reference with `scoring: judge`; no reference; no reference with `task_type: support_email, difficulty: easy`.
 - Loader: every refusal in 1 and 6 names its line number, and a sentinel string inside the prompt never appears in any error.
 - Mock run (`AWR_FORCE_MOCK=1`, temp db, temp output folder, `CACHE_DIR` patched to a temp folder): output shows the dry run (worst case per arm, judge cost, planned sources 2 `reference` / 3 `judge`), then cost cut and quality kept with 99% ranges, the `score_source` table (5 of 5 `simulated`), `(predicted)` labels next to `support_email`, "too few rows for a verdict", and the closing line. The report lands at a `_byo_simulated_` name; `.cache/` and `data/runs.db` are untouched.
-- Paths: `--out` into `data/` refused, existing file refused, and no BYO name equals any `_report_path` output across rosters and tags.
-- Stubbed live path: `--max-spend` under `AWR_FORCE_MOCK` refused; neither mode refused after the dry run; worst case above the cap refused with zero adapter calls; the estimator matches a hand-worked row; preflight covers Haiku 5.5 and Sonnet 5.5; a simulated answer raises `RunStopped`; a judge reply that is prose raises `JudgeError`; both end in `STOPPED` with no report.
+- Paths: `--out` into `data/` refused, also as `DATA/x.md`, `Data/byo/../x.md` and through a symlink; an existing file refused; an unwritable folder refused before any adapter call; and no BYO name equals any `_report_path` output across rosters and tags.
+- Spend: with `--max-spend` set to exactly the printed minimum, a stubbed run whose every call bills its full worst case completes without `RunStopped` at `--workers 1` and `--workers 4`; a hundredth of a cent below is refused. A CJK prompt estimates at least one token per character. U+2028 inside a JSON string does not split a row, and deeply nested JSON is refused as invalid.
+- Stubbed live path: `--max-spend` under `AWR_FORCE_MOCK` refused; neither mode refused after the dry run; worst case above the cap refused with zero adapter calls; the estimator matches a hand-worked row; preflight covers Haiku 5.5 and Sonnet 5.5; a simulated answer raises `RunStopped`; a judge reply that is prose raises `JudgeError`; both end in `STOPPED` with no report, and a stop removes the placeholder. Patching `_check_real` or `_TASK_RESERVE_USD` on `run_benchmark` still reaches its run.
 - Unchanged: the existing suite, `tests/test_analyze.py` after the stats move, and `scripts/check.sh`.
 - Scoring coverage: a mock run scores every row with the mock judge, so the reference scorers (`final_answer`, `exact_match`) and the strict real-judge path are exercised row by row through `byo.score_row`, and the full mock run is exercised end to end. No offline test runs the reference scorer inside a full run.
-- The live path is covered by stubbed tests only. No paid call was made in building or testing this command, and no paid run has been made with it.
+- The live path is covered by stubbed tests only. No paid call was made in building or testing this command, and no paid run has been made with it; the report and README must say so until a paid run is approved.
 
 Decisions on the draft's open questions: the run log is the separate `data/byo/runs_byo.db`, never `data/runs.db`; mock runs score every row with the mock judge, as described above.

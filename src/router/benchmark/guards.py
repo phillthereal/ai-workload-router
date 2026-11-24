@@ -46,21 +46,23 @@ def _check_real(result: Result) -> None:
 
 def _run_tasks(router: Any, tasks: list[dict], workers: int, max_spend: Optional[float],
                reserve: float = _TASK_RESERVE_USD,
-               scorer: Optional[Callable[..., float]] = None) -> Iterator[tuple[dict, Any, float]]:
+               scorer: Optional[Callable[..., float]] = None,
+               checker: Optional[Callable[[Any], None]] = None) -> Iterator[tuple[dict, Any, float]]:
     """Yield (task, result, quality) in task order, answering `workers` tasks at a time.
 
     The spend check runs before each batch and reserves room for the whole
     batch, so a parallel run stops under the cap just as a serial one does.
     `reserve` is the room kept per task; `scorer(task, response, strict=...)`
-    defaults to router.scoring.score.
+    defaults to router.scoring.score and `checker(result)` to _check_real.
     """
     capped = max_spend is not None
     score_fn = scorer or score
+    check = checker or _check_real
 
     def answer(task: dict) -> tuple[dict, Any, float]:
         result = router.complete(task["prompt"], task=task)
         if capped:
-            _check_real(result)
+            check(result)
         return task, result, score_fn(task, result.response, strict=capped)
 
     with ThreadPoolExecutor(workers) as pool:
