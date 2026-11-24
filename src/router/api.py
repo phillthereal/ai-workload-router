@@ -279,7 +279,8 @@ class RulesPolicy:
             task_type=c.task_type, difficulty=c.difficulty,
         )
         trace = [f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
-        if _agree(low, mid):
+        twice = low.model == mid.model  # a failover made one model answer both calls
+        if not twice and _agree(low, mid):
             return Result(
                 text=mid.text, model=mid.model, answer_cost_usd=ctx.cost(mid),
                 routing_cost_usd=c.cost_usd + ctx.cost(low),
@@ -291,7 +292,8 @@ class RulesPolicy:
         return _answer(
             prompt, ctx.roster.frontier, effort, ctx,
             routing_cost=c.cost_usd + ctx.cost(low) + ctx.cost(mid),
-            trace=trace + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
+            trace=trace + ([f"{mid.model} answered twice after a failover: no cross-check"] if twice else [])
+            + [f"{low.model} and {mid.model} differ -> frontier"], **extra,
         )
 
     def _consensus(self, prompt: str, c: Classification, ctx: Ctx) -> Result:
@@ -303,12 +305,15 @@ class RulesPolicy:
             prompt += ANSWER_ONLY
         low = ctx.call(CONSENSUS_FIRST, prompt, EFFORT_OFF)
         mid = ctx.call(ctx.roster.mid, prompt)
+        twice = low.model == mid.model  # a failover made one model answer both calls
         calls, keep, why = [low, mid], mid, f"{low.model} and {mid.model} agree"
-        if not _agree(low, mid):
+        if twice or not _agree(low, mid):
             vote = ctx.call(ctx.roster.budget, prompt) if c.task_type == "reasoning" else None
             if vote:
                 calls.append(vote)
-            if vote and (_agree(vote, low) or _agree(vote, mid)):
+            # A vote from a model that already answered is no independent vote.
+            if (vote and vote.model not in (low.model, mid.model)
+                    and (_agree(vote, low) or _agree(vote, mid))):
                 keep, why = vote, f"{vote.model} broke the tie"
             else:
                 keep = ctx.call(CONSENSUS_LAST, prompt, EFFORT_OFF)
@@ -318,7 +323,8 @@ class RulesPolicy:
             text=keep.text, model=keep.model, answer_cost_usd=ctx.cost(keep),
             routing_cost_usd=c.cost_usd + sum(ctx.cost(r) for r in calls if r is not keep),
             simulated=any(r.simulated for r in calls),
-            trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})", why],
+            trace=[f"classified {c.task_type}/{c.difficulty} (model={c.model})"]
+            + ([f"{mid.model} answered twice after a failover: no cross-check"] if twice else []) + [why],
             response=keep, effort=keep.effort,
             classifier_agreed=c.agreed_with_label, classifier_fell_back=c.fell_back,
             task_type=c.task_type, difficulty=c.difficulty,
