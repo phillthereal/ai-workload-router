@@ -25,8 +25,8 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -107,7 +107,26 @@ def create_app() -> FastAPI:
                        store=spend_store_from_env())
 
     app = FastAPI(title="AI Workload Router", docs_url=None, redoc_url=None)
+
+    # Unlike server.py (no UI, so it refuses every Origin), this app must allow its own page,
+    # whose fetch("/route") sends a same-origin Origin header.
+    @app.middleware("http")
+    async def refuse_cross_origin(request: Request, call_next: Any) -> Any:
+        origin = request.headers.get("origin")
+        if origin is not None and request.url.path != "/healthz":
+            origin_host = origin.split("://", 1)[-1].rstrip("/")
+            if origin_host.lower() != request.headers.get("host", "").lower():
+                return JSONResponse(
+                    {"detail": "Forbidden: cross-origin browser requests are not allowed"},
+                    status_code=403)
+        return await call_next(request)
+
+    # Added after the Origin middleware so it is outermost: Host is checked first.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+    @app.get("/healthz")
+    def healthz() -> dict[str, str]:
+        return {"status": "ok"}
 
     @app.get("/", response_class=HTMLResponse)
     def ui() -> str:

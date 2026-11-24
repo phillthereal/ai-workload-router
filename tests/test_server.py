@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from router import db  # noqa: E402
 from router.adapters.base import Adapter, Response  # noqa: E402
-from router.server import MAX_BODY, SELECTORS, make_server, resolve_token  # noqa: E402
+from router.server import FEEDBACK_RATE_LIMIT_PER_MIN, MAX_BODY, SELECTORS, make_server, resolve_token  # noqa: E402
 from router.spend_guard import SpendGuard  # noqa: E402
 
 
@@ -242,6 +242,71 @@ class HardeningTests(unittest.TestCase):
         _, base = self.serve(rate_limit_per_min=2)
         codes = [call(base, self.P, self.BODY)[0] for _ in range(3)]
         self.assertEqual(codes, [200, 200, 429])
+
+    def hold_all_slots(self, srv, n):
+        slots = srv.RequestHandlerClass.slots
+        for _ in range(n):
+            self.assertTrue(slots.acquire(blocking=False))
+            self.addCleanup(slots.release)
+
+    def test_unauthenticated_request_takes_no_slot(self):
+        srv, base = self.serve(token="tok", max_concurrent=1)
+        self.hold_all_slots(srv, 1)
+        self.assertEqual(call(base, self.P, self.BODY)[0], 401)
+        self.assertEqual(call(base, "/v1/models")[0], 401)
+
+    def test_authenticated_request_still_gets_503_when_busy(self):
+        srv, base = self.serve(token="tok", max_concurrent=1)
+        self.hold_all_slots(srv, 1)
+        self.assertEqual(call(base, self.P, self.BODY, {"Authorization": "Bearer tok"})[0], 503)
+
+    def test_feedback_does_not_use_completions_rate_limit(self):
+        _, base = self.serve(rate_limit_per_min=1)
+        for _ in range(3):
+            call(base, "/v1/feedback", {"request_id": "x", "score": 1})
+        self.assertEqual(call(base, self.P, self.BODY)[0], 200)
+
+    def test_feedback_has_its_own_limit(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, base = self.serve(log_db=Path(d) / "live.db")
+            fb = {"request_id": "nope", "score": 1}
+            codes = [call(base, "/v1/feedback", fb)[0] for _ in range(FEEDBACK_RATE_LIMIT_PER_MIN + 1)]
+            self.assertEqual(codes[:-1], [404] * FEEDBACK_RATE_LIMIT_PER_MIN)
+            self.assertEqual(codes[-1], 429)
+            self.assertEqual(call(base, self.P, self.BODY)[0], 200)
+
+    def test_malformed_body_is_not_counted(self):
+        _, base = self.serve(rate_limit_per_min=1)
+        self.assertEqual(call(base, self.P, raw=b"{nope")[0], 400)
+        self.assertEqual(call(base, self.P, {"model": "gpt-4", "messages": MSG})[0], 400)
+        self.assertEqual(call(base, self.P, self.BODY)[0], 200)
+
+    def test_malformed_feedback_is_not_counted(self):
+        with tempfile.TemporaryDirectory() as d:
+            _, base = self.serve(token="tok", log_db=Path(d) / "live.db")
+            auth = {"Authorization": "Bearer tok"}
+            for _ in range(FEEDBACK_RATE_LIMIT_PER_MIN):
+                self.assertEqual(call(base, "/v1/feedback", {"score": "bad"}, auth)[0], 400)
+            self.assertEqual(call(base, "/v1/feedback", {"request_id": "nope", "score": 1}, auth)[0], 404)
+
+    def test_healthz_works_when_all_slots_held(self):
+        srv, base = self.serve(max_concurrent=1)
+        self.hold_all_slots(srv, 1)
+        self.assertEqual(call(base, "/healthz")[0], 200)
+
+    def test_unauthorized_post_closes_connection(self):
+        import http.client
+        srv, _ = self.serve(token="tok")
+        c = http.client.HTTPConnection("127.0.0.1", srv.server_port)
+        body = json.dumps(self.BODY)
+        c.request("POST", self.P, body=body, headers={"Content-Type": "application/json"})
+        r = c.getresponse()
+        r.read()
+        self.assertEqual(r.status, 401)
+        with self.assertRaises((http.client.HTTPException, OSError)):  # server closed the socket
+            c.request("GET", "/healthz")
+            c.getresponse().read()
+        c.close()
 
     def test_oversize(self):
         _, base = self.serve()

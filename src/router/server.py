@@ -31,6 +31,7 @@ from .spend_guard import SpendGuard, spend_store_from_env
 LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
 
 MAX_BODY = 262_144  # 256 KB
+FEEDBACK_RATE_LIMIT_PER_MIN = 10  # /v1/feedback has its own limiter, apart from completions
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 SELECTORS: dict[str, Callable[[], Policy]] = {
     "router": default_policy,
@@ -63,15 +64,17 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                  rate_limit_per_min: int = 30, max_concurrent: int = 8,
                  host: str = "127.0.0.1") -> type[BaseHTTPRequestHandler]:
     """Build the request handler class, closing over this server's limits and guard."""
-    slots = threading.BoundedSemaphore(max_concurrent)
+    slots = _slots = threading.BoundedSemaphore(max_concurrent)
     guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier, store=spend_store_from_env())
     rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
+    feedback_guard = SpendGuard(daily_budget_usd, FEEDBACK_RATE_LIMIT_PER_MIN, allow_frontier)
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 30  # socket timeout: slow/idle clients can't pin a thread
         server_version = "awr-router"
         protocol_version = "HTTP/1.1"
         server: ThreadingHTTPServer
+        slots = _slots  # exposed so tests can hold the concurrency slots
 
         def log_message(self, fmt: str, *args: Any) -> None:  # never log paths/bodies/headers
             pass
@@ -90,7 +93,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
             self._send(code, {"error": {"message": msg, "type": typ, "param": None, "code": None}})
 
         def _gate(self) -> bool:
-            """Host allowlist (DNS rebinding), no Origin (browsers), concurrency cap."""
+            """Host allowlist (DNS rebinding), no Origin (browsers). Takes no slot and counts no rate."""
             port = self.server.server_port
             ok = {f"{h if h != '::1' else '[::1]'}:{port}" for h in LOOPBACK}
             if host not in LOOPBACK:
@@ -101,6 +104,10 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
             if self.headers.get("Origin") is not None:
                 self._err(403, "Forbidden: browser requests (Origin) are not allowed", "permission_error")
                 return False
+            return True
+
+        def _take_slot(self) -> bool:
+            """Concurrency cap; only called after auth and body validation."""
             if not slots.acquire(blocking=False):
                 self.close_connection = True
                 self._err(503, "Server busy", "api_error")
@@ -119,25 +126,24 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
         def do_GET(self) -> None:
             if not self._gate():
                 return
+            path = self.path.split("?")[0]
+            if path == "/healthz":  # unauthenticated: must not take (or be refused) a slot
+                return self._send(200, {"status": "ok"})
+            if not self._authed():
+                return
+            if not self._take_slot():
+                return
             try:
-                self._get()
+                self._get(path)
             finally:
                 slots.release()
 
         def do_POST(self) -> None:
             if not self._gate():
                 return
-            try:
-                self._post()
-            finally:
-                slots.release()
+            self._post()
 
-        def _get(self) -> None:
-            path = self.path.split("?")[0]
-            if path == "/healthz":
-                return self._send(200, {"status": "ok"})
-            if not self._authed():
-                return
+        def _get(self, path: str) -> None:
             if path == "/v1/models":
                 data = [{"id": s, "object": "model", "created": 0, "owned_by": "ai-workload-router"}
                         for s in SELECTORS]
@@ -170,19 +176,30 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
         def _post(self) -> None:
             path = self.path.split("?")[0]
             if path not in ("/v1/chat/completions", "/v1/feedback"):
+                self.close_connection = True  # body unread
                 return self._err(404, "Not found")
             if not self._authed():
+                self.close_connection = True  # body unread
                 return
             if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
                 self.close_connection = True  # body unread
                 return self._err(415, "Content-Type must be application/json", "invalid_request_error")
-            if not rate_ok():
-                return self._err(429, f"Rate limit exceeded ({rate_limit_per_min}/min)", "rate_limit_error")
             req = self._read_json()
             if req is None:
                 return
             if path == "/v1/feedback":
-                return self._feedback(req)
+                bad = self._feedback_invalid(req)
+                if bad:  # malformed payloads never count toward the limit
+                    return self._err(400, bad)
+                if not feedback_guard.rate_ok():
+                    return self._err(429, f"Rate limit exceeded ({FEEDBACK_RATE_LIMIT_PER_MIN}/min)",
+                                     "rate_limit_error")
+                if not self._take_slot():
+                    return
+                try:
+                    return self._feedback(req)
+                finally:
+                    slots.release()
             if req.get("stream"):
                 return self._err(400, "stream=true is not supported")
             sel = req.get("model")
@@ -194,6 +211,16 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 prompt = flatten(req.get("messages"))
             except ValueError as e:
                 return self._err(400, str(e))
+            if not rate_ok():
+                return self._err(429, f"Rate limit exceeded ({rate_limit_per_min}/min)", "rate_limit_error")
+            if not self._take_slot():
+                return
+            try:
+                self._complete(req, sel, prompt)
+            finally:
+                slots.release()
+
+        def _complete(self, req: dict[str, Any], sel: str, prompt: str) -> None:
             if over_budget():
                 return self._err(429, f"Daily budget of ${daily_budget_usd:.2f} reached (resets 00:00 UTC)",
                                  "insufficient_quota")
@@ -222,10 +249,20 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                              "request_id": r.request_id},
             }, {"X-Router-Model": r.model})
 
+        @staticmethod
+        def _feedback_invalid(req: dict[str, Any]) -> Optional[str]:
+            """Payload check only (no DB access); mirrors Router.feedback's validation."""
+            if not log_db:
+                return "Feedback needs the server started with --log-db"
+            score = req.get("score")
+            if not isinstance(req.get("request_id"), str) or not req["request_id"]:
+                return "request_id must be a non-empty string"
+            if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0.0 <= score <= 1.0:
+                return f"score must be a number in [0, 1], got {score!r}"
+            return None
+
         def _feedback(self, req: dict[str, Any]) -> None:
             """{request_id, score in [0,1]} -> the learned router's live signal."""
-            if not log_db:
-                return self._err(400, "Feedback needs the server started with --log-db")
             try:
                 Router(FrontierOnlyPolicy(), log_to=log_db).feedback(
                     req.get("request_id"), req.get("score"),  # type: ignore[arg-type]  # checked inside
