@@ -134,6 +134,27 @@ class TestAgreeOrFrontier(unittest.TestCase):
                          ["classified", "agree"])
 
 
+class TestDegraded(unittest.TestCase):
+    def test_normal_mock_run_is_not_degraded(self):
+        res = Router(FrontierOnlyPolicy(), "claude_tiers").complete("hi", task=TASK)
+        self.assertFalse(res.degraded)
+
+    def test_classifier_fallback_is_degraded(self):
+        class FellBack(FrontierOnlyPolicy):
+            def run(self, prompt, task, ctx):
+                res = super().run(prompt, task, ctx)
+                res.classifier_fell_back = True
+                return res
+        self.assertTrue(Router(FellBack(), "claude_tiers").complete("hi", task=TASK).degraded)
+
+    def test_injected_failover_event_is_degraded(self):
+        class Injects(FrontierOnlyPolicy):
+            def run(self, prompt, task, ctx):
+                ctx.events.append("failover: answered by some-model")
+                return super().run(prompt, task, ctx)
+        self.assertTrue(Router(Injects(), "claude_tiers").complete("hi", task=TASK).degraded)
+
+
 class TestFailover(unittest.TestCase):
     def run_router(self, failing, mode="raise", policy=None):
         f = fake_factory(failing, mode)
@@ -147,6 +168,7 @@ class TestFailover(unittest.TestCase):
         self.assertEqual(res.model, ro.mid)
         self.assertTrue(any("provider error on " + ro.budget in t for t in res.trace))
         self.assertTrue(any("failover" in t for t in res.trace))
+        self.assertTrue(res.degraded)
         self.assertTrue(all(flag is False for _, flag in f.calls))
 
     def test_unsuccessful_response_also_fails_over(self):

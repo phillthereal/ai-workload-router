@@ -157,6 +157,7 @@ class TestPaidGuards(unittest.TestCase):
         self.assertIn("untrusted_model_output", r)
         self.assertNotIn("answer", r)
         self.assertTrue(r["simulated"])
+        self.assertIs(r["degraded"], False)
         self.assertGreaterEqual(r["spent_today_usd"], 0.0)
 
     def test_max_tokens_cap(self):
