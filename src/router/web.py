@@ -11,9 +11,11 @@ the app only accepts localhost Host headers; do not expose it publicly.
 A pasted task has no answer key, so the benchmark's judged score cannot be
 computed here. ``quality_source`` says what ``quality_score`` really is:
   * "simulated": the placeholder table in router.scoring (demo mode).
-  * "verifier": the roster's mid model estimating adequacy with no answer key.
-    This is an opinion, not a measurement, and the mid model grades itself when
-    it also wrote the answer.
+  * "verifier": a model other than the answering one (the roster's budget
+    model, else CONSENSUS_FIRST, else the mid model) estimating adequacy with
+    no answer key. This is an opinion, not a measurement.
+  * "self-check": no other model was available, so the mid model graded an
+    answer written by the same model.
   * "unavailable": the verifier call failed; the score is null.
 """
 
@@ -30,7 +32,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .adapters import get_adapter
 from .adapters.base import Response
-from .api import ProviderError, Result, Router, default_policy
+from .api import CONSENSUS_FIRST, ProviderError, Result, Router, default_policy
 from .cascade import verify_adequacy
 from .config import MODEL_TIER, ROSTERS, get_roster
 from .scoring import rubric_judge
@@ -83,12 +85,17 @@ def _score(prompt: str, result: Result, roster: str) -> tuple[Optional[float], s
     if result.simulated:
         task = {"id": prompt, "task_type": result.task_type, "difficulty": result.difficulty}
         return rubric_judge(task, result.response), "simulated", 0.0
+    ladder = get_roster(roster)
+    verifier = next((m for m in (ladder.budget, CONSENSUS_FIRST, ladder.mid) if m != result.model), None)
+    source = "verifier"
+    if verifier is None:  # every candidate wrote the answer: grade it with the mid model
+        verifier, source = ladder.mid, "self-check"
     try:
         score, cost = verify_adequacy({"prompt": prompt}, result.response,
-                                      get_roster(roster).mid, complete=_real_call)
+                                      verifier, complete=_real_call)
     except Exception:  # noqa: BLE001 - the answer is already paid for, so keep it
         return None, "unavailable", 0.0
-    return score, "verifier", cost
+    return score, source, cost
 
 
 def create_app() -> FastAPI:
