@@ -2,8 +2,13 @@
 
 Point any OpenAI SDK's ``base_url`` at ``http://127.0.0.1:8787/v1``.
 
-Limitations: the chat ``messages`` are flattened into ONE labelled prompt, so
-the routing decision is single-turn (no per-turn routing); no streaming.
+Multi-turn: routing (task type and difficulty) is decided on the last user turn
+plus up to ``ROUTE_WINDOW_MESSAGES`` (2) earlier messages (system and developer ones are skipped); the model
+still gets the whole conversation, flattened into one labelled prompt.
+Streaming: ``stream=true`` is buffered. The default rule has two cheap models
+write full answers and compares them before it chooses, so the answer exists in
+full before the decision ends; the server sends it afterwards as SSE chunks.
+Clients that need ``stream=true`` work, but the first token comes no sooner.
 The ``model`` field selects the routing policy, not a vendor model:
 ``router``/``auto`` (default rule), ``router:cascade``, ``router:learned``,
 ``router:frontier`` and ``router:shadow``. The last two answer on the frontier
@@ -37,6 +42,9 @@ from .spend_guard import SpendGuard, spend_store_from_env
 LogDb = Union[None, bool, str, Path]  # see Router(log_to=...)
 
 MAX_BODY = 262_144  # 256 KB
+ROUTE_WINDOW_MESSAGES = 2  # messages before the last user turn that routing also reads
+ROUTE_SKIP_ROLES = ("system", "developer")  # instructions, not turns: never part of the routing text
+STREAM_CHUNK_CHARS = 64  # max characters per SSE content chunk
 FEEDBACK_RATE_LIMIT_PER_MIN = 10  # /v1/feedback has its own limiter, apart from completions
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 SELECTORS: dict[str, Callable[[], Policy]] = {
@@ -49,8 +57,8 @@ SELECTORS: dict[str, Callable[[], Policy]] = {
 }
 
 
-def flatten(messages: Any) -> str:
-    """system + user/assistant turns -> one labelled prompt. Raises ValueError."""
+def _labelled(messages: Any) -> list[str]:
+    """Validate the chat messages; each one -> '[role]\ncontent'. Raises ValueError."""
     if not isinstance(messages, list) or not messages:
         raise ValueError("'messages' must be a non-empty array")
     parts = []
@@ -59,11 +67,72 @@ def flatten(messages: Any) -> str:
             raise ValueError("each message needs a 'role'")
         c = m.get("content")
         if isinstance(c, list):  # SDK content parts: [{"type":"text","text":...}]
-            c = "".join(p.get("text", "") for p in c if isinstance(p, dict))
+            texts = [p.get("text", "") for p in c if isinstance(p, dict)]
+            c = "".join(texts) if all(isinstance(t, str) for t in texts) else None
         if not isinstance(c, str):
             raise ValueError("message 'content' must be a string or text parts")
         parts.append(f"[{m['role']}]\n{c}")
-    return "\n\n".join(parts)
+    return parts
+
+
+def flatten(messages: Any) -> str:
+    """system + user/assistant turns -> one labelled prompt. Raises ValueError."""
+    return "\n\n".join(_labelled(messages))
+
+
+def routing_text(messages: Any, window: int = ROUTE_WINDOW_MESSAGES) -> tuple[str, int]:
+    """-> (text to classify, messages used). Raises ValueError like ``flatten``.
+
+    The last user message plus up to `window` messages right before it, skipping system
+    and developer messages (they do not use up the window); later messages are ignored. With no user
+    message, the whole flattened conversation.
+    """
+    parts = _labelled(messages)  # validates every message, so roles below are strings
+    users = [i for i, m in enumerate(messages) if m["role"] == "user"]
+    if not users:
+        return "\n\n".join(parts), len(parts)
+    picked = [users[-1]]
+    for i in range(users[-1] - 1, -1, -1):
+        if len(picked) > window:
+            break
+        if messages[i]["role"] not in ROUTE_SKIP_ROLES:
+            picked.append(i)
+    return "\n\n".join(parts[i] for i in reversed(picked)), len(picked)
+
+
+def _stream_error(req: dict[str, Any]) -> Optional[str]:
+    """Type check of ``stream``/``stream_options``; None when they are valid or absent."""
+    # null counts as absent, as in the OpenAI API
+    if req.get("stream") is not None and not isinstance(req["stream"], bool):
+        return "'stream' must be a boolean"
+    so = req.get("stream_options")
+    if so is not None:
+        if not isinstance(so, dict):
+            return "'stream_options' must be an object"
+        if so.get("include_usage") is not None and not isinstance(so["include_usage"], bool):
+            return "'stream_options.include_usage' must be a boolean"
+    return None
+
+
+def sse_body(resp: dict[str, Any], include_usage: bool) -> bytes:
+    """A finished chat.completion -> the OpenAI streaming body (buffered: the text is complete)."""
+    base = {"id": resp["id"], "object": "chat.completion.chunk",
+            "created": resp["created"], "model": resp["model"]}
+
+    def chunk(delta: dict[str, Any], finish: Optional[str], **extra: Any) -> dict[str, Any]:
+        c = {**base, "choices": [{"index": 0, "delta": delta, "finish_reason": finish}], **extra}
+        if include_usage:
+            c["usage"] = None  # OpenAI's convention: only the last chunk carries usage
+        return c
+
+    text = resp["choices"][0]["message"]["content"] or ""
+    events = [chunk({"role": "assistant", "content": ""}, None)]
+    events += [chunk({"content": text[i:i + STREAM_CHUNK_CHARS]}, None)
+               for i in range(0, len(text), STREAM_CHUNK_CHARS)]
+    events.append(chunk({}, "stop", x_router=resp["x_router"]))
+    if include_usage:
+        events.append({**base, "choices": [], "usage": resp["usage"]})
+    return ("".join(f"data: {json.dumps(e)}\n\n" for e in events) + "data: [DONE]\n\n").encode()
 
 
 def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: LogDb = None,
@@ -106,6 +175,16 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             for k, v in (headers or {}).items():
+                self.send_header(k, v)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _send_sse(self, body: bytes, headers: dict[str, str]) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(body)))  # body is complete: keep-alive stays correct
+            for k, v in headers.items():
                 self.send_header(k, v)
             self.end_headers()
             self.wfile.write(body)
@@ -221,8 +300,9 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                     return self._feedback(req)
                 finally:
                     slots.release()
-            if req.get("stream"):
-                return self._err(400, "stream=true is not supported")
+            bad = _stream_error(req)
+            if bad:
+                return self._err(400, bad)
             sel = req.get("model")
             if sel not in SELECTORS:
                 return self._err(400, f"Unknown model; use one of: {', '.join(SELECTORS)}")
@@ -233,6 +313,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                                       "start the server with --allow-frontier")
             try:
                 prompt = flatten(req.get("messages"))
+                route_on, routed_on = routing_text(req["messages"])
             except ValueError as e:
                 return self._err(400, str(e))
             if not rate_ok():
@@ -240,17 +321,18 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
             if not self._take_slot():
                 return
             try:
-                self._complete(req, sel, prompt)
+                self._complete(req, sel, prompt, route_on, routed_on)
             finally:
                 slots.release()
 
-        def _complete(self, req: dict[str, Any], sel: str, prompt: str) -> None:
+        def _complete(self, req: dict[str, Any], sel: str, prompt: str,
+                      route_on: str, routed_on: int) -> None:
             if over_budget():
                 return self._err(429, f"Daily budget of ${daily_budget_usd:.2f} reached (resets 00:00 UTC)",
                                  "insufficient_quota")
             try:
                 r = Router(_policy(sel), roster_name=roster,
-                           allow_mock_fallback=allow_mock, log_to=log_db).complete(prompt)
+                           allow_mock_fallback=allow_mock, log_to=log_db).complete(prompt, route_on=route_on)
             except ProviderError:
                 return self._err(502, "Upstream providers failed", "api_error")
             except Exception:
@@ -265,17 +347,23 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 "routing_cost_usd": r.routing_cost_usd,
                 "trace": r.trace, "simulated": r.simulated,
                 "degraded": r.degraded,
-                "request_id": r.request_id}
+                "request_id": r.request_id,
+                "routed_on_messages": routed_on}
             if r.shadow is not None:  # router:shadow only; other selectors' bodies are unchanged
                 x_router["shadow"] = r.shadow
-            self._send(200, {
+            resp = {
                 "id": "chatcmpl-" + uuid.uuid4().hex[:24], "object": "chat.completion",
                 "created": int(time.time()), "model": r.model,
                 "choices": [{"index": 0, "finish_reason": "stop",
                              "message": {"role": "assistant", "content": r.text}}],
                 "usage": {"prompt_tokens": pt, "completion_tokens": ct, "total_tokens": pt + ct},
                 "x_router": x_router,
-            }, {"X-Router-Model": r.model})
+            }
+            headers = {"X-Router-Model": r.model}
+            if req.get("stream"):
+                include_usage = bool((req.get("stream_options") or {}).get("include_usage"))
+                return self._send_sse(sse_body(resp, include_usage), headers)
+            self._send(200, resp, headers)
 
         @staticmethod
         def _feedback_invalid(req: dict[str, Any]) -> Optional[str]:

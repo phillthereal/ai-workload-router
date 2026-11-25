@@ -225,6 +225,15 @@ class FrontierOnlyPolicy:
         pass
 
 
+def _classify_view(task: dict[str, Any]) -> dict[str, Any]:
+    """The task as classification sees it: the ``route_on`` text (see Router.complete) as its prompt.
+
+    Only classification reads this view; gates, model calls and the run log keep the full prompt.
+    """
+    route_on = task.get("route_on")
+    return task if route_on is None else {**task, "prompt": route_on}
+
+
 class RulesPolicy:
     """Classify (hand labels or classifier model), then route by the rules table."""
 
@@ -258,6 +267,7 @@ class RulesPolicy:
         pass
 
     def _classify(self, task: dict[str, Any], ctx: Ctx) -> Classification:
+        task = _classify_view(task)
         if self.lookup:
             return self.lookup.classify(task)
         # Labels only exist for benchmark tasks; a bare prompt must be classified.
@@ -293,7 +303,7 @@ class RulesPolicy:
         """What run would call in its best case (agreement), with no model call. Needs a lookup."""
         if self.lookup is None:
             raise ValueError("dry_run needs a lookup-based policy")
-        c = self.lookup.classify(task)
+        c = self.lookup.classify(_classify_view(task))
         d = route_task(task, roster_name=ctx.roster_name, effort_policy=ctx.effort_policy,
                        task_type=c.task_type, difficulty=c.difficulty,
                        tier_override="frontier" if c.task_type in self.frontier_on else None)
@@ -476,9 +486,17 @@ class Router:
         """Forward the benchmark's chronological cutoff to the policy."""
         self.policy.before_run_group(run_group)
 
-    def complete(self, prompt: str, task: Optional[dict[str, Any]] = None) -> Result:
-        """Answer `prompt` through the policy and return the Result, logged if log_to is set."""
+    def complete(self, prompt: str, task: Optional[dict[str, Any]] = None,
+                 route_on: Optional[str] = None) -> Result:
+        """Answer `prompt` through the policy and return the Result, logged if log_to is set.
+
+        `route_on`, when given, is the text classification decides on (e.g. the last turns of
+        a conversation); the model, the gates and the log still get the whole `prompt`.
+        """
         task = {"id": "adhoc", **(task or {}), "prompt": prompt}
+        task.pop("route_on", None)
+        if route_on is not None and route_on != prompt:
+            task["route_on"] = route_on
         ctx = Ctx(self)
         start = time.monotonic()
         result = self.policy.run(prompt, task, ctx)
