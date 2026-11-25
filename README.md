@@ -4,7 +4,7 @@
 
 **[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls, the default rule cut cost by **86.4%** at **98.7%** of the quality of Claude Opus 4.8. With 99% certainty it saves at least 80.8% and keeps at least 95.1%, so it **meets the 95% quality target**. The first version missed that target, at 84.1% saved and 91.8% quality. On the 40-task hard set alone it kept 90.8% of quality, so it misses the bar on hard work. It is a personal project and has not served any customer or company traffic.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls, the default rule cut cost by **86.4%** at **98.7%** of the quality of Claude Opus 4.8. With 99% certainty it saves at least 80.8% and keeps at least 95.1%, so it **meets the 95% quality target** ([report](data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_fresh2.md)). The first version missed that target, at 84.1% saved and 91.8% quality ([report](data/benchmark_report_cross_vendor_classified_public.md)). On the 40-task hard set alone it kept 90.8% of quality, so it misses the bar on hard work ([report](data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_hard.md)). It is a personal project and has not served any customer or company traffic.
 
 ## The problem
 
@@ -59,8 +59,8 @@ flowchart LR
 
 - **Policies** decide the model, and all share one interface. *Rules* classify the task and look up a tier. The default adds a free lookup for the task type, and answers from cheap models that must agree (see [Measured results](#measured-results)). *Learned* checks logged outcomes for similar tasks first. *Cascade* tries the cheap model, has a verifier check the answer, and escalates if it fails. *Jury* escalates when cheap models from different vendors disagree.
 - **Adapters** give Anthropic and the OpenAI-style providers one interface, so a model is a config change. If a provider errors, the router tries the next model up and records that in the trace.
-- **Rosters** are the sets of models the router can pick from. The default spans three vendors, with about a 42× gap in output price between budget and frontier. `claude_tiers` stays inside one vendor, with a 5× gap.
-- **Scoring** only happens in the benchmark, because it needs an answer key. Of the 25 tasks, 10 are graded by exact match and 15 by a Claude Opus 4.8 judge against a rubric.
+- **Rosters** are the sets of models the router can pick from. The default spans three vendors, with about a 42× gap in output price between budget and frontier (list prices, from `Roster.price_range()`; see [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) section 3.1). `claude_tiers` stays inside one vendor, with a 5× gap.
+- **Scoring** only happens in the benchmark, because it needs an answer key. Of the 25 tasks in `data/tasks.json`, 10 are graded by exact match and 15 by a Claude Opus 4.8 judge against a rubric ([`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md) section 2.3).
 
 ## Run it in 2 commands
 
@@ -150,7 +150,7 @@ python redteam.py heuristic
 
 On 24 Nov 2026 I ran the default rule on the 40-task public hard set on its own ([report](data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_hard.md), run group `20261124T181625-fda70f0c`). It cut cost 83.5% but kept 90.8% of quality, below the 95% bar, so on hard work alone the rule does not meet the target. The cheap models agreed on 33 of 40 tasks, and that agreement was wrong often enough to lose the bar: agreement is not correctness. 4 answers (2 per arm, one task in both) hit the 1,024-token ceiling and scored 0. The run cost $0.29.
 
-- **How it routes.** A free nearest-match lookup picks the task type. Reasoning and extraction go to Haiku 5.5 and DeepSeek, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to GPT-4o mini and DeepSeek, then Opus if they differ. Short writing follows the rules table.
+- **How it routes.** A free nearest-match lookup picks the task type. Reasoning and extraction go to Haiku 5.5 and DeepSeek, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to GPT-4o mini and DeepSeek, then Opus if they differ. Short writing follows the rules table. If a provider failover makes both cheap answers come from the same model, that is not treated as agreement and the decider answers.
 - **Chain of Draft was tested and left out.** On 96 reasoning tasks it saved more (92.0% against 80.4%), but quality fell from 98.9% to 95.6%, and on 48 hard tasks to 90.5% ([test](experiments/cheap_tier_draft.py)).
 - **To repeat the run,** use `python run_benchmark.py --tasks data/public/benchmark/tasks_public_fresh2.json`. Use `--classic` for the hand-label setup behind the July report.
 
@@ -187,7 +187,7 @@ How to read them:
 - **Reasoning tasks do not get cheaper.** They go to the frontier model either way. They are 16% of the tasks and 33% of the baseline bill, which limits what routing can save here.
 - **The target was set first:** at least 40% cheaper while keeping at least 95% of quality. Both runs passed.
 
-**Other runs.** The easy set scores about 0.99 on every tier, so it cannot show whether routing protects quality. The 10-task hard set can: on it, Haiku scored 0.70, Sonnet 0.90 and Opus 1.00. The classifier was never run on this 10-task hard set with the three-vendor roster, so the hard rows do not compare directly with the July runs.
+**Other runs.** The easy set scores about 0.99 on every tier, so it cannot show whether routing protects quality. The 10-task hard set can: on it, Haiku scored 0.70, Sonnet 0.90 and Opus 1.00 ([`docs/V2_FINDINGS.md`](docs/V2_FINDINGS.md)). The classifier was never run on this 10-task hard set with the three-vendor roster, so the hard rows do not compare directly with the July runs.
 
 | Models | Method | Task set | Cost cut | Quality vs frontier only | Report |
 |---|---|---|---|---|---|
@@ -210,12 +210,12 @@ The lesson across these runs: **savings depend on how much of the work is genuin
 | Can words in a prompt steer the routing? | Attacks that inflate cost fell from 7/10 to 0/10 on the keyword classifier after hardening, and 3/10 to 0/10 on the LLM classifier. Making a hard task look easy still works 2/9 times. | [V5_REDTEAM](docs/V5_REDTEAM.md) |
 | Does the result survive price changes? | Re-priced at OpenRouter's list prices, the 53.6% run came out at 53.58%. | [V5_PRICES](docs/V5_PRICES.md) |
 | Can a spend cap and a background check run unattended? | In simulation only: checking 5% of traffic caught a quality drop in 83.3% of runs, for 6.1% extra cost. | [V5_BUDGET_SHADOW](docs/V5_BUDGET_SHADOW.md) |
-| Is Kimi K3 a cheaper mid tier? | No. It lists above Sonnet ($3/$15 against $2/$10) and adds billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
+| Is Kimi K3 a cheaper mid tier? | No. It lists above Sonnet ($3/$15 against $2/$10, list prices) and adds billed reasoning. An offline projection from real token counts, with no live quality run. | [V5_KIMI_OFFLINE](docs/V5_KIMI_OFFLINE.md) |
 | Does it work on real text? | On 150 of my own emails, from a personal setup, the keyword classifier sent everything to the top tier. A cheap-first cascade saved 76.4% at 95.3% agreement with Haiku, but missed 1 of 13 emails that needed action. | [REAL_TRAFFIC_ASSESSMENT](docs/REAL_TRAFFIC_ASSESSMENT.md), [SHADOW_TEST](docs/SHADOW_TEST.md) |
 | Can a model's stated confidence be trusted? | On 800 public banking queries with true labels, the Jev model was 94.2% right when at least 90% sure, covering 71.5% of queries. GPT-4o mini was 83.7% right at the same bar, on 300 of them. A self-improving rulebook loop did not help here: all three proposed edits were rejected. This tests confidence, not routing savings. | [PUBLIC_DATASET](docs/PUBLIC_DATASET.md) |
 | Is the judge reliable? | A second judge from another vendor, GPT-4o mini, re-scored the 30 rubric-judged answers from the hand-label run: 96.7% within 0.15, mean difference 0.010. No human has scored them yet. | [CASE_STUDY](CASE_STUDY.md#validating-the-judge) |
 
-**RAG retrieval**, from `rag.py eval`. The first set is 13 questions I wrote after reading the pages. The second is harder on purpose: 66 questions on randomly drawn pages, reworded to avoid the documents' own terms and fixed before any retriever ran on them. Trust the second set more.
+**RAG retrieval**, from `rag.py eval` ([`examples/rag/README.md`](examples/rag/README.md)). The first set is 13 questions I wrote after reading the pages. The second is harder on purpose: 66 questions on randomly drawn pages, reworded to avoid the documents' own terms and fixed before any retriever ran on them. Trust the second set more.
 
 | Retrieval | First set: right page first | First set: top 4 | Second set: right page first | Second set: top 4 |
 |---|---|---|---|---|
@@ -245,7 +245,7 @@ None of the following is evidence of anything. It exists so the project runs for
 **The newest parts are untested with real models.**
 
 - The web app and RAG demo have only been run in free demo mode. **No real paid call has gone through either of them.** Paid mode is covered by stubbed tests only.
-- Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
+- Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, from a model other than the one that answered where possible, and labelled `self-check` when no other model is available. They are not the benchmark's score.
 - RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
 - **Shadow mode's saving is an estimate.** It prices the router's best case at list prices on the frontier answer's token counts, and no real request has gone through shadow mode yet.
@@ -272,7 +272,7 @@ None of the following is evidence of anything. It exists so the project runs for
 ## What I'd do next
 
 1. **Run one small, capped real call** through the web app and the RAG `--paid` path, so the paid paths have been proven once. It would cost cents, and it was deliberately left out of this round.
-2. **Fix the silent classifier fallback** so a downgrade shows up in the result.
+2. **Stop the classifier falling back silently** on the opt-in classifier path. Today a downgrade is flagged in the result (`degraded`), not prevented.
 3. **Improve RAG retrieval and measure answer quality:** look at why reworded questions miss, write answers in advance, and add a "not found" threshold.
 4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
 5. **Grow the eval:** more tasks from one real workload, human scores against the judges.
@@ -297,7 +297,7 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 
 - **Auth:** bearer auth is on by default. `serve.py` prints a generated token once to stderr, or set `AWR_SERVER_TOKEN`.
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
-- **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` and `router:shadow` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
+- **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` and `router:shadow` off unless `--allow-frontier`, 30 requests a minute (`/v1/feedback` has its own limit of 10 a minute), a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests. Auth and body checks come before a concurrency slot or a rate count is taken, and `GET /healthz` needs no token.
 - **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy. Adding `--lookup-from-log` (needs `--log-db`) also rebuilds the free lookup from logged `router` requests rated good through `/v1/feedback` (or by a judge), on start and after every `--lookup-rebuild-every` router/auto requests.
 
 **Bring your own workload.** `awr bench` runs your own JSONL prompts through the same paired test as the benchmark (default rule versus frontier-only) and reports cost cut and quality kept with 99% ranges. It prints a list-price worst-case estimate first. `AWR_FORCE_MOCK=1 awr bench tests/fixtures/byo_mixed.jsonl` is the free simulated demo; `awr bench my_prompts.jsonl --max-spend 2.00` is a live run, refused before any call if the cap is below the printed minimum (list-price worst case plus a reserve and the preflight calls). Reports and the run log go to the gitignored `data/byo/`. See [`docs/BYO_WORKLOAD.md`](docs/BYO_WORKLOAD.md).

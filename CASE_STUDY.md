@@ -106,7 +106,7 @@ A backend benchmark harness, deliberately minimal:
 | **Record & replay cache** | Every real API response is cached, so the whole benchmark re-runs for free from a local cache, which is not committed. |
 | **Performance log** | Every run records task, model, tokens, cost, latency, and quality — the data layer that would drive adaptive routing later. |
 
-**Models (this run):** the three tiers now span three real vendors — GPT-4o mini (OpenAI, $0.15 / $0.60 per 1M tokens, budget), DeepSeek Chat (DeepSeek, ~$0.27 / $1.10, mid), and Claude Opus 4.8 (Anthropic, $5 / $25, frontier). The judge is Claude Opus 4.8, cross-validated by a second, independent judge — see "Validating the judge" below. This is the second iteration of the benchmark: the first run kept all three tiers on Claude models (Opus / Sonnet / Haiku) to prove the method fast on a single working key, and landed 32.5% savings. This run swaps the budget and mid tiers onto OpenAI and DeepSeek, widening the price range the router has to work with — see "The insight that matters" for what that did to the ceiling.
+**Models (this run):** the three tiers now span three real vendors — GPT-4o mini (OpenAI, $0.15 / $0.60 per 1M tokens, budget), DeepSeek Chat (DeepSeek, ~$0.27 / $1.10, mid), and Claude Opus 4.8 (Anthropic, $5 / $25, frontier), all list prices. The judge is Claude Opus 4.8, cross-validated by a second, independent judge — see "Validating the judge" below. This is the second iteration of the benchmark: the first run kept all three tiers on Claude models (Opus / Sonnet / Haiku) to prove the method fast on a single working key, and landed 32.5% savings. This run swaps the budget and mid tiers onto OpenAI and DeepSeek, widening the price range the router has to work with — see "The insight that matters" for what that did to the ceiling.
 
 **Benchmark:** 25 tasks weighted to resemble real production traffic — mostly classification and extraction, some short generation, a minority of hard reasoning (roughly 32% / 28% / 24% / 16%).
 
@@ -120,7 +120,7 @@ A backend benchmark harness, deliberately minimal:
 - **Cost reduction: 53.6%**
 - **Quality retention: 100.4%** of baseline (the router edged it, within noise)
 - **Latency: 46.2% faster** (median 1,208 ms vs. 3,663 ms) — cheaper models also happen to respond faster, so this is a second win at zero extra cost, not a tradeoff.
-- **Hypothesis (≥40% cost reduction, ≥95% quality retention): PASSED on these 25 tasks.** The 300-task public test did not pass.
+- **Hypothesis (≥40% cost reduction, ≥95% quality retention): PASSED on these 25 tasks.** The first 300-task public test did not pass; the current default rule passed a second one (see the top of this page), and missed the quality bar on the 40-task hard set alone.
 - The router sent 11 tasks to the budget tier (GPT-4o mini), 7 to the mid tier (DeepSeek Chat), 7 to the frontier (Opus) — a sensible spread by difficulty, not a blunt "cheapest everywhere."
 
 ## What this looks like at scale
@@ -164,7 +164,7 @@ Everything is additive and reproducible — the default configuration still repr
 
 ## What I'd do next
 
-1. **Adaptive routing** — feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one; the v2 classifier is a first step — prediction from the prompt rather than a static rule.)
+1. **Adaptive routing** — ✅ *built in v3 (the learned router, below).* Feed the performance log back into the router so model choice is learned per task type, not hand-configured. (The log was designed for this from day one; the v2 classifier is a first step — prediction from the prompt rather than a static rule.)
 2. **Confidence-based escalation** — ✅ *built in v2 (the cascade): try the cheap model first, a reference-free verifier checks the answer, escalate only on a failed check.* Next: tune the escalate threshold per task type from the performance log, rather than a single global value.
 3. **More vendors** — cross-provider routing is now proven across three (Anthropic, OpenAI, DeepSeek); v5 added Kimi (Moonshot) as a fourth, offline-only so far; a Gemini adapter is the next candidate to test whether the ceiling keeps climbing or starts to plateau.
 4. **Judge checks** — the second judge agreed on the 25-task run (96.7%), and the eval has grown to 300 public tasks. A hand check on the public run did not confirm the judge, so the next steps are running the second judge there and using code wherever a rule can be checked. The v2 hard set (objective exact-match) is a start at reducing judge dependence.
@@ -219,6 +219,7 @@ v1–v3 showed routing could work on my own tasks, but the router only existed i
 - **One API.** `Router(policy).complete(prompt)` returns the answer, the model, the cost and a "why" trace. Every strategy is an interchangeable policy behind it.
 - **Real failover.** A provider error retries the next model up the ladder and is recorded in the trace, instead of a silent fake answer.
 - **A live learning signal.** The v3 learned router needed an answer key that production never has. `feedback(request_id, score)` replaces it; self-verification evidence is down-weighted so it can never trigger a cheaper route alone.
+- **A degraded flag.** Every result says when the routing was not what the policy intended (the classifier fell back to the keyword heuristic, or a provider failed over), and the web app, the OpenAI-compatible server and the MCP paid result pass it on.
 - **Drop-in endpoint.** OpenAI-compatible — change one URL in an existing app. Localhost-only by default, auth on by default, 256 KB request cap, logging opt-in because it stores prompts.
 
 I also found and fixed a test bug that had silently switched later tests to live paid APIs (6 tiny calls, under $0.001), and added a guard so it can't recur.
@@ -231,7 +232,7 @@ Five experiments, each attacking an assumption, reported as measured — includi
 2. **Fool the router (red-team, defensive).** Cost-inflation prompts ("use your most capable model") moved routing 7/10 → 0/10 after hardening; verifier/jury injection is 0 after hardening. Making a hard task look easy still works 2/9 — a documented residual risk. Original prompts are pinned so published results still reproduce.
 3. **Live price tracking** (free OpenRouter price list, treated as untrusted). v1's 53.6% holds at today's prices (53.58%). It caught Sonnet 5 at −33% vs list and a Kimi resale price ~12× below first-party; no roster's model order would change.
 4. **Budget governor + shadow sampling (offline simulation).** Shadow-checking 5% of traffic detects an injected quality drop in 83% of simulated months (median ~870 requests) for ~6% overhead (1%: 29%; 10%: 93%). Protected task types were never downgraded. With reasoning protected, a 60% budget is infeasible (reasoning is ~64% of cost) and the governor flags that rather than hiding it.
-5. **Kimi K3 (Moonshot).** Priced above Sonnet ($3/$15 against $2/$10) with mandatory billed reasoning on top, so on short mid-tier tasks it can only compete on quality, never price (offline projection from real token counts; live quality run pending). The router now defaults Kimi to low reasoning effort, because Moonshot's own default is its most expensive. A live outage confirmed failover to Opus.
+5. **Kimi K3 (Moonshot).** Priced above Sonnet ($3/$15 against $2/$10, list prices) with mandatory billed reasoning on top, so on short mid-tier tasks it can only compete on quality, never price (offline projection from real token counts; live quality run pending). The router now defaults Kimi to low reasoning effort, because Moonshot's own default is its most expensive. A live outage confirmed failover to Opus.
 
 ## v6: a classifier that teaches itself
 
@@ -270,13 +271,14 @@ Test the one assumption first, then build, then measure honestly. v5's shadow te
 ## Honest limitations
 
 - **The judge is only partly confirmed.** On the 25-task run a second judge from a different vendor agreed (96.7% within 0.15, 0.010 mean difference), but both are LLMs. On the public run my hand check agreed on pass or fail for 22 of 29 answers, with a correlation of only about 0.03, and a code check found 15 answers the judge scored too generously and 4 too harshly. The second judge has not been run there.
-- **The default rule depends on a final `Answer:` line.** Agreement is checked on that line, and every benchmark prompt asks for one. A prompt without one skips the rule for reasoning and extraction and follows the rules table, so everyday prompts save less than the benchmark shows.
-- **The lookup has only seen benchmark tasks.** It knows four task types and rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. No real paid request has gone through the server or web app with the new rule.
+- **The default rule depends on a final `Answer:` line.** Agreement is checked on that line, and every benchmark prompt asks for one. On a reasoning or extraction prompt without one, the router now appends an instruction asking for it, then runs the same check. Free-form answers may agree less often, so more live prompts may end at the decider model (Sonnet 5.5). This is unmeasured: no paid re-run was done.
+- **The lookup has only seen benchmark tasks.** It knows four task types and rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. No real paid request has gone through the server or web app with the new rule. An opt-in flag (`--lookup-from-log`) can add live requests rated good to the lookup; it is tested with the mock only and its effect on real traffic is unmeasured.
 - **The public test is still a fixed mix.** It is not a real workload, the mix drives the answer, and the models have probably seen public benchmarks in training. Answers are capped at 1,024 tokens, and the mixed run printed 11 cut-offs while the database shows 14 answers at the limit. That gap isn't explained.
 - **25 tasks is a starting eval.** It was enough to demonstrate the method, not to certify a savings figure, and its quality result did not carry over to the public test.
 - **v5 results are small-n and partly modelled.** The jury's errors are correlated (shared blind spots); the red-team runs use n of 5–10; the budget simulation imputes some mid-tier quality (optimistic); Kimi's quality is unmeasured — only its price is projected.
 - **The Jev result is small-n.** 150 emails over 3 days, only 50 unseen; Haiku is the reference, not truth; rejection and recruiter-reply emails are untested.
 - **The live chain numbers are early.** They come from a 23-email pre-release test and the first live runs; the fallback path and the fixed job-saving step had not yet run live at time of writing. The old classifier is the reference, not truth.
+- **Shadow mode and `awr bench` are untested live.** `router:shadow` answers on the frontier and reports what the router would have called, with an estimated saving at list prices ([`docs/SHADOW_MODE.md`](docs/SHADOW_MODE.md)); no real request has gone through it. `awr bench` runs your own prompts through the same paired test ([`docs/BYO_WORKLOAD.md`](docs/BYO_WORKLOAD.md)); it has only been run in mock mode.
 - **Single-turn tasks only.** Real workloads include multi-turn and tool-use flows this benchmark doesn't cover.
 - **The at-scale projection is directional.** It's a linear extrapolation from this run's per-task cost and assumes production traffic resembles this benchmark's task mix — real traffic will differ, sometimes substantially.
 
