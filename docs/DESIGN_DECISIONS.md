@@ -8,7 +8,7 @@ The current result is the router's default rule: on 300 public tasks it was 86.4
 
 ## Runs cited
 
-Cost cut is net of routing cost. It is compared with sending every task to Claude Opus 4.8. The ranges in brackets are 95% ranges from [`ANALYSIS.md`](ANALYSIS.md), or from `BENCHMARK_PLAN.md` for R13 and R14. R15's are 99% ranges, from the README. Where no range is shown, the source has none. Quality is the router's quality as a share of frontier-only quality.
+Cost cut is net of routing cost. It is compared with sending every task to Claude Opus 4.8. The ranges in brackets are 95% ranges from [`ANALYSIS.md`](ANALYSIS.md), or from `BENCHMARK_PLAN.md` for R13 and R14. R15's and R16's are 99% ranges, from the README and the reports. Where no range is shown, the source has none. Quality is the router's quality as a share of frontier-only quality.
 
 Task sets: easy is `data/tasks.json` (25 tasks), hard is `data/tasks_hard.json` (10 tasks), held-out is `data/tasks_v3.json` (14 tasks). In `data/public/benchmark/`, public mixed is `tasks_public.json` (300 tasks), public hard is `tasks_public_hard.json` (40 tasks: the 10 hard tasks and 30 from MMLU-Pro) and public fresh is `tasks_public_fresh2.json` (300 tasks).
 
@@ -68,6 +68,7 @@ I built this because the first public test lost quality where a single cheap mod
 - Agreement is not correctness. I rejected a jury of cheap models as a default for exactly that reason (section 1.3). Hard tasks are the real gap: 95.2% on 24 tasks, with a low end of 80.0% [R15]. On the 40-task hard set alone it kept 90.8% of quality [R16], below the bar.
 - By default the lookup only knows the 1,200 labelled public tasks. It got the type right on 1,190 of them when each set was predicted from the other three (#14), but real prompts may look nothing like them. A prompt sharing no words with them gets the keyword heuristic.
 - The red-team results in 1.2 predate the lookup, so it has not been attacked.
+- Agreement is not trusted when a provider failover makes the same model answer both cheap calls: the trace says "no cross-check" and the rule goes on to the vote or the decider.
 - No real paid request has gone through the server or web app with this rule, only stubbed tests (#14).
 
 **Rejected.** The LLM classifier as the default. It costs a call on every task, and the first public test missed the target with it [R13].
@@ -126,6 +127,10 @@ Trade-off:
 
 The rule I used: a default must hold on work nobody has measured yet. The learned router stays opt-in for a similar reason: it may only move a task cheaper with at least 5 similar past successes at the quality bar, so it needs logged history first [R11, R12].
 
+**Shadow mode.** `router:shadow` on the OpenAI-compatible server (off unless `--allow-frontier`) answers on the frontier and logs what the router would have called, with the cost estimated at list prices on the frontier answer's token counts, assuming the cheap models agree. That is the router's best case, so the saving is an upper-end estimate, not a measurement. No real request has gone through it, only mock tests ([`SHADOW_MODE.md`](SHADOW_MODE.md), `scripts/shadow_report.py`).
+
+**Bring your own workload.** `awr bench` runs a JSONL file of prompts through the same paired test as the benchmark (default rule against frontier-only), with a worst-case spend estimate and a `--max-spend` cap checked before any call. It has only been run in mock mode, and its live path is covered by stubbed tests ([`BYO_WORKLOAD.md`](BYO_WORKLOAD.md)).
+
 **At production scale.** Choose the policy per workload, from the measured share of easy work. Use the cascade where task difficulty cannot be predicted.
 
 ### 1.4 Failures climb, never drop
@@ -171,7 +176,8 @@ The rule I used: a default must hold on work nobody has measured yet. The learne
 | `exact_match` | Reference found anywhere in the reply | July reports: 10 of 25 easy tasks, 8 of 10 hard | Loose. See 2.4 |
 | `final_answer` | Only the last `Answer:` line | Public runs: 228 of 300 tasks in R13 and R15, 38 of 40 in R14 | Strict, see 2.4 |
 | `rubric_judge` | Claude Opus 4.8 scores against a rubric | July: 15 of 25 easy, 2 of 10 hard. Public runs: 72 of 300, 2 of 40 | Only partly confirmed, see below |
-| `verifier` | The mid model scores with no answer key | Paid web mode (`quality_source: verifier`) | An opinion. It grades itself when the mid model wrote the answer |
+| `verifier` | A model other than the answering one scores with no answer key (the roster's budget model, else Haiku 5.5, else the mid model) | Paid web mode (`quality_source: verifier`) | An opinion, not a measurement |
+| `self-check` | Every candidate wrote the answer, so the mid model grades it | Paid web mode (`quality_source: self-check`) | Weakest: the answerer grades itself |
 | `simulated` | Placeholder table in `router.scoring` | Demo mode | Not a measurement |
 | `unavailable` | The verifier call failed | Paid web mode | Score is null, answer is kept |
 
@@ -251,11 +257,11 @@ The first public test added two stronger checks on short writing (`BENCHMARK_PLA
 
 **Choice.** `route_request(dry_run=False)` is refused unless the server's own environment has `AI_ROUTER_MCP_ALLOW_PAID=1`. A client can be talked into anything by text it reads. When on, the defaults are $0.50 a day, 1,000 output tokens per call, 10 calls a minute and frontier off. It checks today's spend plus the worst case for this call before calling. Answers come back in `untrusted_model_output`. Nothing is stored.
 
-**Trade-off.** The limits are per process and reset on restart.
+**Trade-off.** The daily spend total is kept in `data/spend.db` and survives restarts, but it is shared only by servers on one machine. The per-minute rate is per process and resets on restart.
 
 **Rejected.** A client-side flag.
 
-**At production scale.** A shared spend store and per-client budgets.
+**At production scale.** A spend store shared across machines and per-client budgets.
 
 ---
 
@@ -270,8 +276,6 @@ Results from [`examples/rag/README.md`](../examples/rag/README.md). The first se
 | Embeddings | 6/13 | 11/13 | 20/66 | 34/66 |
 | Keywords | 9/13 | 12/13 | 19/66 | 36/66 |
 | Hybrid | 10/13 | 12/13 | 27/66 | 44/66 |
-
-I wrote both sets. The first is too kind and the second may be too hard. The 95% range on the second set is about 30 to 53% for first place and 55 to 77% for the top 4.
 
 I wrote both sets. The first is too kind and the second may be too hard. The 95% range on the second set is about 30 to 53% for first place and 55 to 77% for the top 4.
 
@@ -323,13 +327,13 @@ To be exact: `rag.py` uses the free `heuristic_classify` on the question and pas
 
 ### 6.1 Demo mode is the default, even with real keys
 
-**Choice.** Answers, cost and quality are simulated and the page says so (#3). Real calls need `AWR_WEB_ALLOW_PAID=1` in the environment, not read from `.env`. Then the limits are $0.50 a day and 30 a minute. There is no login, so it is localhost only and other `Host` headers are refused.
+**Choice.** Answers, cost and quality are simulated and the page says so (#3). Real calls need `AWR_WEB_ALLOW_PAID=1` in the environment, not read from `.env`. Then the limits are $0.50 a day and 30 a minute. There is no login, so it is localhost only and other `Host` headers are refused. Cross-origin requests are refused too, and `GET /healthz` reports that the app is up.
 
 **Trade-off.** A first-time visitor sees no real answer. The lookup is real, but agreement between simulated answers means nothing, so the final model shown for most tasks is not a real outcome. Paid mode has only been tested with stubs.
 
 **Rejected.** Going paid whenever keys exist.
 
-**At production scale.** Login, per-client limits, and a shared spend store.
+**At production scale.** Login, per-client limits, and a spend store shared across machines.
 
 ### 6.2 Docker: two services, a normal install
 
@@ -343,15 +347,13 @@ To be exact: `rag.py` uses the free `heuristic_classify` on the question and pas
 
 ### 6.3 Spend limits differ by entry point
 
-**Choice.** The web app, the OpenAI-compatible server and the MCP server share `SpendGuard`, and the MCP server adds a worst-case check. The benchmark has its own meter, because it needs to stop a run rather than refuse one request.
-
-**Choice.** The web app, the OpenAI-compatible server and the MCP server share `SpendGuard`, and the MCP server adds a worst-case check. The benchmark has its own meter, because it needs to stop a run rather than refuse one request.
+**Choice.** The web app, the OpenAI-compatible server and the MCP server share `SpendGuard`, and the MCP server adds a worst-case check. The benchmark has its own meter, because it needs to stop a run rather than refuse one request. The daily total is kept in SQLite (`data/spend.db`, set by `AWR_SPEND_STORE`), so it survives restarts and is shared by the three servers on one machine. Each compares that total with its own cap, so set the same cap on all three.
 
 | Path | When it checks | Limits | Gap |
 |---|---|---|---|
-| Web `/route` | Before the call, against today's spend | $0.50 a day, 30 a minute | Requests in flight can overshoot |
-| OpenAI-compatible server | Same check | $1.00 a day default, 30 a minute, 8 concurrent | Same overshoot (smell 4) |
-| MCP | Today's spend plus the worst case for this call | $0.50 a day, 10 a minute | Per process |
+| Web `/route` | Before the call, against today's shared spend | $0.50 a day, 30 a minute | Requests in flight, across all three servers, can overshoot |
+| OpenAI-compatible server | Same check | $1.00 a day default, 30 a minute (`/v1/feedback` 10 a minute), 8 concurrent | Same overshoot (smell 4) |
+| MCP | Shared spend plus the worst case for this call | $0.50 a day, 10 a minute | Rate is per process |
 | Benchmark `--max-spend` (#8) | Before each task | Stops when less than $0.10 of the cap is left | Per process |
 
 The benchmark cap counts real calls only, so cache replays are free. It writes no report for a stopped run. It also stops on a classifier fallback, a failed or unreadable judge reply, a simulated answer or a provider error. It sends one tiny test call per model first. Because it is per process, a restart must be given only what is left. The plan for the first public test was an $8 hard cap across both runs, with an estimate of about $4.30. Real spend was $2.7228 (`BENCHMARK_PLAN.md`). The stop rules did fire: the first attempt stopped at task 190 of 300, after $0.0837, because the judge wrote out its working before its score. With my approval the check now also reads a score alone on the last line, and the plan records that.
@@ -360,7 +362,7 @@ The benchmark cap counts real calls only, so cache replays are free. It writes n
 
 **Rejected.** Quietly carrying on.
 
-**At production scale.** One shared store, with a reservation made before each call.
+**At production scale.** One store shared across machines, with a reservation made before each call.
 
 ---
 
@@ -370,10 +372,10 @@ These were found in #2. I listed them rather than fixed them, so that PR stayed 
 
 | # | Smell | Why it matters | Status on this branch |
 |---|---|---|---|
-| 1 | Silent classifier downgrade | With no key or a failed call, the classifier quietly uses the keyword heuristic, and `Result.simulated` stays False | `Result.classifier_fell_back` records it, and a capped benchmark stops on it (#8). The default rule no longer calls the LLM classifier. Not fixed on the opt-in classifier path |
+| 1 | Silent classifier downgrade | With no key or a failed call, the classifier quietly uses the keyword heuristic, and `Result.simulated` stays False | `Result.classifier_fell_back` records it, and a capped benchmark stops on it (#8). The default rule no longer calls the LLM classifier. Every result now carries `degraded` when the classifier fell back or a provider failed over, and `/route`, the server's `x_router` and the MCP paid result pass it on. The silent fallback itself is not fixed on the opt-in classifier path |
 | 2 | Failed calls are not costed | A refusal has real token counts but `Ctx.call` drops them, so reported spend can be lower than the bill | Not fixed |
 | 3 | Cascade can pay for the frontier twice | If the budget call fails over to a higher tier, that answer is still treated as a non-final attempt. If the verifier rejects it, the ladder calls the frontier again | Not fixed |
-| 4 | Daily budget can overshoot under concurrent requests | Several requests pass the check before any spend is recorded | Not fixed on the HTTP server or the web app. The MCP server checks a worst case first |
+| 4 | Daily budget can overshoot under concurrent requests | Several requests pass the check before any spend is recorded | Not fixed on the HTTP server or the web app, and now requests in flight across all three servers can overshoot the shared total. The MCP server checks a worst case first |
 | 5 | `assert` used for request validation in `server.py` | Asserts vanish under `python -O` | Not fixed |
 | 6 | Paths depend on the source tree | A normal install would put `data/` and `.cache/` under site-packages | Fixed: both resolve from `AWR_HOME` (6.2) |
 | 7 | The server builds a new `Router` per request | Stateful policies such as `BudgetPolicy` cannot work behind it | Not fixed |
