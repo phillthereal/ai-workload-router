@@ -102,7 +102,7 @@ class ServerTests(unittest.TestCase):
     def test_errors(self):
         p = "/v1/chat/completions"
         for body in ({"model": "gpt-4", "messages": MSG},
-                     {"model": "router", "messages": MSG, "stream": True},
+                     {"model": "router", "messages": MSG, "stream": "yes"},  # stream=true now works
                      {"model": "router", "messages": []}):
             code, j, _ = call(self.base, p, body)
             self.assertEqual(code, 400)
