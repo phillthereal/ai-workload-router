@@ -240,7 +240,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small. The separate 40-task hard-set run confirmed the gap: 90.8% of quality.
 - **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. On the 40-task hard set it was run on 24 Nov 2026 and missed the quality bar (90.8%); see Measured results.
 - **Agreement is checked on a final `Answer:` line.** On a reasoning or extraction prompt without one, the router now adds an instruction asking the cheap models to end with that line, then runs the agreement check. The live effect of this is unmeasured: no paid re-run was done. Free-form answers may agree less often, so more of these prompts may end at Sonnet 5.5.
-- **The lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus.
+- **By default the lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. The server can opt in to adding live requests that were rated good through `/v1/feedback` or by a judge (`--lookup-from-log`); what that does to real traffic is unmeasured.
 
 **The newest parts are untested with real models.**
 
@@ -297,7 +297,7 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 - **Auth:** bearer auth is on by default. `serve.py` prints a generated token once to stderr, or set `AWR_SERVER_TOKEN`.
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
 - **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
-- **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy.
+- **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy. Adding `--lookup-from-log` (needs `--log-db`) also rebuilds the free lookup from logged `router` requests rated good through `/v1/feedback` (or by a judge), on start and after every `--lookup-rebuild-every` router/auto requests.
 
 **Bring your own workload.** `awr bench` runs your own JSONL prompts through the same paired test as the benchmark (default rule versus frontier-only) and reports cost cut and quality kept with 99% ranges. It prints a list-price worst-case estimate first. `AWR_FORCE_MOCK=1 awr bench tests/fixtures/byo_mixed.jsonl` is the free simulated demo; `awr bench my_prompts.jsonl --max-spend 2.00` is a live run, refused before any call if the cap is below the printed minimum (list-price worst case plus a reserve and the preflight calls). Reports and the run log go to the gitignored `data/byo/`. See [`docs/BYO_WORKLOAD.md`](docs/BYO_WORKLOAD.md).
 
