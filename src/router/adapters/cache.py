@@ -22,9 +22,10 @@ from pathlib import Path
 from typing import Optional
 
 from .base import Adapter, Response
+from ..paths import CACHE_DIR as _HOME_CACHE_DIR
 from ..secrets import refresh_cache
 
-CACHE_DIR = Path(__file__).resolve().parents[3] / ".cache"
+CACHE_DIR = _HOME_CACHE_DIR
 
 
 def _cache_key(

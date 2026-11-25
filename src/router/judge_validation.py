@@ -44,6 +44,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from . import db
+from .paths import DATA_DIR
 from .adapters.base import Response
 from .benchmark.tasks import load_tasks
 from .config import FRONTIER_MODEL
@@ -52,7 +53,7 @@ from .scoring import judge_score_with_model
 SECOND_JUDGE_MODEL = "gpt-4o-mini"
 AGREEMENT_THRESHOLD = 0.15
 
-DEFAULT_HUMAN_SHEET_PATH = Path(__file__).resolve().parents[2] / "data" / "human_label_sheet.csv"
+DEFAULT_HUMAN_SHEET_PATH = DATA_DIR / "human_label_sheet.csv"
 
 _HUMAN_SHEET_FIELDS = (
     "task_id", "task_type", "prompt", "model_answer", "rubric",

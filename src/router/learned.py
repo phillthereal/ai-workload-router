@@ -62,6 +62,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from . import db
+from .paths import DATA_DIR
 from .classifier import keyword_signal_groups
 from .config import TIER_ORDER, Roster, get_roster
 from .report import QUALITY_RETENTION_TARGET_PCT
@@ -232,7 +233,7 @@ def decay_weight(created_at: Optional[str], now: Optional[datetime] = None) -> f
 
 # --- Task registry: resolving a historical row's prompt by task_id ---------
 
-_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+_DATA_DIR = DATA_DIR
 _registry_cache: Optional[dict[str, str]] = None
 
 

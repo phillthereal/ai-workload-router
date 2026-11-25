@@ -4,13 +4,13 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
 
-# Editable on purpose: the router finds .cache/ and data/ relative to its source
-# files, so they must stay under /app rather than move to site-packages.
-# data/ holds the spend store (data/spend.db) the web app opens at startup.
-RUN pip install --no-cache-dir -e ".[web]" \
+# AWR_HOME is where the router keeps data/ (run log, daily spend store) and .cache/.
+# Mount a volume here to keep them across restarts.
+ENV AWR_HOME=/var/lib/awr
+RUN pip install --no-cache-dir ".[web]" \
     && useradd --create-home app \
-    && mkdir .cache data \
-    && chown app .cache data
+    && mkdir -p "$AWR_HOME/data" "$AWR_HOME/.cache" \
+    && chown -R app "$AWR_HOME"
 USER app
 
 EXPOSE 8000

@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    image: ai-workload-router
     ports:
       - "127.0.0.1:8000:8000"  # localhost only: the app has no login
     env_file:
@@ -9,3 +10,37 @@ services:
     environment:
       AWR_WEB_ALLOW_PAID: ${AWR_WEB_ALLOW_PAID:-}
       AWR_WEB_DAILY_BUDGET_USD: ${AWR_WEB_DAILY_BUDGET_USD:-0.50}
+    volumes:
+      - awr-data:/var/lib/awr  # shared with api: the daily spend store lives here
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build: .  # same image as app (cached, built once)
+    image: ai-workload-router
+    command: ["ai-router-server", "--host", "0.0.0.0", "--port", "8787", "--daily-budget", "${AWR_API_DAILY_BUDGET_USD:-1.00}"]
+    ports:
+      - "127.0.0.1:8787:8787"  # localhost only; bearer auth is on
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Empty: the server makes a token and prints it once to its log (docker compose logs api).
+      AWR_SERVER_TOKEN: ${AWR_SERVER_TOKEN:-}
+      # 1 = simulated answers. Set AWR_API_FORCE_MOCK=0 (and have keys) for real calls.
+      AWR_FORCE_MOCK: ${AWR_API_FORCE_MOCK:-1}
+    volumes:
+      - awr-data:/var/lib/awr
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/healthz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  awr-data:

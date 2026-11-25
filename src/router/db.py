@@ -21,7 +21,9 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Union, cast
 from urllib.parse import quote
 
-DB_PATH = Path(__file__).resolve().parents[2] / "data" / "runs.db"
+from .paths import DATA_DIR
+
+DB_PATH = DATA_DIR / "runs.db"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (

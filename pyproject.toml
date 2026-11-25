@@ -23,6 +23,7 @@ rag = ["fastembed>=0.9,<1", "pypdf>=6.21,<7"]
 
 [project.scripts]
 ai-router-mcp = "router.mcp_server:main"
+ai-router-server = "router.server:main"
 ai-router-web = "router.web:main"
 awr = "router.cli:main"
 

@@ -25,7 +25,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-DEFAULT_SPEND_STORE = Path(__file__).resolve().parents[2] / "data" / "spend.db"
+from .paths import DATA_DIR
+
+DEFAULT_SPEND_STORE = DATA_DIR / "spend.db"
 
 _SCHEMA = "CREATE TABLE IF NOT EXISTS spend (day TEXT PRIMARY KEY, usd REAL NOT NULL)"
 _UPSERT = ("INSERT INTO spend(day, usd) VALUES (?, ?) "
