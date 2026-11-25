@@ -74,12 +74,18 @@ git clone https://github.com/phillthereal/ai-workload-router.git && cd ai-worklo
 docker compose up --build
 ```
 
-Then open http://localhost:8000, paste a task, and see which model it would go to and why. This is demo mode: **the task-type lookup is real, but the answer, cost and quality score are simulated, and so is any agreement between models**, and the page says so. Real calls need keys and an explicit opt-in, covered in [`docs/DOCKER.md`](docs/DOCKER.md).
+That starts two services from one image. Open http://localhost:8000, paste a task, and see which model it would go to and why. This is demo mode: **the task-type lookup is real, but the answer, cost and quality score are simulated, and so is any agreement between models**, and the page says so. Real calls need keys and an explicit opt-in, covered in [`docs/DOCKER.md`](docs/DOCKER.md).
+
+The second service, `api`, is the OpenAI-compatible endpoint on http://localhost:8787/v1. Both ports are published on localhost only. Its answers are simulated too, until you set `AWR_API_FORCE_MOCK=0` and have keys in `.env`. It needs a bearer token. Either set one before you start (`AWR_SERVER_TOKEN=... docker compose up --build`), or leave it empty and read the generated one, shown once, with `docker compose logs api`. Its daily budget is $1.00 per UTC day; change it with `AWR_API_DAILY_BUDGET_USD`. Both services share one volume, so the daily spend total survives restarts.
 
 The same thing from the command line, while the app is running:
 
 ```bash
 curl -s -H "Content-Type: application/json" -d '{"prompt":"Classify this review as positive or negative: great phone"}' http://localhost:8000/route
+```
+
+```bash
+curl -s -H "Authorization: Bearer $AWR_SERVER_TOKEN" -H "Content-Type: application/json" -d '{"model":"router","messages":[{"role":"user","content":"What is 2+2?"}]}' http://localhost:8787/v1/chat/completions
 ```
 
 ### Without Docker
@@ -265,8 +271,8 @@ None of the following is evidence of anything. It exists so the project runs for
 **It is not ready to serve real users.**
 
 - The web app has no login, so it only accepts localhost.
+- Set `AWR_HOME` to move `data/` and `.cache/` out of the source tree (default: the repo root). The Docker image sets it to `/var/lib/awr`.
 - The daily spend total is kept in `data/spend.db` (override the path with `AWR_SPEND_STORE`; set it empty to keep it in memory). It survives restarts and is shared by the web app, the OpenAI-compatible server and the MCP server on one machine. Each server compares that shared total with its own cap, so set the same cap on all three. The budget is checked before each call, so requests in flight, now across all three servers, can still overshoot it slightly. The per-minute rate limit is still held in memory per process.
-- Docker uses an editable install, as a workaround for paths that depend on the source tree.
 - `.cache/` and `--log-db` store prompts and responses in plain text. Both are gitignored, but treat them as sensitive.
 
 ## What I'd do next
@@ -276,8 +282,7 @@ None of the following is evidence of anything. It exists so the project runs for
 3. **Improve RAG retrieval and measure answer quality:** look at why reworded questions miss, write answers in advance, and add a "not found" threshold.
 4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
 5. **Grow the eval:** more tasks from one real workload, human scores against the judges.
-6. **Fix the source-relative paths,** so a normal install works and Docker can drop the workaround.
-7. **For real users:** add authentication, per-client limits, and a spend store that works across machines (today's `data/spend.db` is shared only on one machine).
+6. **For real users:** add authentication, per-client limits, and a spend store that works across machines (today's `data/spend.db` is shared only on one machine).
 
 ## Other ways to use it
 

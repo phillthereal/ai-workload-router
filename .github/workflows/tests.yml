@@ -48,10 +48,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Start the app with Docker Compose
-        run: docker compose up --build --detach
-      - name: Smoke test the API and UI
+      - name: Start both services with Docker Compose
         run: |
-          curl -fsS --retry 15 --retry-all-errors --retry-delay 1 -o /dev/null http://localhost:8000/
+          # Throwaway token for this run only; never stored in a file.
+          TOKEN="$(openssl rand -hex 16)"
+          echo "::add-mask::$TOKEN"
+          echo "AWR_SERVER_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          AWR_SERVER_TOKEN="$TOKEN" docker compose up --build --detach --wait
+      - name: Smoke test the web app and the API
+        run: |
+          curl -fsS -o /dev/null http://localhost:8000/
           curl -fsS -H "Content-Type: application/json" -d '{"prompt":"What is 2+2?"}' \
             http://localhost:8000/route | grep -q '"simulated":true'
+          curl -fsS -o /dev/null http://localhost:8000/healthz
+          curl -fsS -o /dev/null http://localhost:8787/healthz
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $AWR_SERVER_TOKEN" http://localhost:8787/v1/models)
+          test "$code" = 200 || { echo "models with token: $code"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/v1/models)
+          test "$code" = 401 || { echo "models without token: $code"; exit 1; }
+          curl -fsS -H "Authorization: Bearer $AWR_SERVER_TOKEN" -H "Content-Type: application/json" \
+            -d '{"model":"router","messages":[{"role":"user","content":"What is 2+2?"}]}' \
+            http://localhost:8787/v1/chat/completions | grep -q '"simulated": *true'
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs

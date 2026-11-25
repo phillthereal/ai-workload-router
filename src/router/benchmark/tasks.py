@@ -16,7 +16,9 @@ import json
 from pathlib import Path
 from typing import Any, Optional, Union
 
-DEFAULT_TASKS_PATH = Path(__file__).resolve().parents[3] / "data" / "tasks.json"
+from ..paths import DATA_DIR
+
+DEFAULT_TASKS_PATH = DATA_DIR / "tasks.json"
 
 _REQUIRED_FIELDS = ("id", "task_type", "difficulty", "prompt", "reference", "scoring")
 _VALID_TASK_TYPES = {"classification", "extraction", "short_generation", "reasoning"}

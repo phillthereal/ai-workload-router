@@ -27,13 +27,15 @@ from ..api import (
 )
 from ..config import FRONTIER_MODEL, ROSTERS, get_model
 from ..lookup import shared_lookup
+from ..paths import DATA_DIR as _HOME_DATA_DIR
+from ..paths import HOME
 from ..report import COST_REDUCTION_TARGET_PCT, QUALITY_RETENTION_TARGET_PCT, BenchmarkReport, build_report
 from ..scoring import _JUDGE_PROMPT_TEMPLATE, rubric_judge, score
 from . import guards
 from .stats import bootstrap, net_reduction, retention
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = REPO_ROOT / "data"
+REPO_ROOT = HOME
+DATA_DIR = _HOME_DATA_DIR
 BYO_DIR = DATA_DIR / "byo"
 RUNS_DB_NAME = "runs_byo.db"
 """The BYO run log lives in BYO_DIR, never in data/runs.db (section 5)."""
