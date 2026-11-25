@@ -248,6 +248,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
 - RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
+- `awr bench` (bring your own workload) has only been run in mock mode. Its live path is covered by stubbed tests only; no paid run has been made with it.
 
 **Degraded routing is now flagged.** Every result carries `degraded: true` when the LLM classifier fell back to the keyword heuristic or a provider failover happened, and all three entry points (`/route`, the OpenAI-compatible server's `x_router`, the MCP paid result) pass it on, so a caller can tell the routing was not what the policy intended; the web app then shows no quality score. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
 
@@ -297,6 +298,8 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
 - **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
 - **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy.
+
+**Bring your own workload.** `awr bench` runs your own JSONL prompts through the same paired test as the benchmark (default rule versus frontier-only) and reports cost cut and quality kept with 99% ranges. It prints a list-price worst-case estimate first. `AWR_FORCE_MOCK=1 awr bench tests/fixtures/byo_mixed.jsonl` is the free simulated demo; `awr bench my_prompts.jsonl --max-spend 2.00` is a live run, refused before any call if the cap is below the printed minimum (list-price worst case plus a reserve and the preflight calls). Reports and the run log go to the gitignored `data/byo/`. See [`docs/BYO_WORKLOAD.md`](docs/BYO_WORKLOAD.md).
 
 **MCP server.** `ai-router-mcp` gives any MCP client (Claude Code, Cursor, Claude Desktop) five tools to classify a task, estimate cost and explain a decision. It is free and offline by default. See [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md) and a real session in [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
 

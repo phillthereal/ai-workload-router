@@ -311,7 +311,8 @@ def _real_judge_available() -> bool:
 
 
 def judge_score_with_model(
-    task: dict[str, Any], response: Response, judge_model: str, strict: bool = False
+    task: dict[str, Any], response: Response, judge_model: str, strict: bool = False,
+    use_cache: bool = True,
 ) -> float:
     """
     Real LLM-as-judge score using `judge_model`, via the same adapter + cache
@@ -328,6 +329,8 @@ def judge_score_with_model(
         response: The candidate Response to score.
         judge_model: Model name (key in router.config.MODELS) to judge with.
         strict: Raise JudgeError instead of using a mock or default score.
+        use_cache: False skips the record/replay disk cache, so neither the
+            task nor the answer is written to .cache/ (used by `awr bench`).
 
     Returns:
         Judge-assigned quality score in [0.0, 1.0]; 0.5 if the judge's
@@ -347,7 +350,8 @@ def judge_score_with_model(
         reference=task.get("reference", ""),
         candidate=response.text,
     )
-    judge_adapter = get_adapter(judge_model)
+    # use_cache only passed when off, so 1-arg get_adapter stubs keep working
+    judge_adapter = get_adapter(judge_model) if use_cache else get_adapter(judge_model, use_cache=False)
     judge_response = judge_adapter.complete(prompt)
     if not strict:
         return _parse_judge_score(judge_response.text)
@@ -360,7 +364,8 @@ def judge_score_with_model(
     return scores.pop()
 
 
-def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = False) -> float:
+def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = False,
+                       use_cache: bool = True) -> float:
     """
     Real LLM-as-judge score using the primary judge model (claude-opus-4-8),
     via `judge_score_with_model`.
@@ -375,10 +380,11 @@ def _real_rubric_judge(task: dict[str, Any], response: Response, strict: bool = 
     """
     from .config import FRONTIER_MODEL
 
-    return judge_score_with_model(task, response, FRONTIER_MODEL, strict)
+    return judge_score_with_model(task, response, FRONTIER_MODEL, strict, use_cache)
 
 
-def score(task: dict[str, Any], response: Response, strict: bool = False) -> float:
+def score(task: dict[str, Any], response: Response, strict: bool = False,
+          use_cache: bool = True) -> float:
     """
     Score a response against a task using the method named in task['scoring'].
 
@@ -390,6 +396,7 @@ def score(task: dict[str, Any], response: Response, strict: bool = False) -> flo
         task: Task dict with reference/scoring fields.
         response: The Response to score.
         strict: Raise JudgeError rather than fall back to a mock or default score.
+        use_cache: False keeps the real judge's call out of the .cache/ disk cache.
 
     Returns:
         Quality score in [0.0, 1.0].
@@ -405,7 +412,7 @@ def score(task: dict[str, Any], response: Response, strict: bool = False) -> flo
         return final_answer(response.text, task["reference"])
     if method == "rubric_judge":
         if _real_judge_available():
-            return _real_rubric_judge(task, response, strict)
+            return _real_rubric_judge(task, response, strict, use_cache)
         if strict:
             raise JudgeError("real judge unavailable")
         return rubric_judge(task, response)
