@@ -29,6 +29,7 @@ Task sets: easy is `data/tasks.json` (25 tasks), hard is `data/tasks_hard.json` 
 | R13 | `20261105T092337-0eb276cf` | cross_vendor | LLM classifier | Public mixed | 84.1% [79.0, 88.7] | 91.8% [86.9, 96.6] | [report](../data/benchmark_report_cross_vendor_classified_public.md) |
 | R14 | `20261105T095044-1b2f8b62` | cross_vendor | LLM classifier | Public hard | 22.2% [9.0, 40.3] | 96.1% [89.5, 100.0] | [report](../data/benchmark_report_cross_vendor_classified_public_hard.md) |
 | R15 | `20261105T192443-526ca924` | cross_vendor, plus Haiku 5.5 and Sonnet 5.5 | Default rule | Public fresh | 86.4% [80.8, 90.7] | 98.7% [95.1, 102.4] | [report](../data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_fresh2.md) |
+| R16 | `20261124T181625-fda70f0c` | cross_vendor | Default rule | Public hard | 83.5% [70.0, 93.8] | 90.8% [75.0, 105.7] | [report](../data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_hard.md) |
 
 Notes on single runs:
 
@@ -64,7 +65,7 @@ I built this because the first public test lost quality where a single cheap mod
 **Trade-off.** Most tasks now pay for at least two cheap answers. Discarded answers count as routing cost, which came to 1.7% of savings [R15]. The rule also has limits:
 
 - It compares a committed final line. A reasoning or extraction prompt without `Answer:` now gets an instruction to end with one (24 Nov 2026, below).
-- Agreement is not correctness. I rejected a jury of cheap models as a default for exactly that reason (section 1.3). Hard tasks are the real gap: 95.2% on 24 tasks, with a low end of 80.0% [R15]. The rule has not been run on the 40-task hard set.
+- Agreement is not correctness. I rejected a jury of cheap models as a default for exactly that reason (section 1.3). Hard tasks are the real gap: 95.2% on 24 tasks, with a low end of 80.0% [R15]. On the 40-task hard set alone it kept 90.8% of quality [R16], below the bar.
 - By default the lookup only knows the 1,200 labelled public tasks. It got the type right on 1,190 of them when each set was predicted from the other three (#14), but real prompts may look nothing like them. A prompt sharing no words with them gets the keyword heuristic.
 - The red-team results in 1.2 predate the lookup, so it has not been attacked.
 - No real paid request has gone through the server or web app with this rule, only stubbed tests (#14).
@@ -91,6 +92,8 @@ Trade-off:
 - Prompt text is read from the log, which is sensitive.
 - The benchmark's lookup is unchanged and never sees live rows.
 - The effect on real traffic is unmeasured.
+
+**24 Nov 2026: the hard set alone.** I ran the default rule on the 40-task public hard set, once, for $0.29 (run group `20261124T181625-fda70f0c`) [R16]. It was 83.5% cheaper [70.0, 93.8] and kept 90.8% of quality [75.0, 105.7], with 99% ranges, so the 95% bar is not met. The cheap models agreed on 33 of 40 tasks and DeepSeek's answer was kept; the router never called Opus. 5 tasks went to the GPT-4o mini vote and 2 to Sonnet 5.5 when no two agreed. 4 answers hit the 1,024-token output ceiling and scored 0: two in the router arm and two in the frontier arm, one task in both. On hard work the agreement rule saves money but loses quality, and the fix is not a rerun.
 
 **At production scale.** Label real traffic for the lookup, and track how often it is unsure. Watch the disagreement rate per task type, since a rise means the cheap models are struggling. Add a way to compare free-form answers that have no `Answer:` line.
 

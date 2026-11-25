@@ -4,7 +4,7 @@
 
 **[Read the case study →](https://phillthereal.github.io/ai-workload-router/case-study.html)** (the benchmark story, with charts) · **[Do you even need a router? →](https://phillthereal.github.io/ai-workload-router/calculator.html)** (an interactive calculator that will tell you when the answer is no) · License: MIT
 
-A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls, the default rule cut cost by **86.4%** at **98.7%** of the quality of Claude Opus 4.8. With 99% certainty it saves at least 80.8% and keeps at least 95.1%, so it **meets the 95% quality target**. The first version missed that target, at 84.1% saved and 91.8% quality. Quality on hard tasks alone is not proven yet. It is a personal project and has not served any customer or company traffic.
+A portfolio project that sends each LLM task to the cheapest model that can still do it well, and records what that cost and what it did to quality. On 300 public tasks with real API calls, the default rule cut cost by **86.4%** at **98.7%** of the quality of Claude Opus 4.8. With 99% certainty it saves at least 80.8% and keeps at least 95.1%, so it **meets the 95% quality target**. The first version missed that target, at 84.1% saved and 91.8% quality. On the 40-task hard set alone it kept 90.8% of quality, so it misses the bar on hard work. It is a personal project and has not served any customer or company traffic.
 
 ## The problem
 
@@ -146,6 +146,9 @@ python redteam.py heuristic
 | Classification | 96 | 71.0% [59.2, 81.9] | 98.7% [90.9, 106.8] |
 | Short writing | 72 | 94.8% [87.8, 97.3] | 99.3% [94.3, 104.2] |
 | Hard | 24 | 80.0% [56.7, 92.9] | 95.2% [80.0, 100.0] |
+| Hard set, 40 tasks (separate run) | 40 | 83.5% [70.0, 93.8] | 90.8% [75.0, 105.7] |
+
+On 24 Nov 2026 I ran the default rule on the 40-task public hard set on its own ([report](data/benchmark_report_cross_vendor_classified_agree_consensus_lookup_public_hard.md), run group `20261124T181625-fda70f0c`). It cut cost 83.5% but kept 90.8% of quality, below the 95% bar, so on hard work alone the rule does not meet the target. The cheap models agreed on 33 of 40 tasks, and that agreement was wrong often enough to lose the bar: agreement is not correctness. 4 answers (2 per arm, one task in both) hit the 1,024-token ceiling and scored 0. The run cost $0.29.
 
 - **How it routes.** A free nearest-match lookup picks the task type. Reasoning and extraction go to Haiku 5.5 and DeepSeek, and the DeepSeek answer is kept if they agree. If they differ on reasoning, GPT-4o mini votes, and Sonnet 5.5 decides when it sides with neither. Extraction skips the vote. Classification goes to GPT-4o mini and DeepSeek, then Opus if they differ. Short writing follows the rules table.
 - **Chain of Draft was tested and left out.** On 96 reasoning tasks it saved more (92.0% against 80.4%), but quality fell from 98.9% to 95.6%, and on 48 hard tasks to 90.5% ([test](experiments/cheap_tier_draft.py)).
@@ -234,8 +237,8 @@ None of the following is evidence of anything. It exists so the project runs for
 
 **What the default rule has not proven.**
 
-- **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small.
-- **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. It has not been run through the router on the 40-task hard set.
+- **Quality on hard tasks alone.** The 24 hard tasks reached 95.2%, but the worst end of the range is 80.0%. Reasoning and extraction on their own also fall below 95% at the worst end of this run. The groups are small. The separate 40-task hard-set run confirmed the gap: 90.8% of quality.
+- **It is not a brand-new test.** The rule was picked on other tasks, but these 300 had already been used to confirm it. On the 40-task hard set it was run on 24 Nov 2026 and missed the quality bar (90.8%); see Measured results.
 - **Agreement is checked on a final `Answer:` line.** On a reasoning or extraction prompt without one, the router now adds an instruction asking the cheap models to end with that line, then runs the agreement check. The live effect of this is unmeasured: no paid re-run was done. Free-form answers may agree less often, so more of these prompts may end at Sonnet 5.5.
 - **By default the lookup has only seen benchmark tasks.** It knows four task types, and it rates almost all writing as medium, so hard writing goes to DeepSeek rather than Opus. The server can opt in to adding live requests that were rated good through `/v1/feedback` or by a judge (`--lookup-from-log`); what that does to real traffic is unmeasured.
 
@@ -245,6 +248,7 @@ None of the following is evidence of anything. It exists so the project runs for
 - Quality scores in the web app are simulated in demo mode. In paid mode they would be a model's estimate with no answer key, and the mid model grades itself when it wrote the answer. They are not the benchmark's score.
 - RAG retrieval is 10/13 first place and 12/13 in the top 4 on a small set I wrote after reading the pages, so its wording matches the documents. On 66 reworded questions from random pages it falls to 27/66 and 44/66, so expect real users to get the wrong passages often. I wrote both sets, and a page that also answers a question but was not listed counts as a miss.
 - **RAG answer quality has not been measured.**
+- `awr bench` (bring your own workload) has only been run in mock mode. Its live path is covered by stubbed tests only; no paid run has been made with it.
 
 **Degraded routing is now flagged.** Every result carries `degraded: true` when the LLM classifier fell back to the keyword heuristic or a provider failover happened, and all three entry points (`/route`, the OpenAI-compatible server's `x_router`, the MCP paid result) pass it on, so a caller can tell the routing was not what the policy intended; the web app then shows no quality score. This and 13 other design problems are listed in [PR #2](https://github.com/phillthereal/ai-workload-router/pull/2). Two more affect cost: failed calls are not costed, and the HTTP server's daily budget can overshoot under concurrent requests.
 
@@ -270,7 +274,7 @@ None of the following is evidence of anything. It exists so the project runs for
 2. **Fix the silent classifier fallback** so a downgrade shows up in the result.
 3. **Improve RAG retrieval and measure answer quality:** look at why reworded questions miss, write answers in advance, and add a "not found" threshold.
 4. **Count the cost of failed calls** and reserve the worst case before each call, so reported spend matches what a provider bills.
-5. **Grow the eval:** more tasks from one real workload, human scores against the judges, and the hard set on the three-vendor roster.
+5. **Grow the eval:** more tasks from one real workload, human scores against the judges.
 6. **Fix the source-relative paths,** so a normal install works and Docker can drop the workaround.
 7. **For real users:** add authentication, per-client limits, and a spend store that works across machines (today's `data/spend.db` is shared only on one machine).
 
@@ -294,6 +298,8 @@ AWR_FORCE_MOCK=1 python serve.py --port 8787
 - **Request checks:** localhost only by default. Requests must be `application/json`, the `Host` header must be loopback or the explicit `--host`, and anything with an `Origin` header is refused.
 - **Spend guards:** `--daily-budget` (default $1.00 per UTC day), `router:frontier` off unless `--allow-frontier`, 30 requests a minute, a 256 KB body cap, a 30 s socket timeout and 8 concurrent requests.
 - **Logging:** `--log-db live.db` also logs requests, including prompt text, and turns on `POST /v1/feedback`, which feeds ratings to the learned policy. Adding `--lookup-from-log` (needs `--log-db`) also rebuilds the free lookup from logged `router` requests rated good through `/v1/feedback` (or by a judge), on start and after every `--lookup-rebuild-every` router/auto requests.
+
+**Bring your own workload.** `awr bench` runs your own JSONL prompts through the same paired test as the benchmark (default rule versus frontier-only) and reports cost cut and quality kept with 99% ranges. It prints a list-price worst-case estimate first. `AWR_FORCE_MOCK=1 awr bench tests/fixtures/byo_mixed.jsonl` is the free simulated demo; `awr bench my_prompts.jsonl --max-spend 2.00` is a live run, refused before any call if the cap is below the printed minimum (list-price worst case plus a reserve and the preflight calls). Reports and the run log go to the gitignored `data/byo/`. See [`docs/BYO_WORKLOAD.md`](docs/BYO_WORKLOAD.md).
 
 **MCP server.** `ai-router-mcp` gives any MCP client (Claude Code, Cursor, Claude Desktop) five tools to classify a task, estimate cost and explain a decision. It is free and offline by default. See [`docs/MCP_SERVER.md`](docs/MCP_SERVER.md) and a real session in [`docs/MCP_DEMO.md`](docs/MCP_DEMO.md).
 

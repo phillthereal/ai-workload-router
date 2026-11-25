@@ -1,0 +1,5 @@
+{"id": "refund-total", "prompt": "A customer bought 3 items at $12 each and returned one. How much should the refund be in dollars?", "reference": "12"}
+{"id": "ticket-label", "prompt": "Label this support ticket as billing, shipping or technical: 'My parcel has not arrived after two weeks.' Reply with the label only.", "reference": "shipping", "scoring": "exact_match"}
+{"id": "apology-tone", "prompt": "Write a two-sentence apology to a customer whose order arrived damaged.", "reference": "Apologises clearly, takes responsibility, offers a replacement or refund, and stays within two sentences.", "scoring": "judge"}
+{"id": "summary-policy", "prompt": "Summarise in one sentence why a return window helps an online shop."}
+{"id": "reply-delay", "prompt": "Draft a short, friendly reply telling a customer their order will ship two days late.", "task_type": "support_email", "difficulty": "easy"}
