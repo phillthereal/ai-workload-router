@@ -331,15 +331,15 @@ To be exact: `rag.py` uses the free `heuristic_classify` on the question and pas
 
 **At production scale.** Login, per-client limits, and a shared spend store.
 
-### 6.2 Editable Docker install, as a workaround
+### 6.2 Docker: two services, a normal install
 
-**Choice.** The router works out `.cache/` and `data/` from its own source path (section 7, smell 6). A normal install would put them under site-packages. So the image uses an editable install (#4). This works around the smell. It does not fix it. It is also one container, not two, because the API already serves the UI. It is published on 127.0.0.1 only. The image is 279 MB.
+**Choice.** The router used to work out `.cache/` and `data/` from its own source path (section 7, smell 6), so the image needed an editable install (#4). Both folders now resolve from `AWR_HOME` (`src/router/paths.py`), and stay at the repo root when it is unset. The image installs the package normally and sets `AWR_HOME=/var/lib/awr`. Compose starts two services from that one image: the web page on 8000 and the OpenAI-compatible endpoint on 8787, each with a healthcheck, both published on 127.0.0.1 only, sharing one volume so the daily spend total is common to both and survives restarts.
 
-**Trade-off.** The image depends on the source layout staying as it is.
+**Trade-off.** `AWR_HOME` moves all of `data/`, including the benchmark's input files, so a benchmark run with it set needs those files copied there. The endpoint answers with simulated text until `AWR_API_FORCE_MOCK=0` is set and keys are present; that real-call path has not been run in Docker.
 
-**Rejected.** A two-service setup. Fixing the paths in that PR, because it was out of scope.
+**Rejected.** Baking a token into the image or the compose file. With no `AWR_SERVER_TOKEN` set, the server makes one and prints it once in its log.
 
-**At production scale.** Paths from config, a normal install, a pinned base image digest, and secrets from a secret store.
+**At production scale.** A pinned base image digest, and secrets from a secret store.
 
 ### 6.3 Spend limits differ by entry point
 
@@ -375,7 +375,7 @@ These were found in #2. I listed them rather than fixed them, so that PR stayed 
 | 3 | Cascade can pay for the frontier twice | If the budget call fails over to a higher tier, that answer is still treated as a non-final attempt. If the verifier rejects it, the ladder calls the frontier again | Not fixed |
 | 4 | Daily budget can overshoot under concurrent requests | Several requests pass the check before any spend is recorded | Not fixed on the HTTP server or the web app. The MCP server checks a worst case first |
 | 5 | `assert` used for request validation in `server.py` | Asserts vanish under `python -O` | Not fixed |
-| 6 | Paths depend on the source tree | A normal install would put `data/` and `.cache/` under site-packages | Worked around in Docker (6.2) |
+| 6 | Paths depend on the source tree | A normal install would put `data/` and `.cache/` under site-packages | Fixed: both resolve from `AWR_HOME` (6.2) |
 | 7 | The server builds a new `Router` per request | Stateful policies such as `BudgetPolicy` cannot work behind it | Not fixed |
 | 8 | Disk cache on by default for the HTTP server | Answers are written to `.cache/` even without `--log-db`, and an identical prompt replays while still counting as spend | Not fixed. The web app and MCP paid paths turn it off for answers, though in paid web mode the classifier still goes through it (#3) |
 | 10 | Two sources of truth for tiers | `MODEL_TIER` and `MODELS` can disagree, and an unknown model silently becomes `budget` | Not fixed |

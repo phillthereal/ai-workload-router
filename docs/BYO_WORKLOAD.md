@@ -90,7 +90,7 @@ Sections 1 to 8 are the reference for what the command does.
 - Files over 5 MB or 1,000 rows *(chosen: keeps the worst-case estimate readable and the run within one sitting)*.
 - No `--judge` flag. Rows without a reference are judged automatically, and `"scoring": "judge"` on a row covers "judge this row even though it has a reference". A per-row field keeps the choice next to the reference it changes.
 - Other policies (cascade, jury, learned, effort dial, `--classic`) are not offered: the command measures the default rule only.
-- Paths are source-relative (`data/byo/` is found from the source tree, an editable install), like the rest of the repo. The planned `AWR_HOME` work covers this.
+- `data/byo/` sits under the repo root by default, like the rest of `data/`. Set `AWR_HOME` to move it.
 
 ## 7. CLI shape
 - `awr bench tasks.jsonl [--max-spend 2.00] [--roster cross_vendor] [--workers N] [--out PATH] [--dry-run]`, in `src/router/cli.py` with one `bench` subcommand, and `awr = "router.cli:main"` in `[project.scripts]`. `--roster` swaps budget, mid and frontier; Haiku 5.5 and Sonnet 5.5 stay fixed in the default rule, and the help says so. `--workers` keeps the benchmark's latency caveat.
