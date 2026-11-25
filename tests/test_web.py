@@ -58,6 +58,23 @@ class DemoMode(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("Route task", r.text)
 
+    def test_frontier_comparison_fields(self):
+        from router.config import get_model, get_roster
+
+        b = self.c.post("/route", json={"prompt": "What is 2+2?"}).json()
+        frontier = get_roster("cross_vendor").frontier
+        self.assertEqual(b["frontier_model"], frontier)
+        self.assertGreater(b["frontier_cost_usd"], 0)
+        self.assertIsNotNone(get_model(frontier))
+        self.assertEqual(b["saving_pct"], round((1 - b["cost_usd"] / b["frontier_cost_usd"]) * 100, 1))
+
+    def test_ui_mode_is_demo_and_placeholder_is_replaced(self):
+        text = self.c.get("/").text
+        self.assertIn('<body data-mode="demo">', text)
+        self.assertNotIn("__AWR_MODE__", text)
+        self.assertIn("Demo mode.", text)
+        self.assertIn("Answers, costs and quality scores are simulated. No model is called.", text)
+
     def test_bad_input_is_refused(self):
         self.assertEqual(self.c.post("/route", json={"prompt": ""}).status_code, 422)
         self.assertEqual(self.c.post("/route", json={"prompt": "x" * 32_001}).status_code, 422)
@@ -112,6 +129,38 @@ class PaidMode(unittest.TestCase):
         self.assertEqual(b["quality_score"], 0.9)
         self.assertGreater(b["routing_cost_usd"], 0)  # classifier + verifier
         self.assertAlmostEqual(b["cost_usd"], b["answer_cost_usd"] + b["routing_cost_usd"])
+
+    def test_ui_mode_is_paid_with_allow_paid(self):
+        self.stub(lambda m, *a, **k: StubAdapter(m))
+        c = TestClient(web.create_app(), base_url="http://localhost")
+        text = c.get("/").text
+        self.assertIn('<body data-mode="paid">', text)
+        self.assertNotIn('<body data-mode="demo">', text)
+        self.assertNotIn("__AWR_MODE__", text)
+
+    def test_saving_is_positive_when_a_cheap_model_answers(self):
+        self.stub(lambda m, *a, **k: StubAdapter(m))
+        os.environ["AWR_WEB_DAILY_BUDGET_USD"] = "100"
+        c = TestClient(web.create_app(), base_url="http://localhost")
+        b = c.post("/route", json={"prompt": "What is 2+2?"}).json()
+        self.assertNotEqual(b["model"], b["frontier_model"])
+        self.assertGreater(b["saving_pct"], 0)
+        self.assertEqual(b["saving_pct"], round((1 - b["cost_usd"] / b["frontier_cost_usd"]) * 100, 1))
+
+    def test_saving_is_not_positive_when_the_router_is_dearer(self):
+        self.stub(lambda m, *a, **k: StubAdapter(m))
+        os.environ["AWR_WEB_DAILY_BUDGET_USD"] = "100"
+        orig = web._score
+
+        def dear_score(prompt, result, roster):
+            score, source, extra = orig(prompt, result, roster)
+            return score, source, extra + 10.0  # a very expensive quality check
+        p = mock.patch.object(web, "_score", dear_score)
+        p.start()
+        self.addCleanup(p.stop)
+        c = TestClient(web.create_app(), base_url="http://localhost")
+        b = c.post("/route", json={"prompt": "What is 2+2?"}).json()
+        self.assertLessEqual(b["saving_pct"], 0)
 
     def test_spend_stops_at_the_daily_budget(self):
         self.stub(lambda m, *a, **k: StubAdapter(m))
@@ -216,7 +265,7 @@ class VerifierChoice(unittest.TestCase):
 
     def test_ui_has_the_self_check_label(self):
         text = web.UI_PATH.read_text(encoding="utf-8")
-        self.assertIn("Self-check (the same model graded its own answer)", text)
+        self.assertIn("self-check: the same model graded its own answer", text)
 
 
 if __name__ == "__main__":

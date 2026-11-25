@@ -17,6 +17,11 @@ computed here. ``quality_source`` says what ``quality_score`` really is:
   * "self-check": no other model was available, so the mid model graded an
     answer written by the same model.
   * "unavailable": the verifier call failed; the score is null.
+
+The frontier comparison is an ESTIMATE: ``frontier_cost_usd`` is the roster's frontier
+model priced at list price for this answer's token counts. The frontier model is never
+called. ``saving_pct`` compares the total actually spent (answer + routing + quality
+check) with that estimate, so it can be negative.
 """
 
 from __future__ import annotations
@@ -34,7 +39,7 @@ from .adapters import get_adapter
 from .adapters.base import Response
 from .api import CONSENSUS_FIRST, ProviderError, Result, Router, default_policy
 from .cascade import verify_adequacy
-from .config import MODEL_TIER, ROSTERS, get_roster
+from .config import MODEL_TIER, ROSTERS, get_model, get_roster
 from .scoring import rubric_judge
 from .secrets import force_mock
 from .spend_guard import SpendGuard, spend_store_from_env
@@ -70,6 +75,11 @@ class RouteResponse(BaseModel):
     degraded: bool
     latency_ms: float
     trace: list[str]
+    frontier_model: str
+    # ESTIMATE: list price of the frontier model for this answer's token counts; it is not called.
+    frontier_cost_usd: float
+    # (1 - cost_usd / frontier_cost_usd) * 100; None when the estimate is 0; negative if dearer.
+    saving_pct: Optional[float]
 
 
 def _real_call(model: str, prompt: str, max_tokens: Optional[int] = None) -> Response:
@@ -130,7 +140,8 @@ def create_app() -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def ui() -> str:
-        return UI_PATH.read_text()
+        mode = "demo" if force_mock() else "paid"
+        return UI_PATH.read_text().replace("__AWR_MODE__", mode)
 
     @app.post("/route")
     def route(req: RouteRequest) -> RouteResponse:
@@ -156,12 +167,19 @@ def create_app() -> FastAPI:
         result.routing_cost_usd += extra
         if paid:
             guard.add_spend(result.total_cost_usd)
+        assert result.response is not None  # RulesPolicy always sets it
+        frontier = get_roster(roster).frontier
+        frontier_cost = get_model(frontier).cost_for_tokens(
+            result.response.input_tokens, result.response.output_tokens)
+        saving = (round((1 - result.total_cost_usd / frontier_cost) * 100, 1)
+                  if frontier_cost > 0 else None)
         fields: dict[str, Any] = dict(
             answer=result.text, model=result.model, tier=MODEL_TIER[result.model], roster=roster,
             task_type=result.task_type, difficulty=result.difficulty,
             cost_usd=result.total_cost_usd, answer_cost_usd=result.answer_cost_usd,
             routing_cost_usd=result.routing_cost_usd, quality_score=score, quality_source=source,
             simulated=result.simulated, degraded=result.degraded, latency_ms=result.latency_ms, trace=result.trace,
+            frontier_model=frontier, frontier_cost_usd=frontier_cost, saving_pct=saving,
         )
         return RouteResponse(**fields)
 

@@ -9,23 +9,30 @@
     color-scheme: light dark;
     --bg: #f7f7f5; --panel: #fff; --text: #1c1c1a; --muted: #5f5f5a;
     --line: #dcdcd6; --accent: #1f5f4a; --accent-text: #fff; --warn-bg: #fbf1d9; --warn: #6b4e00;
-    --error: #a12020;
+    --error: #a12020; --ok: #17623c; --sel: rgba(31, 95, 74, .22);
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #161615; --panel: #20201f; --text: #ecece8; --muted: #a5a59e;
       --line: #383836; --accent: #6fc7a8; --accent-text: #10201a; --warn-bg: #3a2f12; --warn: #f0d58c;
-      --error: #f09a9a;
+      --error: #f09a9a; --ok: #86d9a8; --sel: rgba(111, 199, 168, .3);
     }
   }
   * { box-sizing: border-box; }
+  ::selection { background: var(--sel); }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
-  h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  h2 { font-size: .85rem; margin: 24px 0 8px; color: var(--muted); font-weight: 600; }
+  .mode { position: sticky; top: 0; z-index: 1; padding: 8px 16px; text-align: center; font-size: .9rem; }
+  .mode p { max-width: 720px; margin: 0 auto; }
+  .mode strong { font-weight: 600; }
+  body[data-mode="demo"] .mode { background: var(--warn-bg); color: var(--warn); }
+  body:not([data-mode="demo"]) .mode { background: var(--panel); color: var(--muted); border-bottom: 1px solid var(--line); }
+  body[data-mode="demo"] .mode-paid, body:not([data-mode="demo"]) .mode-demo { display: none; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 4px; }
+  h3 { font-size: .85rem; margin: 24px 0 8px; color: var(--muted); font-weight: 600; }
   p { margin: 0; }
   .lead { color: var(--muted); margin-bottom: 24px; }
   label { display: block; font-weight: 600; margin-bottom: 8px; }
@@ -33,81 +40,206 @@
     width: 100%; min-height: 140px; padding: 12px; resize: vertical; font: inherit;
     color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
   }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
   button {
     margin-top: 12px; padding: 10px 20px; font: inherit; font-weight: 600; cursor: pointer;
     color: var(--accent-text); background: var(--accent); border: 0; border-radius: 8px;
   }
   button:disabled { opacity: .6; cursor: wait; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .notice { margin-top: 24px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
-  .stat { padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
-  .stat span { display: block; font-size: .85rem; color: var(--muted); }
-  .stat strong { display: block; font-size: 1.15rem; overflow-wrap: anywhere; }
+  .hint { margin-top: 24px; color: var(--muted); font-size: .9rem; }
+  .notice { margin-top: 16px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+  .notice strong { font-weight: 600; }
+  .headline { margin: 32px 0 0; font-size: 1.6rem; line-height: 1.25; font-weight: 600; text-wrap: balance; }
+  .headline .ok { color: var(--ok); }
+  .headline .dear { color: var(--warn); }
+  .pill {
+    display: inline-block; margin-left: 8px; padding: 2px 8px; vertical-align: middle;
+    font-size: .8rem; font-weight: 600; line-height: 1.4; border-radius: 999px;
+    background: var(--warn-bg); color: var(--warn);
+  }
+  .sub { margin-top: 4px; color: var(--muted); }
+  .prices { margin: 16px 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .prices .row {
+    display: grid; grid-template-columns: 5.5rem 9rem 1fr; gap: 4px 16px; align-items: baseline;
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+  }
+  .prices dt { margin: 0; font-weight: 400; }
+  .prices dd { margin: 0; }
+  .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .note { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+  .status { margin-top: 12px; color: var(--muted); font-size: .9rem; }
+  .status span { color: var(--text); }
+  .status p + p { margin-top: 2px; }
   .answer { padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-  ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+  .steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  .steps li { position: relative; padding: 0 0 16px 40px; min-height: 28px; overflow-wrap: anywhere; font-size: .9rem; color: var(--muted); counter-increment: step; }
+  .steps li:last-child { padding-bottom: 0; }
+  .steps li::after { content: ""; position: absolute; left: 13px; top: 28px; bottom: 0; width: 1px; background: var(--line); }
+  .steps li:last-child::after { display: none; }
+  .steps .mark {
+    position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; z-index: 1;
+    display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 600;
+    color: var(--muted); background: var(--panel); border: 1px solid var(--line);
+  }
+  .steps .mark::before { content: counter(step); }
+  .steps .problem .mark { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); }
+  .steps .done .mark { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .steps .done .mark::before { content: none; }
+  .steps .mark svg { width: 14px; height: 14px; }
+  .steps li > span { display: block; padding-top: 3px; }
+  .steps .problem > span { color: var(--text); }
+  .steps .done > span { color: var(--text); font-weight: 600; }
   .error { margin-top: 16px; color: var(--error); }
   [hidden] { display: none; }
-  @media (max-width: 520px) { .stats { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) {
+    .headline { font-size: 1.3rem; }
+    .prices .row { grid-template-columns: 1fr auto; }
+    .prices .note { grid-column: 1 / -1; }
+  }
 </style>
 </head>
-<body>
+<body data-mode="__AWR_MODE__">
+<div class="mode" role="status">
+  <p class="mode-demo"><strong>Demo mode.</strong> Answers, costs and quality scores are simulated. No model is called.</p>
+  <p class="mode-paid"><strong>Live mode.</strong> Each task calls real models and costs money.</p>
+</div>
 <main>
   <h1>AI Workload Router</h1>
-  <p class="lead">Paste a task to see which model it routes to, what it costs and how the answer scored.</p>
+  <p class="lead">Paste a task to see what the router pays for it, and what the frontier model would have charged.</p>
   <form id="form">
     <label for="prompt">Task</label>
     <textarea id="prompt" required maxlength="32000" placeholder="Extract the company name: 'Acme Corp. signed the lease.'"></textarea>
     <button id="go" type="submit">Route task</button>
   </form>
+  <p id="hint" class="hint">The result appears here: the saving, both prices, the answer and the steps the router took.</p>
   <p id="error" class="error" role="alert" hidden></p>
-  <section id="result" aria-live="polite" hidden>
-    <p id="demo" class="notice" hidden>Demo mode: the answer, cost and quality score are simulated. No model was called.</p>
-    <div class="stats">
-      <div class="stat"><span>Model</span><strong id="model"></strong><span id="tier"></span></div>
-      <div class="stat"><span>Cost</span><strong id="cost"></strong><span id="cost-note"></span></div>
-      <div class="stat"><span>Quality score</span><strong id="quality"></strong><span id="source"></span></div>
+  <section id="result" aria-live="polite" aria-busy="false" hidden>
+    <h2 id="headline" class="headline"></h2>
+    <p id="sub" class="sub" hidden></p>
+    <dl class="prices">
+      <div class="row"><dt>Router</dt><dd class="price" id="router-price"></dd><dd class="note" id="router-note"></dd></div>
+      <div class="row"><dt>Frontier</dt><dd class="price" id="frontier-price"></dd><dd class="note" id="frontier-note"></dd></div>
+    </dl>
+    <div class="status">
+      <p id="quality"></p>
+      <p id="classified" hidden></p>
     </div>
-    <h2>Answer</h2>
+    <p id="degraded" class="notice" hidden><strong>Degraded run.</strong> A provider failed or the classifier fell back, so this is not the router's usual route. The steps below show where.</p>
+    <h3>Answer</h3>
     <p id="answer" class="answer"></p>
-    <h2>Why this model</h2>
-    <ol id="trace"></ol>
+    <h3>How it was routed</h3>
+    <ol id="trace" class="steps"></ol>
   </section>
 </main>
 <script>
   const $ = (id) => document.getElementById(id);
   const SOURCES = {
-    simulated: "Simulated placeholder",
-    verifier: "Model estimate, no answer key",
-    "self-check": "Self-check (the same model graded its own answer)",
-    unavailable: "Check failed",
+    simulated: "simulated placeholder",
+    verifier: "a different model's estimate, no answer key",
+    "self-check": "self-check: the same model graded its own answer",
   };
+  const usd = (n) => `$${n.toFixed(6)}`;
 
   function detailText(detail) {
     if (typeof detail === "string") return detail;
     return "Check the task is between 1 and 32,000 characters.";
   }
 
+  function el(tag, text, cls) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (cls) node.className = cls;
+    return node;
+  }
+
+  function headline(r) {
+    const h = $("headline");
+    const sub = $("sub");
+    let subText = "";
+    h.replaceChildren();
+    const pct = r.saving_pct;
+    if (r.model === r.frontier_model) {
+      h.append("No saving on this task");
+      subText = `The router sent it to the frontier model, ${r.model}.`;
+    } else if (pct === null) {
+      h.append("Saving not available");
+    } else if (pct >= 0.5) {
+      h.append(el("span", `${Math.round(pct)}% cheaper`, "ok"), ` than ${r.frontier_model}`);
+    } else if (pct <= -0.5) {
+      h.append(el("span", `${Math.round(-pct)}% dearer`, "dear"), ` than ${r.frontier_model}`);
+      subText = "The router paid for extra checks on this task.";
+    } else {
+      h.append(`Same price as ${r.frontier_model}`);
+    }
+    if (r.simulated) h.append(el("span", "Simulated", "pill"));
+    sub.textContent = subText;
+    sub.hidden = !subText;
+  }
+
+  function stepItem(text, kind) {
+    const li = document.createElement("li");
+    const mark = el("span", undefined, "mark");
+    mark.setAttribute("aria-hidden", "true");
+    if (kind === "done") {
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("viewBox", "0 0 16 16");
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("d", "M3 8.5l3.2 3.2L13 4.8");
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      svg.append(path);
+      mark.append(svg);
+    }
+    if (kind) li.className = kind;
+    li.append(mark, el("span", text));
+    return li;
+  }
+
   function show(r) {
-    $("demo").hidden = !r.simulated;
-    $("model").textContent = r.model;
-    $("tier").textContent = `${r.tier} tier`;
-    $("cost").textContent = `$${r.cost_usd.toFixed(6)}`;
-    $("cost-note").textContent = r.simulated ? "Simulated" : `Includes $${r.routing_cost_usd.toFixed(6)} routing`;
-    $("quality").textContent = r.quality_score === null ? "n/a" : r.quality_score.toFixed(2);
-    $("source").textContent = SOURCES[r.quality_source] || r.quality_source;
+    headline(r);
+    $("router-price").textContent = usd(r.cost_usd);
+    $("router-note").textContent =
+      `${r.model}, ${r.tier} tier. Includes ${usd(r.routing_cost_usd)} routing and checking.`;
+    $("frontier-price").textContent = usd(r.frontier_cost_usd);
+    $("frontier-note").textContent =
+      `${r.frontier_model}. Estimate at list price for the same token counts; not called.`;
+
+    const q = $("quality");
+    q.replaceChildren();
+    if (r.quality_source === "unavailable" || r.quality_score === null) {
+      q.append("Not scored: the check did not run");
+    } else {
+      q.append("Quality score ", el("span", r.quality_score.toFixed(2)),
+               " \u00b7 ", el("span", SOURCES[r.quality_source] || r.quality_source));
+    }
+    const c = $("classified");
+    c.replaceChildren();
+    const known = r.task_type && r.difficulty;
+    if (known) c.append("Classified as ", el("span", `${r.task_type}, ${r.difficulty}`));
+    c.hidden = !known;
+    $("degraded").hidden = !r.degraded;
+
     $("answer").textContent = r.answer;
-    $("trace").replaceChildren(...r.trace.map((line) => {
-      const li = document.createElement("li");
-      li.textContent = line;
-      return li;
-    }));
+    const steps = r.trace.map((line) => {
+      const bad = line.startsWith("failover:") || line.includes("provider error");
+      return stepItem(bad ? `Problem: ${line}` : line, bad ? "problem" : "");
+    });
+    steps.push(stepItem(`Answer from ${r.model}`, "done"));
+    $("trace").replaceChildren(...steps);
     $("result").hidden = false;
   }
 
   $("form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    $("go").disabled = true;
+    const go = $("go");
+    go.disabled = true;
+    go.textContent = "Routing\u2026";
+    $("result").setAttribute("aria-busy", "true");
     $("error").hidden = true;
     try {
       const res = await fetch("/route", {
@@ -118,12 +250,16 @@
       const body = await res.json();
       if (!res.ok) throw new Error(detailText(body.detail));
       show(body);
+      $("hint").hidden = true;
     } catch (err) {
       $("result").hidden = true;
+      $("hint").hidden = true;
       $("error").textContent = err.message;
       $("error").hidden = false;
     } finally {
-      $("go").disabled = false;
+      go.disabled = false;
+      go.textContent = "Route task";
+      $("result").setAttribute("aria-busy", "false");
     }
   });
 </script>
