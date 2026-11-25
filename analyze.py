@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import csv
 import json
-import random
 import re
 import sqlite3
 import sys
@@ -20,9 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from router.benchmark.stats import N_BOOT, SEED, bootstrap, net_reduction, retention  # noqa: E402,F401
+
 DB = ROOT / "data" / "runs.db"
 BASELINE = "frontier_only"
-N_BOOT, SEED = 10_000, 20261020
 
 # Hand-written experiment labels, keyed by report-file stem.
 LABELS = {
@@ -76,22 +76,7 @@ def paired_tasks(conn, run_group: str, exp: str | None = None, base_group: str |
 
 
 # ------------------------------------------------------------------ statistics
-def net_reduction(p) -> float:  # p: list of (base_cost, exp_net_cost, base_q, exp_q)
-    base = sum(x[0] for x in p)
-    return (base - sum(x[1] for x in p)) / base * 100
-
-
-def retention(p) -> float:
-    return (sum(x[3] for x in p) / len(p)) / (sum(x[2] for x in p) / len(p)) * 100
-
-
-def bootstrap(pairs, stat, n=N_BOOT, seed=SEED, alpha=0.05):
-    """Resample whole tasks (both arms together) with replacement.
-    Returns (point, lo, hi) with a percentile CI."""
-    rng = random.Random(seed)
-    k = len(pairs)
-    vals = sorted(stat([pairs[rng.randrange(k)] for _ in range(k)]) for _ in range(n))
-    return stat(pairs), vals[int(n * alpha / 2)], vals[int(n * (1 - alpha / 2)) - 1]
+# Moved to src/router/benchmark/stats.py (shared with `awr bench`); re-exported here.
 
 
 def headline_specs(conn):

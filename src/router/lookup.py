@@ -11,13 +11,16 @@ from __future__ import annotations
 import json
 import math
 import re
+import threading
 from collections import Counter, defaultdict
 from functools import cache
 from heapq import nlargest
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable, Optional, Union
 
+from . import db
 from .classifier import Classification, heuristic_classify
+from .scoring import DIFFICULTIES, TASK_TYPES
 
 LABELLED_TASKS = Path(__file__).with_name("lookup_tasks.json")
 
@@ -29,8 +32,9 @@ def _bag(text: str) -> Counter:
 class Lookup:
     """Votes (task_type, difficulty) from the k nearest labelled tasks."""
 
-    def __init__(self, tasks: Iterable[dict[str, Any]], k: int = 7) -> None:
+    def __init__(self, tasks: Iterable[dict[str, Any]], k: int = 7, live_rows: int = 0) -> None:
         tasks = list(tasks)
+        self.live_rows = live_rows  # how many tasks came from the run log (0 for public lookups)
         bags = [_bag(t["prompt"]) for t in tasks]
         counts = Counter(w for bag in bags for w in bag)
         self.k = k
@@ -75,3 +79,82 @@ def public_lookup(exclude_prompts: Iterable[str] = ()) -> Lookup:
 def shared_lookup() -> Lookup:
     """One Lookup over every labelled task, built once per process for live requests."""
     return public_lookup()
+
+
+def from_log(db_path: Union[str, Path], min_rows: int = 50, min_score: float = 0.7,
+             k: int = 7) -> Lookup:
+    """A Lookup over every public labelled task plus live rows from the run log with a good outcome.
+
+    Only 'live:router' rows are read. A live row's label is the label the router ACTED ON
+    for that request (live traffic has no ground truth): the free lookup's guess for
+    router/auto, the classifier's guess (or its keyword fallback's, when the classifier call
+    failed) for router:learned, which shares the strategy name. The row does not record
+    which one it was. It is kept only because the outcome was good (quality_score >=
+    min_score, from POST /v1/feedback or a judge; cascade rows are logged with task_type
+    'unknown', so verifier outcomes never qualify). Rows with a low score are dropped, not
+    relabelled: a low score says the route failed, not what the right label was.
+
+    The score filter runs before deduplication: a later low-score or pending row for the
+    same prompt does not hide an earlier good one, and the latest QUALIFYING row's label
+    wins. A live prompt identical to a public task is dropped; the public label stands. If
+    fewer than `min_rows` live rows remain, the result is public-only (`live_rows == 0`). The db is read-only here and never created. The benchmark does not
+    use this: its lookup (`public_lookup(exclude_prompts)`) never sees live rows.
+    """
+    public = json.loads(LABELLED_TASKS.read_text())
+    rows = db.live_labelled_rows(db_path, min_score, task_types=TASK_TYPES, difficulties=DIFFICULTIES)
+    known = {t["prompt"] for t in public}
+    # rows come oldest first and are already filtered, so the latest qualifying row wins
+    latest = {r["prompt"]: r for r in rows if r["prompt"] not in known}
+    if len(latest) < min_rows:
+        return Lookup(public, k=k)
+    live = [{"prompt": p, "task_type": r["task_type"], "difficulty": r["difficulty"]}
+            for p, r in latest.items()]
+    return Lookup(public + live, k=k, live_rows=len(live))
+
+
+class RefreshingLookup:
+    """Holds a from_log Lookup and rebuilds it every `every` calls to get().
+
+    The first get() builds; after a build, `every` more get() calls are served before the
+    next one rebuilds (so with every=100, calls 1 and 101 build). The rebuild runs
+    synchronously in the calling request: building over ~1,300 prompts takes milliseconds,
+    so a background thread is not worth its complexity. A failed build keeps the previous
+    Lookup, or falls back to public_lookup() when there is none yet.
+    """
+
+    def __init__(self, db_path: Union[str, Path], every: int = 100, min_rows: int = 50,
+                 build: Callable[..., Lookup] = from_log) -> None:
+        self.db_path = db_path
+        if every < 1:
+            raise ValueError(f"every must be >= 1, got {every}")
+        self.every = every
+        self.min_rows = min_rows
+        self.builds = 0
+        self.lookup: Optional[Lookup] = None
+        self._build = build
+        self._since = 0
+        self._lock = threading.Lock()
+
+    def _rebuild_locked(self) -> Lookup:
+        try:
+            self.lookup = self._build(self.db_path, min_rows=self.min_rows)
+        except Exception:
+            if self.lookup is None:
+                self.lookup = public_lookup()
+        self.builds += 1
+        self._since = 0
+        return self.lookup
+
+    def rebuild(self) -> Lookup:
+        """Build now, whatever the call count."""
+        with self._lock:
+            return self._rebuild_locked()
+
+    def get(self) -> Lookup:
+        """The current Lookup, rebuilt first on the first call and every `every` calls."""
+        with self._lock:
+            if self.lookup is None or self._since >= self.every:
+                self._rebuild_locked()
+            self._since += 1
+            assert self.lookup is not None
+            return self.lookup

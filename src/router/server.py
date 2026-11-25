@@ -30,6 +30,7 @@ from .api import (
     CascadePolicy, LearnedPolicy, FrontierOnlyPolicy, Policy, ProviderError, Router, default_policy,
 )
 from .config import ROSTERS
+from .lookup import RefreshingLookup
 from .shadow import ShadowComparePolicy
 from .spend_guard import SpendGuard, spend_store_from_env
 
@@ -68,8 +69,21 @@ def flatten(messages: Any) -> str:
 def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: LogDb = None,
                  daily_budget_usd: float = 1.0, allow_frontier: bool = False,
                  rate_limit_per_min: int = 30, max_concurrent: int = 8,
-                 host: str = "127.0.0.1") -> type[BaseHTTPRequestHandler]:
+                 host: str = "127.0.0.1", lookup_from_log: bool = False,
+                 lookup_rebuild_every: int = 100) -> type[BaseHTTPRequestHandler]:
     """Build the request handler class, closing over this server's limits and guard."""
+    holder: Optional[RefreshingLookup] = None
+    if lookup_from_log:
+        if not log_db or log_db is True:
+            raise ValueError("lookup_from_log needs a log_db path")
+        holder = RefreshingLookup(log_db, every=lookup_rebuild_every)
+        holder.rebuild()  # on start, so the operator sees what was learned before any request
+
+    def _policy(sel: str) -> Policy:
+        """Resolve the selector at request time; router/auto use the live lookup when it is on."""
+        if holder is not None and sel in ("router", "auto"):
+            return default_policy(lookup=holder.get())
+        return SELECTORS[sel]()
     slots = _slots = threading.BoundedSemaphore(max_concurrent)
     guard = SpendGuard(daily_budget_usd, rate_limit_per_min, allow_frontier, store=spend_store_from_env())
     rate_ok, over_budget, add_spend = guard.rate_ok, guard.over_budget, guard.add_spend
@@ -81,6 +95,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
         protocol_version = "HTTP/1.1"
         server: ThreadingHTTPServer
         slots = _slots  # exposed so tests can hold the concurrency slots
+        lookup_holder = holder  # the live-learning lookup, or None when --lookup-from-log is off
 
         def log_message(self, fmt: str, *args: Any) -> None:  # never log paths/bodies/headers
             pass
@@ -234,7 +249,7 @@ def make_handler(roster: str, allow_mock: bool, token: Optional[str], log_db: Lo
                 return self._err(429, f"Daily budget of ${daily_budget_usd:.2f} reached (resets 00:00 UTC)",
                                  "insufficient_quota")
             try:
-                r = Router(SELECTORS[sel](), roster_name=roster,
+                r = Router(_policy(sel), roster_name=roster,
                            allow_mock_fallback=allow_mock, log_to=log_db).complete(prompt)
             except ProviderError:
                 return self._err(502, "Upstream providers failed", "api_error")
@@ -293,12 +308,14 @@ def make_server(host: str = "127.0.0.1", port: int = 8787, roster: str = "cross_
                 allow_mock: bool = False, token: Optional[str] = None, log_db: LogDb = None,
                 daily_budget_usd: float = 1.0,
                 allow_frontier: bool = False, rate_limit_per_min: int = 30,
-                max_concurrent: int = 8) -> ThreadingHTTPServer:
+                max_concurrent: int = 8, lookup_from_log: bool = False,
+                lookup_rebuild_every: int = 100) -> ThreadingHTTPServer:
     """token=None means NO authentication (tests/embedding only); the CLI always sets one
     unless --no-auth. Defaults: $1/day cap, router:frontier and router:shadow off, 30 req/min, 8 in flight."""
     return ThreadingHTTPServer((host, port), make_handler(
         roster, allow_mock, token, log_db, daily_budget_usd, allow_frontier,
-        rate_limit_per_min, max_concurrent, host))
+        rate_limit_per_min, max_concurrent, host,
+        lookup_from_log=lookup_from_log, lookup_rebuild_every=lookup_rebuild_every))
 
 
 def resolve_token(env_token: Optional[str], no_auth: bool) -> tuple[Optional[str], bool]:
@@ -326,7 +343,16 @@ def main(argv: Optional[list[str]] = None) -> None:
     p.add_argument("--allow-frontier", action="store_true", help="enable the router:frontier and router:shadow selectors "
                         "(both answer on the frontier)")
     p.add_argument("--rate-limit", type=int, default=30, metavar="N", help="max POSTs per minute; default 30")
+    p.add_argument("--lookup-from-log", action="store_true",
+                   help="rebuild the free lookup from --log-db rows that have a good outcome, on start "
+                        "and every --lookup-rebuild-every requests; off by default")
+    p.add_argument("--lookup-rebuild-every", type=int, default=100, metavar="N",
+                   help="with --lookup-from-log: rebuild after every N router/auto requests; default 100")
     a = p.parse_args(argv)
+    if a.lookup_from_log and not a.log_db:
+        p.error("--lookup-from-log needs --log-db")
+    if a.lookup_rebuild_every < 1:
+        p.error("--lookup-rebuild-every must be >= 1")
     token, generated = resolve_token(os.environ.get("AWR_SERVER_TOKEN") or None, a.no_auth)
     if a.no_auth:
         print("WARNING: --no-auth: anyone who can reach this port can spend your API budget",
@@ -337,7 +363,12 @@ def main(argv: Optional[list[str]] = None) -> None:
     if a.host not in LOOPBACK:
         print(f"WARNING: binding to non-loopback {a.host}", file=sys.stderr)
     srv = make_server(a.host, a.port, a.roster, a.allow_mock, token, a.log_db,
-                      a.daily_budget, a.allow_frontier, a.rate_limit)
+                      a.daily_budget, a.allow_frontier, a.rate_limit,
+                      lookup_from_log=a.lookup_from_log, lookup_rebuild_every=a.lookup_rebuild_every)
+    holder = getattr(srv.RequestHandlerClass, "lookup_holder", None)
+    if holder is not None and holder.lookup is not None:
+        print(f"lookup: {holder.lookup.live_rows} live rows added to the public tasks "
+              f"(min {holder.min_rows})", file=sys.stderr)
     print(f"Serving on http://{a.host}:{srv.server_port}/v1 (roster={a.roster})", file=sys.stderr)
     try:
         srv.serve_forever()
